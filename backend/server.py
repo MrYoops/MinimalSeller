@@ -25,6 +25,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Request logging middleware
+@app.middleware("http")
+async def log_requests(request, call_next):
+    logger.info(f"Request: {request.method} {request.url.path} from {request.client.host}")
+    response = await call_next(request)
+    logger.info(f"Response: {response.status_code}")
+    return response
+
 # MongoDB setup
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 DATABASE_NAME = os.getenv("DATABASE_NAME", "minimalmod")
