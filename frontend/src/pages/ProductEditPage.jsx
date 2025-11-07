@@ -42,12 +42,22 @@ function ProductEditPage() {
   })
 
   useEffect(() => {
+    loadCategories()
     if (id !== 'new') {
       loadProduct()
     } else {
       setLoading(false)
     }
   }, [id])
+
+  const loadCategories = async () => {
+    try {
+      const response = await api.get('/api/admin/categories')
+      setCategories(response.data)
+    } catch (error) {
+      console.error('Failed to load categories:', error)
+    }
+  }
 
   const loadProduct = async () => {
     try {
