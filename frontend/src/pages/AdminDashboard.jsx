@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiLogOut, FiUsers, FiKey, FiActivity } from 'react-icons/fi'
+import { FiLogOut, FiUsers, FiKey, FiActivity, FiPackage } from 'react-icons/fi'
 
 function AdminDashboard() {
   const { user, logout, api } = useAuth()
   const [users, setUsers] = useState([])
+  const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('users')
 
   useEffect(() => {
     loadUsers()
+    loadProducts()
   }, [])
 
   const loadUsers = async () => {
