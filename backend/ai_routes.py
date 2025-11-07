@@ -14,11 +14,11 @@ def init_ai_routes(current_user_dep):
 # Для AI будем использовать Emergent LLM key
 EMERGENT_API_KEY = os.getenv("EMERGENT_LLM_KEY", "")
 
-@router.post("/adapt-name")
+@router.post("/ai/adapt-name")
 async def adapt_name(
     text: str,
     marketplace: str,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """
     AI-адаптация названия товара для конкретного маркетплейса.
