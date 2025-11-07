@@ -26,8 +26,8 @@ export const translations = {
     inn: 'ИНН',
     
     // Header
-    adminPanel: 'АДМИН ПАНЕЛЬ',
-    sellerPanel: 'ПАНЕЛЬ ПРОДАВЦА',
+    adminPanel: 'АДМИН',
+    sellerPanel: 'ПРОДАВЕЦ',
     
     // Tabs
     overview: 'Обзор',
@@ -37,12 +37,21 @@ export const translations = {
     orders: 'Заказы',
     inventory: 'Склад',
     apiKeys: 'API Ключи',
+    finance: 'Финансы',
+    balance: 'Баланс',
+    promocodes: 'Промокоды',
+    questions: 'Вопросы',
+    reviews: 'Отзывы',
+    dashboard: 'Дашборд',
+    sellers: 'Продавцы',
+    payouts: 'Выплаты',
+    categories: 'Категории',
     
     // Products
     addProduct: '+ ДОБАВИТЬ ТОВАР',
     editProduct: 'РЕДАКТИРОВАТЬ ТОВАР',
     createProduct: 'СОЗДАТЬ ТОВАР',
-    productList: 'СПИСОК ТОВАРОВ',
+    productList: 'ТОВАРЫ',
     sku: 'Артикул',
     name: 'Название',
     price: 'Цена',
