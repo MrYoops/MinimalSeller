@@ -47,13 +47,13 @@ function LoginPage() {
           <h1 className="text-5xl font-bold mb-4 text-mm-text">
             MINIMAL<span className="text-mm-purple">MOD</span>
           </h1>
-          <p className="comment">// No distractions, Just results</p>
+          <p className="comment">{t('noDistractionsJustResults')}</p>
         </div>
 
         {/* Login Form */}
         <div className="card-neon">
-          <h2 className="text-2xl mb-2 text-mm-cyan">LOGIN</h2>
-          <p className="comment mb-8">// Enter your credentials</p>
+          <h2 className="text-2xl mb-2 text-mm-cyan">{t('login')}</h2>
+          <p className="comment mb-8">{t('enterCredentials')}</p>
 
           {error && (
             <div className="mb-6 p-4 border border-mm-red bg-mm-red/10 text-mm-red text-sm font-mono">
