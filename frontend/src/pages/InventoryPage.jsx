@@ -353,6 +353,161 @@ function InventoryPage() {
           </div>
         </div>
       )}
+
+      {/* FBO Shipment Modal */}
+      {showFBOShipmentModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="card-neon max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl text-mm-cyan">CREATE FBO SHIPMENT</h3>
+              <button onClick={() => setShowFBOShipmentModal(false)} className="text-mm-text-secondary hover:text-mm-red">
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Step 1: Select Warehouse */}
+              <div className="card-neon bg-mm-darker">
+                <p className="comment mb-3">// Step 1: Select Warehouse</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Marketplace</label>
+                    <select
+                      value={fboShipment.marketplace}
+                      onChange={(e) => setFBOShipment({...fboShipment, marketplace: e.target.value})}
+                      className="input-neon w-full"
+                    >
+                      <option value="ozon">Ozon</option>
+                      <option value="wb">Wildberries</option>
+                      <option value="yandex">Yandex.Market</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Warehouse</label>
+                    <select
+                      value={fboShipment.warehouse}
+                      onChange={(e) => setFBOShipment({...fboShipment, warehouse: e.target.value})}
+                      className="input-neon w-full"
+                    >
+                      <option value="">Select warehouse</option>
+                      <option value="moscow">Moscow - Khoruzhino</option>
+                      <option value="spb">Saint Petersburg</option>
+                      <option value="kazan">Kazan</option>
+                      <option value="ekb">Ekaterinburg</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2: Add Products */}
+              <div className="card-neon bg-mm-darker">
+                <p className="comment mb-3">// Step 2: Add Products to Shipment</p>
+                <div className="space-y-2 mb-4">
+                  {fboShipment.products.map((item, idx) => (
+                    <div key={idx} className="flex items-center space-x-2 bg-mm-black p-2 border border-mm-border">
+                      <span className="flex-1 font-mono text-sm">{item.name}</span>
+                      <span className="text-mm-text-secondary">Qty:</span>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const newProds = [...fboShipment.products]
+                          newProds[idx].quantity = parseInt(e.target.value) || 0
+                          setFBOShipment({...fboShipment, products: newProds})
+                        }}
+                        className="input-neon w-20"
+                        min="1"
+                      />
+                      <button
+                        onClick={() => {
+                          setFBOShipment({
+                            ...fboShipment,
+                            products: fboShipment.products.filter((_, i) => i !== idx)
+                          })
+                        }}
+                        className="text-mm-red"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <select
+                  onChange={(e) => {
+                    const prod = products.find(p => p.id === e.target.value)
+                    if (prod && !fboShipment.products.find(p => p.id === prod.id)) {
+                      setFBOShipment({
+                        ...fboShipment,
+                        products: [...fboShipment.products, {
+                          id: prod.id,
+                          name: prod.minimalmod.name,
+                          sku: prod.sku,
+                          quantity: 1
+                        }]
+                      })
+                    }
+                    e.target.value = ''
+                  }}
+                  className="input-neon w-full"
+                >
+                  <option value="">+ Add product to shipment</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>{p.sku} - {p.minimalmod.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Step 3: Confirm */}
+              {fboShipment.products.length > 0 && (
+                <div className="card-neon bg-mm-darker">
+                  <p className="comment mb-3">// Step 3: Confirm Shipment</p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-mm-text-secondary">Total Items:</span>
+                      <span className="font-bold">{fboShipment.products.reduce((sum, p) => sum + p.quantity, 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-mm-text-secondary">Products:</span>
+                      <span className="font-bold">{fboShipment.products.length}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex space-x-4">
+                <button
+                  onClick={async () => {
+                    if (!fboShipment.warehouse) {
+                      alert('Please select warehouse')
+                      return
+                    }
+                    if (fboShipment.products.length === 0) {
+                      alert('Please add products')
+                      return
+                    }
+                    alert('FBO Shipment created! Stock will be deducted from FBS.')
+                    setShowFBOShipmentModal(false)
+                    setFBOShipment({ marketplace: 'ozon', warehouse: '', products: [] })
+                  }}
+                  className="btn-primary flex-1"
+                  disabled={!fboShipment.warehouse || fboShipment.products.length === 0}
+                >
+                  CREATE SHIPMENT
+                </button>
+                <button
+                  onClick={() => {
+                    setShowFBOShipmentModal(false)
+                    setFBOShipment({ marketplace: 'ozon', warehouse: '', products: [] })
+                  }}
+                  className="btn-secondary flex-1"
+                >
+                  CANCEL
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
