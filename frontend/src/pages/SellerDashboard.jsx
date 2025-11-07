@@ -60,6 +60,61 @@ function SellerDashboard() {
     }
   }
 
+  const loadProducts = async () => {
+    try {
+      const response = await api.get('/api/products')
+      setProducts(response.data)
+    } catch (error) {
+      console.error('Failed to load products:', error)
+    }
+  }
+
+  const addProduct = async (e) => {
+    e.preventDefault()
+    try {
+      await api.post('/api/products', {
+        sku: newProduct.sku,
+        price: parseFloat(newProduct.price),
+        status: newProduct.status,
+        minimalmod: {
+          name: newProduct.name,
+          description: newProduct.description,
+          tags: [],
+          images: [],
+          attributes: {}
+        }
+      })
+      setShowAddProductModal(false)
+      setNewProduct({ sku: '', name: '', description: '', price: '', status: 'draft' })
+      loadProducts()
+    } catch (error) {
+      console.error('Failed to add product:', error)
+      alert('Failed to add product: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+
+  const deleteProduct = async (productId) => {
+    if (!confirm('Delete this product?')) return
+    try {
+      await api.delete(`/api/products/${productId}`)
+      loadProducts()
+    } catch (error) {
+      console.error('Failed to delete product:', error)
+    }
+  }
+
+  const getQualityColor = (score) => {
+    if (score >= 80) return 'text-mm-green'
+    if (score >= 50) return 'text-mm-yellow'
+    return 'text-mm-red'
+  }
+
+  const getQualityLabel = (score) => {
+    if (score >= 80) return 'HIGH'
+    if (score >= 50) return 'MEDIUM'
+    return 'LOW'
+  }
+
   return (
     <div className="min-h-screen bg-mm-black">
       {/* Header */}
