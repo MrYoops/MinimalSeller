@@ -382,7 +382,14 @@ function SellerDashboard() {
                               ))}
                             </div>
                           </td>
-                          <td className="py-4 px-4 text-right">
+                          <td className="py-4 px-4 text-right space-x-2">
+                            <button
+                              onClick={() => window.location.href = `/products/${product.id}/edit`}
+                              className="px-3 py-1 border border-mm-cyan text-mm-cyan hover:bg-mm-cyan/10 transition-colors text-xs uppercase font-mono"
+                              data-testid={`edit-product-${product.id}`}
+                            >
+                              EDIT
+                            </button>
                             <button
                               onClick={() => deleteProduct(product.id)}
                               className="px-3 py-1 border border-mm-red text-mm-red hover:bg-mm-red/10 transition-colors text-xs uppercase font-mono"
