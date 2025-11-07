@@ -508,6 +508,18 @@ function SellerDashboard() {
         {activeTab === 'balance' && (
           <PayoutsPage />
         )}
+
+        {activeTab === 'promocodes' && (
+          <PromocodesPage />
+        )}
+
+        {activeTab === 'questions' && (
+          <QuestionsPage />
+        )}
+
+        {activeTab === 'reviews' && (
+          <ReviewsPage />
+        )}
       </main>
 
       {/* Add API Key Modal */}
