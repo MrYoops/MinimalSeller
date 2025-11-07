@@ -1,0 +1,224 @@
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { FiLogOut, FiUsers, FiKey, FiActivity } from 'react-icons/fi'
+
+function AdminDashboard() {
+  const { user, logout, api } = useAuth()
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('users')
+
+  useEffect(() => {
+    loadUsers()
+  }, [])
+
+  const loadUsers = async () => {
+    try {
+      const response = await api.get('/api/admin/users')
+      setUsers(response.data)
+    } catch (error) {
+      console.error('Failed to load users:', error)
+    }
+    setLoading(false)
+  }
+
+  const approveUser = async (userId) => {
+    try {
+      await api.put(`/api/admin/users/${userId}/approve`)
+      loadUsers()
+    } catch (error) {
+      console.error('Failed to approve user:', error)
+    }
+  }
+
+  const blockUser = async (userId) => {
+    try {
+      await api.put(`/api/admin/users/${userId}/block`)
+      loadUsers()
+    } catch (error) {
+      console.error('Failed to block user:', error)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-mm-black">
+      {/* Header */}
+      <header className="border-b border-mm-border bg-mm-darker">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold">
+                MINIMAL<span className="text-mm-purple">MOD</span>
+              </h1>
+              <span className="status-active">ADMIN</span>
+            </div>
+            
+            <div className="flex items-center space-x-6">
+              <div className="text-right">
+                <p className="text-sm text-mm-text-secondary">// {user?.email}</p>
+                <p className="text-xs comment">{user?.full_name}</p>
+              </div>
+              <button
+                onClick={logout}
+                className="btn-secondary p-2"
+                data-testid="logout-button"
+              >
+                <FiLogOut size={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Navigation */}
+      <nav className="border-b border-mm-border bg-mm-dark">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-8 h-12">
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'users'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-users"
+            >
+              <FiUsers className="inline mr-2" />
+              Users
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'analytics'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-analytics"
+            >
+              <FiActivity className="inline mr-2" />
+              Analytics
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'users' && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl mb-2 text-mm-cyan">USER MANAGEMENT</h2>
+              <p className="comment">// Approve, block or manage sellers</p>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-mm-cyan animate-pulse">// LOADING...</p>
+              </div>
+            ) : (
+              <div className="card-neon overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full" data-testid="users-table">
+                    <thead>
+                      <tr className="border-b border-mm-border">
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Email</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Name</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Role</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Status</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Registered</th>
+                        <th className="text-right py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((u) => (
+                        <tr key={u.id} className="border-b border-mm-border hover:bg-mm-gray transition-colors">
+                          <td className="py-4 px-4 font-mono text-sm">{u.email}</td>
+                          <td className="py-4 px-4 font-mono text-sm">{u.full_name}</td>
+                          <td className="py-4 px-4">
+                            <span className={u.role === 'admin' ? 'status-active' : 'status-new'}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className={u.is_active ? 'status-active' : 'status-pending'}>
+                              {u.is_active ? 'ACTIVE' : 'PENDING'}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 font-mono text-sm text-mm-text-secondary">
+                            {new Date(u.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="py-4 px-4 text-right space-x-2">
+                            {!u.is_active && u.role === 'seller' && (
+                              <button
+                                onClick={() => approveUser(u.id)}
+                                className="px-3 py-1 border border-mm-green text-mm-green hover:bg-mm-green/10 transition-colors text-xs uppercase font-mono"
+                                data-testid={`approve-user-${u.id}`}
+                              >
+                                Approve
+                              </button>
+                            )}
+                            {u.is_active && u.role === 'seller' && (
+                              <button
+                                onClick={() => blockUser(u.id)}
+                                className="px-3 py-1 border border-mm-red text-mm-red hover:bg-mm-red/10 transition-colors text-xs uppercase font-mono"
+                                data-testid={`block-user-${u.id}`}
+                              >
+                                Block
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl mb-2 text-mm-cyan">ANALYTICS</h2>
+              <p className="comment">// Platform statistics and metrics</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="card-neon">
+                <p className="comment mb-2">// Total Users</p>
+                <p className="text-4xl font-bold text-mm-green">{users.length}</p>
+              </div>
+              
+              <div className="card-neon">
+                <p className="comment mb-2">// Active Sellers</p>
+                <p className="text-4xl font-bold text-mm-cyan">
+                  {users.filter(u => u.role === 'seller' && u.is_active).length}
+                </p>
+              </div>
+              
+              <div className="card-neon">
+                <p className="comment mb-2">// Pending Approval</p>
+                <p className="text-4xl font-bold text-mm-yellow">
+                  {users.filter(u => !u.is_active).length}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 card-neon">
+              <p className="comment mb-4">// Coming soon:</p>
+              <ul className="space-y-2 text-mm-text-secondary font-mono text-sm">
+                <li>• Revenue analytics</li>
+                <li>• Orders statistics</li>
+                <li>• Marketplace performance</li>
+                <li>• Commission tracking</li>
+              </ul>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
+
+export default AdminDashboard
