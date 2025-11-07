@@ -246,6 +246,42 @@ function SellerDashboard() {
               <FiDollarSign className="inline mr-2" />
               Balance
             </button>
+            <button
+              onClick={() => setActiveTab('promocodes')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'promocodes'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-promocodes"
+            >
+              <FiTag className="inline mr-2" />
+              Promocodes
+            </button>
+            <button
+              onClick={() => setActiveTab('questions')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'questions'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-questions"
+            >
+              <FiMessageSquare className="inline mr-2" />
+              Questions
+            </button>
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'reviews'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-reviews"
+            >
+              <FiStar className="inline mr-2" />
+              Reviews
+            </button>
           </div>
         </div>
       </nav>
