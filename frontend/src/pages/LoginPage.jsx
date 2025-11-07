@@ -1,10 +1,14 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
+import { useTranslation } from '../i18n/translations'
 
 function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
+  const { language } = useTheme()
+  const { t } = useTranslation(language)
   const [formData, setFormData] = useState({
     email: '',
     password: ''
