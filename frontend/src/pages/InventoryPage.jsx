@@ -75,9 +75,20 @@ function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl mb-2 text-mm-cyan uppercase">Inventory & Stock</h2>
-        <p className="comment">// Manage warehouse and stock levels</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl mb-2 text-mm-cyan uppercase">Inventory & Stock</h2>
+          <p className="comment">// Manage warehouse and stock levels</p>
+        </div>
+        {activeTab === 'fbs' && (
+          <button
+            onClick={() => setShowFBOShipmentModal(true)}
+            className="btn-primary"
+            data-testid="create-fbo-shipment-button"
+          >
+            + CREATE FBO SHIPMENT
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
