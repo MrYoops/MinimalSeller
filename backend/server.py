@@ -1304,6 +1304,85 @@ async def delete_review(
     await db.product_reviews.delete_one({'_id': ObjectId(review_id)})
     return {'message': 'Review deleted'}
 
+# ========== FBO SHIPMENTS ==========
+
+@app.post("/api/inventory/fbo-shipment")
+async def create_fbo_shipment(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Создать поставку на FBO"""
+    marketplace = data.get('marketplace')
+    warehouse = data.get('warehouse')
+    products_data = data.get('products', [])
+    
+    # Создаем документ поставки
+    shipment = {
+        'seller_id': current_user['_id'],
+        'marketplace': marketplace,
+        'warehouse': warehouse,
+        'status': 'created',
+        'products': [],
+        'created_at': datetime.utcnow()
+    }
+    
+    total_items = 0
+    
+    # Обрабатываем каждый товар
+    for prod in products_data:
+        product_id = prod.get('id')
+        quantity = int(prod.get('quantity', 0))
+        
+        if quantity <= 0:
+            continue
+        
+        # Списываем с FBS
+        inventory = await db.inventory.find_one({'product_id': ObjectId(product_id)})
+        
+        if inventory:
+            new_qty = inventory['quantity'] - quantity
+            if new_qty < 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Insufficient stock for product {prod.get('sku')}"
+                )
+            
+            # Обновляем остатки FBS
+            await db.inventory.update_one(
+                {'_id': inventory['_id']},
+                {'$set': {
+                    'quantity': new_qty,
+                    'available': new_qty - inventory['reserved']
+                }}
+            )
+            
+            # Записываем в историю
+            await db.inventory_history.insert_one({
+                'product_id': ObjectId(product_id),
+                'operation_type': 'fbo_shipment',
+                'quantity_change': -quantity,
+                'reason': f'FBO Shipment to {marketplace} - {warehouse}',
+                'user_id': current_user['_id'],
+                'created_at': datetime.utcnow()
+            })
+            
+            shipment['products'].append({
+                'product_id': product_id,
+                'sku': prod.get('sku'),
+                'name': prod.get('name'),
+                'quantity': quantity
+            })
+            
+            total_items += quantity
+    
+    result = await db.fbo_shipments.insert_one(shipment)
+    
+    return {
+        'message': f'FBO Shipment created. {total_items} items will be shipped.',
+        'id': str(result.inserted_id),
+        'total_items': total_items
+    }
+
 # Import and include product routes
 try:
     from products_routes import router as products_router
