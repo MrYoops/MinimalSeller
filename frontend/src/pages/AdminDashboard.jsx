@@ -487,6 +487,43 @@ function AdminDashboard() {
         {activeTab === 'categories' && (
           <CategoriesPage />
         )}
+
+        {activeTab === 'marketing' && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl mb-2 text-mm-cyan">MARKETING MODERATION</h2>
+              <p className="comment">// Approve or reject seller marketing activities</p>
+            </div>
+            <PromocodesPage />
+          </div>
+        )}
+
+        {activeTab === 'communication' && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl mb-2 text-mm-cyan">COMMUNICATION MODERATION</h2>
+              <p className="comment">// Moderate questions and reviews</p>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <QuestionsPage />
+              <ReviewsPage />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl mb-2 text-mm-cyan">PLATFORM ANALYTICS</h2>
+              <p className="comment">// Global analytics and insights</p>
+            </div>
+            <AnalyticsPage />
+          </div>
+        )}
+
+        {activeTab === 'cms' && (
+          <CMSPage />
+        )}
       </main>
     </div>
   )
