@@ -345,7 +345,7 @@ function SellerDashboard() {
                 className="btn-primary"
                 data-testid="add-product-button"
               >
-                + ADD PRODUCT
+                {t('addProduct')}
               </button>
             </div>
 
