@@ -5,17 +5,27 @@ import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiDollarSign } from 'react-
 function SellerDashboard() {
   const { user, logout, api } = useAuth()
   const [apiKeys, setApiKeys] = useState([])
+  const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [showAddKeyModal, setShowAddKeyModal] = useState(false)
+  const [showAddProductModal, setShowAddProductModal] = useState(false)
   const [newKey, setNewKey] = useState({
     marketplace: 'ozon',
     client_id: '',
     api_key: ''
   })
+  const [newProduct, setNewProduct] = useState({
+    sku: '',
+    name: '',
+    description: '',
+    price: '',
+    status: 'draft'
+  })
 
   useEffect(() => {
     loadApiKeys()
+    loadProducts()
   }, [])
 
   const loadApiKeys = async () => {
