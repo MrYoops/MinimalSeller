@@ -9,6 +9,8 @@ function ProductEditPage() {
   const { api } = useAuth()
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('minimalmod')
+  const [showMarketplaces, setShowMarketplaces] = useState(false)
+  const [categories, setCategories] = useState([])
   const [product, setProduct] = useState({
     sku: '',
     price: '',
