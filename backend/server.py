@@ -401,6 +401,176 @@ async def delete_api_key(
     
     return {"message": "API key deleted successfully"}
 
+# ========== PRODUCT MANAGEMENT ROUTES ==========
+from models import ProductCreate, ProductUpdate
+from utils import (
+    extract_investor_tag, generate_url_slug,
+    calculate_listing_quality_score, prepare_product_response
+)
+
+@app.get("/api/products")
+async def get_products(
+    search: Optional[str] = None,
+    category_id: Optional[str] = None,
+    tags: Optional[str] = None,
+    status: Optional[str] = None,
+    quality: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить список товаров с фильтрацией"""
+    query = {}
+    
+    # Продавец видит только свои товары
+    if current_user['role'] == 'seller':
+        query['seller_id'] = current_user['_id']
+    
+    # Поиск
+    if search:
+        query['$or'] = [
+            {'sku': {'$regex': search, '$options': 'i'}},
+            {'minimalmod.name': {'$regex': search, '$options': 'i'}}
+        ]
+    
+    # Фильтры
+    if category_id:
+        query['category_id'] = ObjectId(category_id)
+    
+    if tags:
+        tag_list = [t.strip() for t in tags.split(',')]
+        query['minimalmod.tags'] = {'$in': tag_list}
+    
+    if status:
+        query['status'] = status
+    
+    products = await db.products.find(query).skip(skip).limit(limit).to_list(length=limit)
+    
+    # Фильтр по качеству
+    if quality:
+        filtered = []
+        for p in products:
+            score = p.get('listing_quality_score', {}).get('total', 0)
+            if quality == 'high' and score >= 80:
+                filtered.append(p)
+            elif quality == 'medium' and 50 <= score < 80:
+                filtered.append(p)
+            elif quality == 'low' and score < 50:
+                filtered.append(p)
+        products = filtered
+    
+    return [prepare_product_response(p) for p in products]
+
+@app.get("/api/products/{product_id}")
+async def get_product(
+    product_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить один товар"""
+    product = await db.products.find_one({'_id': ObjectId(product_id)})\n    
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Проверка доступа
+    if current_user['role'] == 'seller' and str(product['seller_id']) != str(current_user['_id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    return prepare_product_response(product)
+
+@app.post("/api/products")
+async def create_product(
+    product_data: ProductCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Создать новый товар"""
+    # Проверка уникальности SKU
+    existing = await db.products.find_one({
+        'seller_id': current_user['_id'],
+        'sku': product_data.sku
+    })
+    
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="Product with this SKU already exists"
+        )
+    
+    # Извлечение тега инвестора
+    investor_tag = extract_investor_tag(product_data.sku)
+    if investor_tag and investor_tag not in product_data.minimalmod.tags:
+        product_data.minimalmod.tags.append(investor_tag)
+    
+    # Генерация URL slug
+    if not product_data.seo.url_slug:
+        product_data.seo.url_slug = generate_url_slug(product_data.minimalmod.name)
+    
+    # Создание документа
+    product_dict = product_data.dict()
+    product_dict['seller_id'] = current_user['_id']
+    product_dict['dates'] = {
+        'created_at': datetime.utcnow(),
+        'updated_at': datetime.utcnow(),
+        'published_at': datetime.utcnow() if product_data.status == 'active' else None
+    }
+    
+    # Расчет качества
+    product_dict['listing_quality_score'] = calculate_listing_quality_score(product_dict)
+    
+    result = await db.products.insert_one(product_dict)
+    product_dict['_id'] = result.inserted_id
+    
+    return prepare_product_response(product_dict)
+
+@app.put("/api/products/{product_id}")
+async def update_product(
+    product_id: str,
+    product_data: ProductUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Обновить товар"""
+    product = await db.products.find_one({'_id': ObjectId(product_id)})
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Проверка доступа
+    if current_user['role'] == 'seller' and str(product['seller_id']) != str(current_user['_id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    update_dict = product_data.dict(exclude_unset=True)
+    update_dict['dates'] = product.get('dates', {})
+    update_dict['dates']['updated_at'] = datetime.utcnow()
+    
+    # Пересчет качества
+    merged_product = {**product, **update_dict}
+    update_dict['listing_quality_score'] = calculate_listing_quality_score(merged_product)
+    
+    await db.products.update_one(
+        {'_id': ObjectId(product_id)},
+        {'$set': update_dict}
+    )
+    
+    updated_product = await db.products.find_one({'_id': ObjectId(product_id)})
+    return prepare_product_response(updated_product)
+
+@app.delete("/api/products/{product_id}")
+async def delete_product(
+    product_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Удалить товар"""
+    product = await db.products.find_one({'_id': ObjectId(product_id)})
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Проверка доступа
+    if current_user['role'] == 'seller' and str(product['seller_id']) != str(current_user['_id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    await db.products.delete_one({'_id': ObjectId(product_id)})
+    return {'message': 'Product deleted successfully'}
+
 # Import and include product routes
 try:
     from products_routes import router as products_router
