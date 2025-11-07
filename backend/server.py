@@ -1066,6 +1066,244 @@ async def update_cms_page(
     )
     return {'message': 'Page updated'}
 
+# ========== MARKETING & PROMOTIONS (БЛОК 7) ==========
+
+@app.get("/api/promocodes")
+async def get_promocodes(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить промокоды"""
+    query = {}
+    if current_user['role'] == 'seller':
+        query['seller_id'] = current_user['_id']
+    
+    promocodes = await db.promocodes.find(query).to_list(length=100)
+    
+    for promo in promocodes:
+        promo['id'] = str(promo.pop('_id'))
+        promo['seller_id'] = str(promo['seller_id'])
+    
+    return promocodes
+
+@app.post("/api/promocodes")
+async def create_promocode(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Создать промокод"""
+    promocode = {
+        'seller_id': current_user['_id'],
+        'code': data.get('code', '').upper(),
+        'discount_type': data.get('discount_type', 'percent'),
+        'discount_value': float(data.get('discount_value', 0)),
+        'min_order_amount': float(data.get('min_order_amount', 0)),
+        'max_uses': int(data.get('max_uses', 0)),
+        'current_uses': 0,
+        'expires_at': datetime.fromisoformat(data.get('expires_at')) if data.get('expires_at') else None,
+        'status': 'pending_approval',
+        'created_at': datetime.utcnow()
+    }
+    
+    result = await db.promocodes.insert_one(promocode)
+    return {'message': 'Promocode created, waiting for approval', 'id': str(result.inserted_id)}
+
+@app.put("/api/admin/promocodes/{promo_id}/approve")
+async def approve_promocode(
+    promo_id: str,
+    current_user: dict = Depends(require_role(UserRole.ADMIN))
+):
+    """Одобрить промокод"""
+    await db.promocodes.update_one(
+        {'_id': ObjectId(promo_id)},
+        {'$set': {'status': 'active'}}
+    )
+    return {'message': 'Promocode approved'}
+
+@app.put("/api/admin/promocodes/{promo_id}/reject")
+async def reject_promocode(
+    promo_id: str,
+    reason: str = "",
+    current_user: dict = Depends(require_role(UserRole.ADMIN))
+):
+    """Отклонить промокод"""
+    await db.promocodes.update_one(
+        {'_id': ObjectId(promo_id)},
+        {'$set': {'status': 'rejected', 'rejection_reason': reason}}
+    )
+    return {'message': 'Promocode rejected'}
+
+@app.get("/api/promotions")
+async def get_promotions(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить акции"""
+    promotions = await db.promotions.find().to_list(length=100)
+    
+    for promo in promotions:
+        promo['id'] = str(promo.pop('_id'))
+    
+    return promotions
+
+@app.post("/api/promotions/{promo_id}/participate")
+async def participate_in_promotion(
+    promo_id: str,
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Подать заявку на участие в акции"""
+    participation = {
+        'promotion_id': ObjectId(promo_id),
+        'seller_id': current_user['_id'],
+        'product_ids': [ObjectId(pid) for pid in data.get('product_ids', [])],
+        'discount': float(data.get('discount', 0)),
+        'status': 'pending_approval',
+        'created_at': datetime.utcnow()
+    }
+    
+    result = await db.promotion_participations.insert_one(participation)
+    return {'message': 'Participation request submitted', 'id': str(result.inserted_id)}
+
+# ========== COMMUNICATION (БЛОК 8) ==========
+
+@app.get("/api/questions")
+async def get_product_questions(
+    product_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить вопросы о товарах"""
+    query = {}
+    
+    if current_user['role'] == 'seller':
+        # Получаем товары продавца
+        seller_products = await db.products.find(
+            {'seller_id': current_user['_id']},
+            {'_id': 1}
+        ).to_list(length=10000)
+        product_ids = [p['_id'] for p in seller_products]
+        query['product_id'] = {'$in': product_ids}
+    
+    if product_id:
+        query['product_id'] = ObjectId(product_id)
+    
+    questions = await db.product_questions.find(query).sort('created_at', -1).to_list(length=100)
+    
+    for q in questions:
+        q['id'] = str(q.pop('_id'))
+        q['product_id'] = str(q['product_id'])
+        
+        # Добавляем информацию о товаре
+        product = await db.products.find_one({'_id': ObjectId(q['product_id'])})
+        if product:
+            q['product_name'] = product['minimalmod']['name']
+            q['product_sku'] = product['sku']
+    
+    return questions
+
+@app.post("/api/questions/{question_id}/answer")
+async def answer_question(
+    question_id: str,
+    answer: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Ответить на вопрос"""
+    question = await db.product_questions.find_one({'_id': ObjectId(question_id)})
+    
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    # Проверка доступа (продавец может отвечать только на вопросы о своих товарах)
+    product = await db.products.find_one({'_id': question['product_id']})
+    if current_user['role'] == 'seller' and str(product['seller_id']) != str(current_user['_id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    await db.product_questions.update_one(
+        {'_id': ObjectId(question_id)},
+        {'$set': {
+            'answer': answer,
+            'answered_at': datetime.utcnow(),
+            'status': 'answered'
+        }}
+    )
+    
+    return {'message': 'Answer posted'}
+
+@app.get("/api/reviews")
+async def get_product_reviews(
+    product_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить отзывы о товарах"""
+    query = {}
+    
+    if current_user['role'] == 'seller':
+        seller_products = await db.products.find(
+            {'seller_id': current_user['_id']},
+            {'_id': 1}
+        ).to_list(length=10000)
+        product_ids = [p['_id'] for p in seller_products]
+        query['product_id'] = {'$in': product_ids}
+    
+    if product_id:
+        query['product_id'] = ObjectId(product_id)
+    
+    reviews = await db.product_reviews.find(query).sort('created_at', -1).to_list(length=100)
+    
+    for r in reviews:
+        r['id'] = str(r.pop('_id'))
+        r['product_id'] = str(r['product_id'])
+        
+        product = await db.products.find_one({'_id': ObjectId(r['product_id'])})
+        if product:
+            r['product_name'] = product['minimalmod']['name']
+            r['product_sku'] = product['sku']
+    
+    return reviews
+
+@app.post("/api/reviews/{review_id}/reply")
+async def reply_to_review(
+    review_id: str,
+    reply: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Ответить на отзыв"""
+    review = await db.product_reviews.find_one({'_id': ObjectId(review_id)})
+    
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    product = await db.products.find_one({'_id': review['product_id']})
+    if current_user['role'] == 'seller' and str(product['seller_id']) != str(current_user['_id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    await db.product_reviews.update_one(
+        {'_id': ObjectId(review_id)},
+        {'$set': {
+            'seller_reply': reply,
+            'replied_at': datetime.utcnow(),
+            'status': 'answered'
+        }}
+    )
+    
+    return {'message': 'Reply posted'}
+
+@app.delete("/api/admin/questions/{question_id}")
+async def delete_question(
+    question_id: str,
+    current_user: dict = Depends(require_role(UserRole.ADMIN))
+):
+    """Удалить вопрос (модерация)"""
+    await db.product_questions.delete_one({'_id': ObjectId(question_id)})
+    return {'message': 'Question deleted'}
+
+@app.delete("/api/admin/reviews/{review_id}")
+async def delete_review(
+    review_id: str,
+    current_user: dict = Depends(require_role(UserRole.ADMIN))
+):
+    """Удалить отзыв (модерация)"""
+    await db.product_reviews.delete_one({'_id': ObjectId(review_id)})
+    return {'message': 'Review deleted'}
+
 # Import and include product routes
 try:
     from products_routes import router as products_router
