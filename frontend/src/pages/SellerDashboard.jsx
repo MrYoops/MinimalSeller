@@ -361,13 +361,13 @@ function SellerDashboard() {
                   <table className="w-full" data-testid="products-table">
                     <thead>
                       <tr className="border-b border-mm-border">
-                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">SKU</th>
-                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Name</th>
-                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Price</th>
-                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Status</th>
-                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Quality</th>
-                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Tags</th>
-                        <th className="text-right py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Actions</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">{t('sku')}</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">{t('name')}</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">{t('price')}</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">{t('status')}</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">{t('quality')}</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">{t('tags')}</th>
+                        <th className="text-right py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">{t('actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
