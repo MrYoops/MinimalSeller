@@ -245,6 +245,104 @@ function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {activeTab === 'products' && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl mb-2 text-mm-cyan">ALL PRODUCTS</h2>
+              <p className="comment">// View all products from all sellers</p>
+            </div>
+
+            {products.length === 0 ? (
+              <div className="card-neon text-center py-12">
+                <FiPackage className="mx-auto text-mm-text-tertiary mb-4" size={48} />
+                <p className="text-mm-text-secondary mb-2">No products in system</p>
+                <p className="comment">// Sellers haven't created any products yet</p>
+              </div>
+            ) : (
+              <div className="card-neon overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full" data-testid="admin-products-table">
+                    <thead>
+                      <tr className="border-b border-mm-border">
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Seller</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">SKU</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Name</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Price</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Status</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Quality</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Tags</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products.map((product) => (
+                        <tr key={product.id} className="border-b border-mm-border hover:bg-mm-gray transition-colors">
+                          <td className="py-4 px-4 font-mono text-sm text-mm-text-secondary">
+                            {product.seller_id.substring(0, 8)}...
+                          </td>
+                          <td className="py-4 px-4 font-mono text-sm text-mm-cyan">{product.sku}</td>
+                          <td className="py-4 px-4 font-mono text-sm">{product.minimalmod.name}</td>
+                          <td className="py-4 px-4 font-mono text-sm">₽{product.price.toLocaleString()}</td>
+                          <td className="py-4 px-4">
+                            <span className={
+                              product.status === 'active' ? 'status-active' :
+                              product.status === 'draft' ? 'status-pending' :
+                              'status-error'
+                            }>
+                              {product.status}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className={`font-mono text-sm ${getQualityColor(product.listing_quality_score.total)}`}>
+                              {Math.round(product.listing_quality_score.total)}/100
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex flex-wrap gap-1">
+                              {product.minimalmod.tags.map((tag, idx) => (
+                                <span key={idx} className="px-2 py-1 text-xs font-mono border border-mm-cyan text-mm-cyan">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-6 p-4 bg-mm-darker border-t border-mm-border">
+                  <p className="comment mb-2">// Statistics:</p>
+                  <div className="grid grid-cols-4 gap-4 text-center">
+                    <div>
+                      <p className="text-2xl font-bold text-mm-cyan">{products.length}</p>
+                      <p className="text-xs text-mm-text-secondary">Total Products</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-mm-green">
+                        {products.filter(p => p.status === 'active').length}
+                      </p>
+                      <p className="text-xs text-mm-text-secondary">Active</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-mm-yellow">
+                        {products.filter(p => p.status === 'draft').length}
+                      </p>
+                      <p className="text-xs text-mm-text-secondary">Drafts</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-mm-purple">
+                        {Math.round(products.reduce((sum, p) => sum + p.listing_quality_score.total, 0) / products.length || 0)}
+                      </p>
+                      <p className="text-xs text-mm-text-secondary">Avg Quality</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   )
