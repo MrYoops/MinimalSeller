@@ -132,6 +132,18 @@ function AdminDashboard() {
               {t('sellers')}
             </button>
             <button
+              onClick={() => setActiveTab('api-keys')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'api-keys'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-api-keys"
+            >
+              <FiKey className="inline mr-2" />
+              API Keys
+            </button>
+            <button
               onClick={() => setActiveTab('products')}
               className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
                 activeTab === 'products'
