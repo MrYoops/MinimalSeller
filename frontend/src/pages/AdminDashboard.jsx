@@ -42,6 +42,21 @@ function AdminDashboard() {
     }
   }
 
+  const loadProducts = async () => {
+    try {
+      const response = await api.get('/api/products')
+      setProducts(response.data)
+    } catch (error) {
+      console.error('Failed to load products:', error)
+    }
+  }
+
+  const getQualityColor = (score) => {
+    if (score >= 80) return 'text-mm-green'
+    if (score >= 50) return 'text-mm-yellow'
+    return 'text-mm-red'
+  }
+
   return (
     <div className="min-h-screen bg-mm-black">
       {/* Header */}
