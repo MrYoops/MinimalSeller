@@ -57,6 +57,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      console.log('Attempting login to:', `${API_URL}/api/auth/login`)
       const response = await api.post('/api/auth/login', { email, password })
       const { access_token, user: userData } = response.data
       
@@ -66,9 +67,11 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true }
     } catch (error) {
+      console.error('Login error:', error)
+      const errorMessage = error.response?.data?.detail || error.message || 'Login failed - Network error'
       return {
         success: false,
-        error: error.response?.data?.detail || 'Login failed'
+        error: errorMessage
       }
     }
   }
