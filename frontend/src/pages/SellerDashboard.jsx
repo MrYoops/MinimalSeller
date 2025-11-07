@@ -406,7 +406,7 @@ function SellerDashboard() {
                 <p className="comment">{t('manageProducts')}</p>
               </div>
               <button
-                onClick={() => setShowAddProductModal(true)}
+                onClick={() => window.location.href = '/products/new/edit'}
                 className="btn-primary"
                 data-testid="add-product-button"
               >
