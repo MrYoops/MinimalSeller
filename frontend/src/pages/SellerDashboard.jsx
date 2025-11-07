@@ -251,18 +251,6 @@ function SellerDashboard() {
               {t('finance')}
             </button>
             <button
-              onClick={() => setActiveTab('reports')}
-              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
-                activeTab === 'reports'
-                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                  : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-              data-testid="tab-reports"
-            >
-              <FiFileText className="inline mr-2" />
-              Reports
-            </button>
-            <button
               onClick={() => setActiveTab('balance')}
               className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
                 activeTab === 'balance'
@@ -273,78 +261,6 @@ function SellerDashboard() {
             >
               <FiDollarSign className="inline mr-2" />
               {t('balance')}
-            </button>
-            <button
-              onClick={() => setActiveTab('promocodes')}
-              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
-                activeTab === 'promocodes'
-                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                  : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-              data-testid="tab-promocodes"
-            >
-              <FiTag className="inline mr-2" />
-              {t('promocodes')}
-            </button>
-            <button
-              onClick={() => setActiveTab('promotions')}
-              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
-                activeTab === 'promotions'
-                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                  : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-              data-testid="tab-promotions"
-            >
-              <FiPercent className="inline mr-2" />
-              Promotions
-            </button>
-            <button
-              onClick={() => setActiveTab('returns')}
-              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
-                activeTab === 'returns'
-                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                  : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-              data-testid="tab-returns"
-            >
-              <FiRotateCcw className="inline mr-2" />
-              Returns
-            </button>
-            <button
-              onClick={() => setActiveTab('questions')}
-              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
-                activeTab === 'questions'
-                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                  : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-              data-testid="tab-questions"
-            >
-              <FiMessageSquare className="inline mr-2" />
-              {t('questions')}
-            </button>
-            <button
-              onClick={() => setActiveTab('reviews')}
-              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
-                activeTab === 'reviews'
-                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                  : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-              data-testid="tab-reviews"
-            >
-              <FiStar className="inline mr-2" />
-              {t('reviews')}
-            </button>
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
-                activeTab === 'analytics'
-                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                  : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-              data-testid="tab-analytics"
-            >
-              <FiTrendingUp className="inline mr-2" />
-              Analytics
             </button>
           </div>
         </div>
