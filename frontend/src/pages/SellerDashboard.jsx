@@ -219,6 +219,30 @@ function SellerDashboard() {
               <FiBox className="inline mr-2" />
               {t('inventory')}
             </button>
+            <button
+              onClick={() => setActiveTab('finance')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'finance'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-finance"
+            >
+              <FiPieChart className="inline mr-2" />
+              Finance
+            </button>
+            <button
+              onClick={() => setActiveTab('balance')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'balance'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-balance"
+            >
+              <FiDollarSign className="inline mr-2" />
+              Balance
+            </button>
           </div>
         </div>
       </nav>
