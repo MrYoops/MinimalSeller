@@ -451,24 +451,8 @@ function SellerDashboard() {
           <FinanceDashboard />
         )}
 
-        {activeTab === 'reports' && (
-          <FinanceReportsPage />
-        )}
-
         {activeTab === 'balance' && (
           <PayoutsPage />
-        )}
-
-        {activeTab === 'promocodes' && (
-          <PromocodesPage />
-        )}
-
-        {activeTab === 'promotions' && (
-          <PromotionsPage />
-        )}
-
-        {activeTab === 'returns' && (
-          <ReturnsPage />
         )}
 
         {activeTab === 'questions' && (
