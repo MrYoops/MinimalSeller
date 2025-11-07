@@ -309,22 +309,35 @@ function OrderDetailPage() {
                     Create CDEK Label
                   </button>
                 ) : (
-                  <div className="space-y-2">
+                  <>
+                    <div className="mb-4 p-3 bg-mm-darker border border-mm-cyan">
+                      <p className="comment text-xs mb-1">// Tracking Number:</p>
+                      <p className="font-mono text-lg text-mm-cyan">{order.shipping.tracking_number}</p>
+                    </div>
                     <button
                       onClick={printLabel}
                       className="btn-secondary w-full"
+                      data-testid="print-label-button"
                     >
                       <FiPrinter className="inline mr-2" />
-                      Print Label
+                      Print Shipping Label
                     </button>
                     <button
                       onClick={printLabel}
                       className="btn-secondary w-full"
+                      data-testid="print-picking-list-button"
                     >
                       <FiPrinter className="inline mr-2" />
                       Print Picking List
                     </button>
-                  </div>
+                    <button
+                      onClick={() => window.open(`https://www.cdek.ru/track.html?order_id=${order.shipping.tracking_number}`, '_blank')}
+                      className="btn-secondary w-full text-mm-cyan border-mm-cyan"
+                      data-testid="track-cdek-button"
+                    >
+                      🔍 Track on CDEK Website
+                    </button>
+                  </>
                 )}
               </div>
             </div>
