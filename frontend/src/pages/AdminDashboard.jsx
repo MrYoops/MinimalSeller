@@ -418,6 +418,18 @@ function AdminDashboard() {
             <InventoryPage />
           </div>
         )}
+
+        {activeTab === 'dashboard' && (
+          <AdminGlobalDashboard />
+        )}
+
+        {activeTab === 'payouts' && (
+          <PayoutsPage isAdmin={true} />
+        )}
+
+        {activeTab === 'categories' && (
+          <CategoriesPage />
+        )}
       </main>
     </div>
   )
