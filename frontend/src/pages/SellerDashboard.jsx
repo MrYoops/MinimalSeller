@@ -379,55 +379,7 @@ function SellerDashboard() {
         )}
 
         {activeTab === 'api-keys' && (
-          <div>
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl mb-2 text-mm-cyan">API KEYS</h2>
-                <p className="comment">// Manage marketplace integrations</p>
-              </div>
-              <button
-                onClick={() => setShowAddKeyModal(true)}
-                className="btn-primary"
-                data-testid="add-api-key-button"
-              >
-                + ADD KEY
-              </button>
-            </div>
-
-            {loading ? (
-              <div className="text-center py-12">
-                <p className="text-mm-cyan animate-pulse">// LOADING...</p>
-              </div>
-            ) : apiKeys.length === 0 ? (
-              <div className="card-neon text-center py-12">
-                <FiKey className="mx-auto text-mm-text-tertiary mb-4" size={48} />
-                <p className="text-mm-text-secondary mb-2">No API keys added yet</p>
-                <p className="comment">// Click "ADD KEY" to connect a marketplace</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {apiKeys.map((key) => (
-                  <div key={key.id} className="card-neon flex items-center justify-between" data-testid={`api-key-${key.id}`}>
-                    <div>
-                      <p className="text-mm-cyan font-mono uppercase text-lg mb-1">{key.marketplace}</p>
-                      <p className="text-sm text-mm-text-secondary">Client ID: {key.client_id}</p>
-                      <p className="text-sm text-mm-text-secondary font-mono">API Key: {key.api_key_masked}</p>
-                      <p className="comment text-xs mt-2">
-                        Added: {new Date(key.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => deleteApiKey(key.id)}
-                      className="btn-secondary text-mm-red border-mm-red hover:bg-mm-red/10"
-                      data-testid={`delete-api-key-${key.id}`}
-                    >
-                      DELETE
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <APIKeysPage />
         )}
 
         {activeTab === 'products' && (
