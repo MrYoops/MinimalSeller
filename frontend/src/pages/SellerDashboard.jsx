@@ -136,6 +136,7 @@ function SellerDashboard() {
                 <p className="text-sm text-mm-text-secondary">// {user?.email}</p>
                 <p className="text-xs comment">{user?.full_name}</p>
               </div>
+              <SettingsDropdown />
               <button
                 onClick={logout}
                 className="btn-secondary p-2"
