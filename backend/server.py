@@ -572,6 +572,237 @@ async def delete_product(
     await db.products.delete_one({'_id': ObjectId(product_id)})
     return {'message': 'Product deleted successfully'}
 
+# ========== INVENTORY MANAGEMENT ROUTES ==========
+
+@app.get("/api/inventory")
+async def get_inventory(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить остатки на складе FBS"""
+    query = {}
+    if current_user['role'] == 'seller':
+        query['seller_id'] = current_user['_id']
+    
+    inventory = await db.inventory.find(query).to_list(length=1000)
+    
+    # Обогащаем данными о товарах
+    for item in inventory:
+        product = await db.products.find_one({'_id': item['product_id']})
+        if product:
+            item['product_name'] = product['minimalmod']['name']
+            item['product_image'] = product['minimalmod']['images'][0] if product['minimalmod']['images'] else ''
+        item['id'] = str(item.pop('_id'))
+        item['product_id'] = str(item['product_id'])
+        item['seller_id'] = str(item['seller_id'])
+    
+    return inventory
+
+@app.get("/api/inventory/fbo")
+async def get_fbo_inventory(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить остатки на складах маркетплейсов (FBO)"""
+    query = {}
+    if current_user['role'] == 'seller':
+        query['seller_id'] = current_user['_id']
+    
+    fbo_inventory = await db.fbo_inventory.find(query).to_list(length=1000)
+    
+    for item in fbo_inventory:
+        product = await db.products.find_one({'_id': item['product_id']})
+        if product:
+            item['product_name'] = product['minimalmod']['name']
+        item['id'] = str(item.pop('_id'))
+        item['product_id'] = str(item['product_id'])
+        item['seller_id'] = str(item['seller_id'])
+    
+    return fbo_inventory
+
+@app.post("/api/inventory/{product_id}/adjust")
+async def adjust_inventory(
+    product_id: str,
+    quantity_change: int,
+    reason: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Ручная корректировка остатков"""
+    product = await db.products.find_one({'_id': ObjectId(product_id)})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Проверка доступа
+    if current_user['role'] == 'seller' and str(product['seller_id']) != str(current_user['_id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Найти или создать запись в inventory
+    inventory = await db.inventory.find_one({
+        'product_id': ObjectId(product_id),
+        'seller_id': product['seller_id']
+    })
+    
+    if not inventory:
+        inventory = {
+            'product_id': ObjectId(product_id),
+            'seller_id': product['seller_id'],
+            'sku': product['sku'],
+            'quantity': 0,
+            'reserved': 0,
+            'available': 0,
+            'alert_threshold': 10
+        }
+        result = await db.inventory.insert_one(inventory)
+        inventory['_id'] = result.inserted_id
+    
+    # Обновить остатки
+    new_quantity = inventory['quantity'] + quantity_change
+    new_available = new_quantity - inventory['reserved']
+    
+    if new_quantity < 0:
+        raise HTTPException(status_code=400, detail="Insufficient stock")
+    
+    await db.inventory.update_one(
+        {'_id': inventory['_id']},
+        {'$set': {
+            'quantity': new_quantity,
+            'available': new_available
+        }}
+    )
+    
+    # Записать в историю
+    await db.inventory_history.insert_one({
+        'product_id': ObjectId(product_id),
+        'operation_type': 'manual_in' if quantity_change > 0 else 'manual_out',
+        'quantity_change': quantity_change,
+        'reason': reason,
+        'user_id': current_user['_id'],
+        'created_at': datetime.utcnow()
+    })
+    
+    return {'message': 'Inventory adjusted', 'new_quantity': new_quantity}
+
+@app.get("/api/inventory/history")
+async def get_inventory_history(
+    product_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить историю движений по складу"""
+    query = {}
+    
+    if product_id:
+        query['product_id'] = ObjectId(product_id)
+    
+    # Для продавца фильтруем через его товары
+    if current_user['role'] == 'seller':
+        seller_products = await db.products.find(
+            {'seller_id': current_user['_id']},
+            {'_id': 1}
+        ).to_list(length=10000)
+        product_ids = [p['_id'] for p in seller_products]
+        query['product_id'] = {'$in': product_ids}
+    
+    history = await db.inventory_history.find(query).sort('created_at', -1).limit(100).to_list(length=100)
+    
+    for item in history:
+        product = await db.products.find_one({'_id': item['product_id']})
+        if product:
+            item['product_name'] = product['minimalmod']['name']
+            item['sku'] = product['sku']
+        item['id'] = str(item.pop('_id'))
+        item['product_id'] = str(item['product_id'])
+        item['user_id'] = str(item['user_id'])
+    
+    return history
+
+# ========== ORDER MANAGEMENT ROUTES ==========
+
+@app.get("/api/orders")
+async def get_orders(
+    status: Optional[str] = None,
+    source: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить список заказов"""
+    query = {}
+    
+    if current_user['role'] == 'seller':
+        query['seller_id'] = current_user['_id']
+    
+    if status:
+        query['status'] = status
+    
+    if source:
+        query['source'] = source
+    
+    orders = await db.orders.find(query).sort('dates.created_at', -1).to_list(length=100)
+    
+    for order in orders:
+        order['id'] = str(order.pop('_id'))
+        order['seller_id'] = str(order['seller_id'])
+    
+    return orders
+
+@app.get("/api/orders/{order_id}")
+async def get_order(
+    order_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить детали заказа"""
+    order = await db.orders.find_one({'_id': ObjectId(order_id)})
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Проверка доступа
+    if current_user['role'] == 'seller' and str(order['seller_id']) != str(current_user['_id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    order['id'] = str(order.pop('_id'))
+    order['seller_id'] = str(order['seller_id'])
+    
+    return order
+
+@app.put("/api/orders/{order_id}/status")
+async def update_order_status(
+    order_id: str,
+    status: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Изменить статус заказа"""
+    order = await db.orders.find_one({'_id': ObjectId(order_id)})
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Проверка доступа
+    if current_user['role'] == 'seller' and str(order['seller_id']) != str(current_user['_id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    await db.orders.update_one(
+        {'_id': ObjectId(order_id)},
+        {'$set': {'status': status, 'dates.updated_at': datetime.utcnow()}}
+    )
+    
+    return {'message': 'Order status updated'}
+
+@app.get("/api/returns")
+async def get_returns(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить список возвратов"""
+    query = {}
+    
+    if current_user['role'] == 'seller':
+        query['seller_id'] = current_user['_id']
+    
+    returns = await db.returns.find(query).sort('dates.created_at', -1).to_list(length=100)
+    
+    for ret in returns:
+        ret['id'] = str(ret.pop('_id'))
+        ret['order_id'] = str(ret['order_id'])
+        ret['seller_id'] = str(ret['seller_id'])
+    
+    return returns
+
 # Import and include product routes
 try:
     from products_routes import router as products_router
