@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { FiSave, FiX, FiImage, FiTag } from 'react-icons/fi'
+import { FiSave, FiX, FiImage, FiTag, FiPackage } from 'react-icons/fi'
 
 function ProductEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { api } = useAuth()
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('minimalmod')
-  const [showMarketplaces, setShowMarketplaces] = useState(false)
+  const [activeMarketplace, setActiveMarketplace] = useState('minimalmod')
   const [categories, setCategories] = useState([])
   const [product, setProduct] = useState({
     sku: '',
     price: '',
+    cogs: '',
     status: 'draft',
+    category_id: '',
     visibility: {
       show_on_minimalmod: true,
       show_in_search: true,
@@ -35,9 +36,33 @@ function ProductEditPage() {
     },
     marketplaces: {
       images: [],
-      ozon: { enabled: false, name: '', description: '', category_id: '', attributes: {} },
-      wildberries: { enabled: false, name: '', description: '', category_id: '', attributes: {} },
-      yandex_market: { enabled: false, name: '', description: '', category_id: '', attributes: {} }
+      ozon: {
+        enabled: false,
+        product_id: '',
+        name: '',
+        description: '',
+        price: '',
+        category_id: '',
+        attributes: {}
+      },
+      wildberries: {
+        enabled: false,
+        product_id: '',
+        name: '',
+        description: '',
+        price: '',
+        category_id: '',
+        attributes: {}
+      },
+      yandex_market: {
+        enabled: false,
+        product_id: '',
+        name: '',
+        description: '',
+        price: '',
+        category_id: '',
+        attributes: {}
+      }
     }
   })
 
@@ -108,6 +133,53 @@ function ProductEditPage() {
     })
   }
 
+  const addAttribute = (marketplace, key, value) => {
+    if (marketplace === 'minimalmod') {
+      setProduct({
+        ...product,
+        minimalmod: {
+          ...product.minimalmod,
+          attributes: {...product.minimalmod.attributes, [key]: value}
+        }
+      })
+    } else {
+      setProduct({
+        ...product,
+        marketplaces: {
+          ...product.marketplaces,
+          [marketplace]: {
+            ...product.marketplaces[marketplace],
+            attributes: {...product.marketplaces[marketplace].attributes, [key]: value}
+          }
+        }
+      })
+    }
+  }
+
+  const removeAttribute = (marketplace, key) => {
+    if (marketplace === 'minimalmod') {
+      const newAttrs = {...product.minimalmod.attributes}
+      delete newAttrs[key]
+      setProduct({
+        ...product,
+        minimalmod: {...product.minimalmod, attributes: newAttrs}
+      })
+    } else {
+      const newAttrs = {...product.marketplaces[marketplace].attributes}
+      delete newAttrs[key]
+      setProduct({
+        ...product,
+        marketplaces: {
+          ...product.marketplaces,
+          [marketplace]: {
+            ...product.marketplaces[marketplace],
+            attributes: newAttrs
+          }
+        }
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-mm-black flex items-center justify-center">
@@ -123,24 +195,16 @@ function ProductEditPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <h1 className="text-2xl font-bold text-mm-cyan uppercase">
-              {id === 'new' ? 'Create Product' : 'Edit Product'}
+              {id === 'new' ? 'CREATE PRODUCT' : 'EDIT PRODUCT'}
             </h1>
             <div className="flex items-center space-x-4">
-              <button
-                onClick={handleSave}
-                className="btn-primary"
-                data-testid="save-product-button"
-              >
+              <button onClick={handleSave} className="btn-primary">
                 <FiSave className="inline mr-2" />
-                Save Product
+                SAVE PRODUCT
               </button>
-              <button
-                onClick={() => navigate(-1)}
-                className="btn-secondary"
-                data-testid="cancel-button"
-              >
+              <button onClick={() => navigate(-1)} className="btn-secondary">
                 <FiX className="inline mr-2" />
-                Cancel
+                CANCEL
               </button>
             </div>
           </div>
@@ -148,32 +212,77 @@ function ProductEditPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Marketplace Switcher */}
+        <div className="mb-6">
+          <p className="comment mb-3">// Select where to publish this product:</p>
+          <div className="flex space-x-4">
+            <button
+              onClick={() => setActiveMarketplace('minimalmod')}
+              className={`px-6 py-3 border-2 font-mono uppercase transition-all ${
+                activeMarketplace === 'minimalmod'
+                  ? 'border-mm-purple text-mm-purple bg-mm-purple/10'
+                  : 'border-mm-border text-mm-text-secondary hover:border-mm-cyan'
+              }`}
+            >
+              <FiPackage className="inline mr-2" />
+              ОСНОВНОЙ САЙТ
+            </button>
+            <button
+              onClick={() => setActiveMarketplace('ozon')}
+              className={`px-6 py-3 border-2 font-mono uppercase transition-all ${
+                activeMarketplace === 'ozon'
+                  ? 'border-mm-blue text-mm-blue bg-mm-blue/10'
+                  : 'border-mm-border text-mm-text-secondary hover:border-mm-cyan'
+              }`}
+            >
+              OZON
+            </button>
+            <button
+              onClick={() => setActiveMarketplace('wildberries')}
+              className={`px-6 py-3 border-2 font-mono uppercase transition-all ${
+                activeMarketplace === 'wildberries'
+                  ? 'border-mm-purple text-mm-purple bg-mm-purple/10'
+                  : 'border-mm-border text-mm-text-secondary hover:border-mm-cyan'
+              }`}
+            >
+              WILDBERRIES
+            </button>
+            <button
+              onClick={() => setActiveMarketplace('yandex_market')}
+              className={`px-6 py-3 border-2 font-mono uppercase transition-all ${
+                activeMarketplace === 'yandex_market'
+                  ? 'border-mm-yellow text-mm-yellow bg-mm-yellow/10'
+                  : 'border-mm-border text-mm-text-secondary hover:border-mm-cyan'
+              }`}
+            >
+              ЯНДЕКС.МАРКЕТ
+            </button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content - Left */}
+          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* MinimalMod Data */}
-            {activeTab === 'minimalmod' && (
-              <div className="space-y-6">
-                {/* Basic Info */}
+            {/* MinimalMod Section */}
+            {activeMarketplace === 'minimalmod' && (
+              <>
                 <div className="card-neon">
-                  <h3 className="text-xl mb-4 text-mm-cyan uppercase">Basic Information</h3>
-                  
+                  <h3 className="text-xl mb-4 text-mm-cyan uppercase">ОСНОВНАЯ ИНФОРМАЦИЯ</h3>
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">SKU *</label>
+                        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">SKU (Артикул) *</label>
                         <input
                           type="text"
                           value={product.sku}
                           onChange={(e) => setProduct({...product, sku: e.target.value})}
                           className="input-neon w-full"
                           placeholder="PRODUCT-NAME-db15"
-                          data-testid="sku-input"
                         />
-                        <p className="comment text-xs mt-1">// Unique product identifier</p>
+                        <p className="comment text-xs mt-1">// Уникальный идентификатор товара</p>
                       </div>
                       <div>
-                        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Price *</label>
+                        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Цена *</label>
                         <input
                           type="number"
                           step="0.01"
@@ -181,13 +290,12 @@ function ProductEditPage() {
                           onChange={(e) => setProduct({...product, price: parseFloat(e.target.value)})}
                           className="input-neon w-full"
                           placeholder="1500.00"
-                          data-testid="price-input"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Name *</label>
+                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Название товара *</label>
                       <input
                         type="text"
                         value={product.minimalmod.name}
@@ -196,13 +304,12 @@ function ProductEditPage() {
                           minimalmod: {...product.minimalmod, name: e.target.value}
                         })}
                         className="input-neon w-full"
-                        placeholder="Product Name"
-                        data-testid="name-input"
+                        placeholder="Название товара"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Variant Name</label>
+                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Вариант</label>
                       <input
                         type="text"
                         value={product.minimalmod.variant_name}
@@ -211,12 +318,12 @@ function ProductEditPage() {
                           minimalmod: {...product.minimalmod, variant_name: e.target.value}
                         })}
                         className="input-neon w-full"
-                        placeholder="e.g. Red, Large"
+                        placeholder="Например: Красный, Размер M"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Description</label>
+                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Описание</label>
                       <textarea
                         value={product.minimalmod.description}
                         onChange={(e) => setProduct({
@@ -224,203 +331,193 @@ function ProductEditPage() {
                           minimalmod: {...product.minimalmod, description: e.target.value}
                         })}
                         className="input-neon w-full"
-                        rows="6"
-                        placeholder="Detailed product description..."
-                        data-testid="description-input"
+                        rows="8"
+                        placeholder="Подробное описание товара для основного сайта..."
                       />
+                      <p className="comment text-xs mt-1">// Описание для MinimalMod сайта</p>
                     </div>
 
-                    {/* Tags */}
                     <div>
-                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">
-                        <FiTag className="inline mr-2" />
-                        Tags
-                      </label>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {product.minimalmod.tags.map((tag, idx) => (
-                          <span
-                            key={idx}
-                            className="px-3 py-1 text-sm font-mono border border-mm-cyan text-mm-cyan flex items-center"
-                          >
-                            {tag}
-                            <button
-                              onClick={() => removeTag(tag)}
-                              className="ml-2 text-mm-red hover:text-mm-red/80"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                      <input
-                        type="text"
-                        className="input-neon w-full"
-                        placeholder="Add tag and press Enter"
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            addTag(e.target.value.trim())
-                            e.target.value = ''
-                          }
-                        }}
-                      />
-                      <p className="comment text-xs mt-1">// Tags extracted from SKU will be added automatically</p>
-                    </div>
-
-                    {/* Attributes */}
-                    <div>
-                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">
-                        Attributes (Key-Value)
-                      </label>
-                      <div className="space-y-2 mb-2">
-                        {Object.entries(product.minimalmod.attributes).map(([key, value]) => (
-                          <div key={key} className="flex items-center space-x-2">
-                            <input
-                              type="text"
-                              value={key}
-                              className="input-neon flex-1"
-                              readOnly
-                            />
-                            <span className="text-mm-text-secondary">=</span>
-                            <input
-                              type="text"
-                              value={value}
-                              className="input-neon flex-1"
-                              readOnly
-                            />
-                            <button
-                              onClick={() => {
-                                const newAttrs = {...product.minimalmod.attributes}
-                                delete newAttrs[key]
-                                setProduct({
-                                  ...product,
-                                  minimalmod: {...product.minimalmod, attributes: newAttrs}
-                                })
-                              }}
-                              className="text-mm-red hover:text-mm-red/80"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          id="attr-key"
-                          className="input-neon flex-1"
-                          placeholder="Key (e.g., Color)"
-                        />
-                        <span className="text-mm-text-secondary">=</span>
-                        <input
-                          type="text"
-                          id="attr-value"
-                          className="input-neon flex-1"
-                          placeholder="Value (e.g., Black)"
-                        />
-                        <button
-                          onClick={() => {
-                            const keyInput = document.getElementById('attr-key')
-                            const valueInput = document.getElementById('attr-value')
-                            if (keyInput.value && valueInput.value) {
-                              setProduct({
-                                ...product,
-                                minimalmod: {
-                                  ...product.minimalmod,
-                                  attributes: {
-                                    ...product.minimalmod.attributes,
-                                    [keyInput.value]: valueInput.value
-                                  }
-                                }
-                              })
-                              keyInput.value = ''
-                              valueInput.value = ''
-                            }
-                          }}
-                          className="btn-secondary px-3 py-2"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <p className="comment text-xs mt-1">// Add product characteristics</p>
-                    </div>
-
-                    {/* Category */}
-                    <div>
-                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Category</label>
+                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Категория</label>
                       <select
                         value={product.category_id || ''}
                         onChange={(e) => setProduct({...product, category_id: e.target.value})}
                         className="input-neon w-full"
                       >
-                        <option value="">No Category</option>
+                        <option value="">Выберите категорию</option>
                         {categories.map((cat) => (
                           <option key={cat.id} value={cat.id}>{cat.name}</option>
                         ))}
                       </select>
                     </div>
+
+                    <div>
+                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Себестоимость (COGS)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={product.cogs || ''}
+                        onChange={(e) => setProduct({...product, cogs: parseFloat(e.target.value)})}
+                        className="input-neon w-full"
+                        placeholder="800.00"
+                      />
+                      <p className="comment text-xs mt-1">// Для расчета прибыли в финансовой аналитике</p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Show Marketplaces Button */}
-                <button
-                  onClick={() => setShowMarketplaces(!showMarketplaces)}
-                  className="btn-secondary w-full"
-                >
-                  {showMarketplaces ? 'Hide' : 'Show'} Marketplace Parameters
-                </button>
-
-                {/* Images */}
+                {/* Images for MinimalMod */}
                 <div className="card-neon">
                   <h3 className="text-xl mb-4 text-mm-cyan uppercase">
                     <FiImage className="inline mr-2" />
-                    Images (up to 8)
+                    Изображения для MinimalMod (до 8 фото)
                   </h3>
-                  <p className="comment mb-4">// Enter image URLs (one per line)</p>
-                  <textarea
-                    value={product.minimalmod.images.join('\n')}
-                    onChange={(e) => setProduct({
-                      ...product,
-                      minimalmod: {
-                        ...product.minimalmod,
-                        images: e.target.value.split('\n').filter(url => url.trim())
-                      }
-                    })}
-                    className="input-neon w-full"
-                    rows="4"
-                    placeholder="https://example.com/image1.jpg"
-                  />
+                  <div className="space-y-2">
+                    {product.minimalmod.images.map((url, idx) => (
+                      <div key={idx} className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={url}
+                          onChange={(e) => {
+                            const newImages = [...product.minimalmod.images]
+                            newImages[idx] = e.target.value
+                            setProduct({
+                              ...product,
+                              minimalmod: {...product.minimalmod, images: newImages}
+                            })
+                          }}
+                          className="input-neon flex-1"
+                          placeholder="https://example.com/image.jpg"
+                        />
+                        <button
+                          onClick={() => {
+                            setProduct({
+                              ...product,
+                              minimalmod: {
+                                ...product.minimalmod,
+                                images: product.minimalmod.images.filter((_, i) => i !== idx)
+                              }
+                            })
+                          }}
+                          className="text-mm-red hover:text-mm-red/80"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    {product.minimalmod.images.length < 8 && (
+                      <button
+                        onClick={() => {
+                          setProduct({
+                            ...product,
+                            minimalmod: {
+                              ...product.minimalmod,
+                              images: [...product.minimalmod.images, '']
+                            }
+                          })
+                        }}
+                        className="btn-secondary w-full"
+                      >
+                        + Добавить изображение
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+
+                {/* Tags */}
+                <div className="card-neon">
+                  <h3 className="text-xl mb-4 text-mm-cyan uppercase">
+                    <FiTag className="inline mr-2" />
+                    Теги (не идут в название)
+                  </h3>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {product.minimalmod.tags.map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1 text-sm font-mono border border-mm-cyan text-mm-cyan flex items-center"
+                      >
+                        {tag}
+                        <button
+                          onClick={() => removeTag(tag)}
+                          className="ml-2 text-mm-red hover:text-mm-red/80"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    className="input-neon w-full"
+                    placeholder="Добавить тег и нажать Enter"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addTag(e.target.value.trim())
+                        e.target.value = ''
+                      }
+                    }}
+                  />
+                  <p className="comment text-xs mt-1">// Теги для поиска и фильтрации (например: летний, новинка, скидка)</p>
+                </div>
+
+                {/* Attributes */}
+                <div className="card-neon">
+                  <h3 className="text-xl mb-4 text-mm-cyan uppercase">Характеристики</h3>
+                  <div className="space-y-2 mb-3">
+                    {Object.entries(product.minimalmod.attributes).map(([key, value]) => (
+                      <div key={key} className="flex items-center space-x-2">
+                        <span className="input-neon flex-1">{key}</span>
+                        <span className="text-mm-text-secondary">=</span>
+                        <span className="input-neon flex-1">{value}</span>
+                        <button
+                          onClick={() => removeAttribute('minimalmod', key)}
+                          className="text-mm-red hover:text-mm-red/80"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      id="attr-key-mm"
+                      className="input-neon flex-1"
+                      placeholder="Ключ (Цвет)"
+                    />
+                    <span className="text-mm-text-secondary">=</span>
+                    <input
+                      type="text"
+                      id="attr-value-mm"
+                      className="input-neon flex-1"
+                      placeholder="Значение (Черный)"
+                    />
+                    <button
+                      onClick={() => {
+                        const keyInput = document.getElementById('attr-key-mm')
+                        const valueInput = document.getElementById('attr-value-mm')
+                        if (keyInput.value && valueInput.value) {
+                          addAttribute('minimalmod', keyInput.value, valueInput.value)
+                          keyInput.value = ''
+                          valueInput.value = ''
+                        }
+                      }}
+                      className="btn-secondary px-3 py-2"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
 
-            {/* Marketplaces Section (shown when button clicked) */}
-            {activeTab === 'minimalmod' && showMarketplaces && (
-              <div className="space-y-6 mt-6 border-t-2 border-mm-cyan pt-6">
-                <h3 className="text-xl mb-4 text-mm-purple uppercase">MARKETPLACE SETTINGS</h3>
-                
-                {/* Marketplace Images */}
-                <div className="card-neon">
-                  <h3 className="text-xl mb-4 text-mm-cyan uppercase">Marketplace Images (up to 10)</h3>
-                  <textarea
-                    value={product.marketplaces.images.join('\n')}
-                    onChange={(e) => setProduct({
-                      ...product,
-                      marketplaces: {
-                        ...product.marketplaces,
-                        images: e.target.value.split('\n').filter(url => url.trim())
-                      }
-                    })}
-                    className="input-neon w-full"
-                    rows="5"
-                    placeholder="https://example.com/marketplace-image1.jpg"
-                  />
-                </div>
-
-                {/* Ozon */}
+            {/* Ozon Section */}
+            {activeMarketplace === 'ozon' && (
+              <>
                 <div className="card-neon">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl text-mm-cyan uppercase">Ozon</h3>
+                    <h3 className="text-xl text-mm-blue uppercase">OZON НАСТРОЙКИ</h3>
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
@@ -434,14 +531,30 @@ function ProductEditPage() {
                         })}
                         className="w-4 h-4"
                       />
-                      <span className="text-mm-text-secondary">Publish to Ozon</span>
+                      <span className="text-mm-text-secondary">Публиковать на Ozon</span>
                     </label>
                   </div>
-                  
+
                   {product.marketplaces.ozon.enabled && (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Name</label>
+                        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Product ID на Ozon</label>
+                        <input
+                          type="text"
+                          value={product.marketplaces.ozon.product_id}
+                          onChange={(e) => setProduct({
+                            ...product,
+                            marketplaces: {
+                              ...product.marketplaces,
+                              ozon: {...product.marketplaces.ozon, product_id: e.target.value}
+                            }
+                          })}
+                          className="input-neon w-full"
+                          placeholder="123456789"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Название для Ozon</label>
                         <input
                           type="text"
                           value={product.marketplaces.ozon.name}
@@ -453,11 +566,10 @@ function ProductEditPage() {
                             }
                           })}
                           className="input-neon w-full"
-                          placeholder="Optimized name for Ozon"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Description</label>
+                        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Описание для Ozon</label>
                         <textarea
                           value={product.marketplaces.ozon.description}
                           onChange={(e) => setProduct({
@@ -468,95 +580,113 @@ function ProductEditPage() {
                             }
                           })}
                           className="input-neon w-full"
-                          rows="4"
-                          placeholder="Optimized description for Ozon"
+                          rows="6"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Цена для Ozon</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={product.marketplaces.ozon.price}
+                          onChange={(e) => setProduct({
+                            ...product,
+                            marketplaces: {
+                              ...product.marketplaces,
+                              ozon: {...product.marketplaces.ozon, price: e.target.value}
+                            }
+                          })}
+                          className="input-neon w-full"
                         />
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Wildberries */}
                 <div className="card-neon">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl text-mm-cyan uppercase">Wildberries</h3>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={product.marketplaces.wildberries.enabled}
-                        onChange={(e) => setProduct({
-                          ...product,
-                          marketplaces: {
-                            ...product.marketplaces,
-                            wildberries: {...product.marketplaces.wildberries, enabled: e.target.checked}
-                          }
-                        })}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-mm-text-secondary">Publish to Wildberries</span>
-                    </label>
-                  </div>
-                  
-                  {product.marketplaces.wildberries.enabled && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Name</label>
+                  <h3 className="text-xl mb-4 text-mm-blue uppercase">Изображения для маркетплейсов (до 10 фото)</h3>
+                  <p className="comment mb-3">// Общие изображения для всех маркетплейсов</p>
+                  <div className="space-y-2">
+                    {product.marketplaces.images.map((url, idx) => (
+                      <div key={idx} className="flex items-center space-x-2">
                         <input
                           type="text"
-                          value={product.marketplaces.wildberries.name}
-                          onChange={(e) => setProduct({
+                          value={url}
+                          onChange={(e) => {
+                            const newImages = [...product.marketplaces.images]
+                            newImages[idx] = e.target.value
+                            setProduct({
+                              ...product,
+                              marketplaces: {...product.marketplaces, images: newImages}
+                            })
+                          }}
+                          className="input-neon flex-1"
+                        />
+                        <button
+                          onClick={() => {
+                            setProduct({
+                              ...product,
+                              marketplaces: {
+                                ...product.marketplaces,
+                                images: product.marketplaces.images.filter((_, i) => i !== idx)
+                              }
+                            })
+                          }}
+                          className="text-mm-red"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    {product.marketplaces.images.length < 10 && (
+                      <button
+                        onClick={() => {
+                          setProduct({
                             ...product,
                             marketplaces: {
                               ...product.marketplaces,
-                              wildberries: {...product.marketplaces.wildberries, name: e.target.value}
+                              images: [...product.marketplaces.images, '']
                             }
-                          })}
-                          className="input-neon w-full"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Description</label>
-                        <textarea
-                          value={product.marketplaces.wildberries.description}
-                          onChange={(e) => setProduct({
-                            ...product,
-                            marketplaces: {
-                              ...product.marketplaces,
-                              wildberries: {...product.marketplaces.wildberries, description: e.target.value}
-                            }
-                          })}
-                          className="input-neon w-full"
-                          rows="4"
-                        />
-                      </div>
-                    </div>
-                  )}
+                          })
+                        }}
+                        className="btn-secondary w-full"
+                      >
+                        + Добавить изображение
+                      </button>
+                    )}
+                  </div>
                 </div>
+              </>
+            )}
+
+            {/* Similar sections for WB and Yandex */}
+            {(activeMarketplace === 'wildberries' || activeMarketplace === 'yandex_market') && (
+              <div className="card-neon text-center py-12">
+                <FiPackage className="mx-auto text-mm-text-tertiary mb-4" size={48} />
+                <p className="text-mm-text-secondary mb-2">Настройки для {activeMarketplace}</p>
+                <p className="comment">// Аналогично Ozon (будет реализовано)</p>
               </div>
             )}
           </div>
 
-          {/* Sidebar - Right */}
+          {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Status */}
             <div className="card-neon">
-              <h3 className="text-lg mb-4 text-mm-cyan uppercase">Status</h3>
+              <h3 className="text-lg mb-4 text-mm-cyan uppercase">Статус</h3>
               <select
                 value={product.status}
                 onChange={(e) => setProduct({...product, status: e.target.value})}
                 className="input-neon w-full"
-                data-testid="status-select"
               >
-                <option value="draft">Draft</option>
-                <option value="active">Active</option>
-                <option value="out_of_stock">Out of Stock</option>
-                <option value="archived">Archived</option>
+                <option value="draft">Черновик</option>
+                <option value="active">Активен</option>
+                <option value="out_of_stock">Нет в наличии</option>
+                <option value="archived">Архив</option>
               </select>
             </div>
 
-            {/* Visibility */}
             <div className="card-neon">
-              <h3 className="text-lg mb-4 text-mm-cyan uppercase">Visibility</h3>
+              <h3 className="text-lg mb-4 text-mm-cyan uppercase">Видимость</h3>
               <div className="space-y-3">
                 <label className="flex items-center space-x-2">
                   <input
@@ -568,7 +698,7 @@ function ProductEditPage() {
                     })}
                     className="w-4 h-4"
                   />
-                  <span className="text-mm-text-secondary">Show on MinimalMod</span>
+                  <span className="text-mm-text-secondary">Показывать на сайте</span>
                 </label>
                 <label className="flex items-center space-x-2">
                   <input
@@ -580,7 +710,7 @@ function ProductEditPage() {
                     })}
                     className="w-4 h-4"
                   />
-                  <span className="text-mm-text-secondary">Show in search</span>
+                  <span className="text-mm-text-secondary">Показывать в поиске</span>
                 </label>
                 <label className="flex items-center space-x-2">
                   <input
@@ -592,12 +722,11 @@ function ProductEditPage() {
                     })}
                     className="w-4 h-4"
                   />
-                  <span className="text-mm-text-secondary">Featured</span>
+                  <span className="text-mm-text-secondary">Рекомендуемый товар</span>
                 </label>
               </div>
             </div>
 
-            {/* SEO */}
             <div className="card-neon">
               <h3 className="text-lg mb-4 text-mm-cyan uppercase">SEO</h3>
               <div className="space-y-4">
@@ -624,7 +753,7 @@ function ProductEditPage() {
                     })}
                     className="input-neon w-full"
                   />
-                  <p className="comment text-xs mt-1">// Auto-generated from name</p>
+                  <p className="comment text-xs mt-1">// Автогенерация из названия</p>
                 </div>
               </div>
             </div>
