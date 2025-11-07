@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { FiLogOut, FiUsers, FiKey, FiActivity, FiPackage, FiShoppingCart, FiBox } from 'react-icons/fi'
 import OrdersPage from './OrdersPage'
 import InventoryPage from './InventoryPage'
+import SettingsDropdown from '../components/SettingsDropdown'
 
 function AdminDashboard() {
   const { user, logout, api } = useAuth()
