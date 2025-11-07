@@ -12,6 +12,7 @@ import PromocodesPage from './PromocodesPage'
 import QuestionsPage from './QuestionsPage'
 import ReviewsPage from './ReviewsPage'
 import AnalyticsPage from './AnalyticsPage'
+import APIKeysPage from './APIKeysPage'
 
 function SellerDashboard() {
   const { user, logout, api } = useAuth()
