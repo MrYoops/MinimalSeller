@@ -6,6 +6,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import SellerDashboard from './pages/SellerDashboard'
 import ProductEditPage from './pages/ProductEditPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 
 function ProtectedRoute({ children, requiredRole }) {
   const { user, loading } = useAuth()
