@@ -43,7 +43,17 @@ function SellerDashboard() {
   useEffect(() => {
     loadApiKeys()
     loadProducts()
+    loadCategories()
   }, [])
+
+  const loadCategories = async () => {
+    try {
+      const response = await api.get('/api/admin/categories')
+      setCategories(response.data)
+    } catch (error) {
+      console.error('Failed to load categories:', error)
+    }
+  }
 
   const loadApiKeys = async () => {
     try {
