@@ -423,17 +423,11 @@ function SellerDashboard() {
         )}
 
         {activeTab === 'orders' && (
-          <div>
-            <div className="mb-6">
-              <h2 className="text-2xl mb-2 text-mm-cyan">ORDERS</h2>
-              <p className="comment">// Track your sales</p>
-            </div>
-            <div className="card-neon text-center py-12">
-              <FiShoppingCart className="mx-auto text-mm-text-tertiary mb-4" size={48} />
-              <p className="text-mm-text-secondary mb-2">Order tracking coming soon</p>
-              <p className="comment">// This feature will be available in the next update</p>
-            </div>
-          </div>
+          <OrdersPage />
+        )}
+
+        {activeTab === 'inventory' && (
+          <InventoryPage />
         )}
       </main>
 
