@@ -112,7 +112,7 @@ function AdminDashboard() {
               data-testid="tab-dashboard"
             >
               <FiActivity className="inline mr-2" />
-              Dashboard
+              {t('dashboard')}
             </button>
             <button
               onClick={() => setActiveTab('users')}
@@ -124,7 +124,7 @@ function AdminDashboard() {
               data-testid="tab-users"
             >
               <FiUsers className="inline mr-2" />
-              Sellers
+              {t('sellers')}
             </button>
             <button
               onClick={() => setActiveTab('products')}
@@ -136,7 +136,7 @@ function AdminDashboard() {
               data-testid="tab-products"
             >
               <FiPackage className="inline mr-2" />
-              Products
+              {t('products')}
             </button>
             <button
               onClick={() => setActiveTab('orders')}
@@ -148,7 +148,7 @@ function AdminDashboard() {
               data-testid="tab-orders"
             >
               <FiShoppingCart className="inline mr-2" />
-              Orders
+              {t('orders')}
             </button>
             <button
               onClick={() => setActiveTab('inventory')}
@@ -160,7 +160,7 @@ function AdminDashboard() {
               data-testid="tab-inventory"
             >
               <FiBox className="inline mr-2" />
-              Inventory
+              {t('inventory')}
             </button>
             <button
               onClick={() => setActiveTab('payouts')}
@@ -172,7 +172,7 @@ function AdminDashboard() {
               data-testid="tab-payouts"
             >
               <FiDollarSign className="inline mr-2" />
-              Payouts
+              {t('payouts')}
             </button>
             <button
               onClick={() => setActiveTab('categories')}
@@ -184,7 +184,7 @@ function AdminDashboard() {
               data-testid="tab-categories"
             >
               <FiFolder className="inline mr-2" />
-              Categories
+              {t('categories')}
             </button>
           </div>
         </div>
