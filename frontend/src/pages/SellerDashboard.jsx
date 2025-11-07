@@ -167,7 +167,7 @@ function SellerDashboard() {
               data-testid="tab-overview"
             >
               <FiDollarSign className="inline mr-2" />
-              Overview
+              {t('overview')}
             </button>
             <button
               onClick={() => setActiveTab('api-keys')}
@@ -179,7 +179,7 @@ function SellerDashboard() {
               data-testid="tab-api-keys"
             >
               <FiKey className="inline mr-2" />
-              API Keys
+              {t('apiKeys')}
             </button>
             <button
               onClick={() => setActiveTab('products')}
@@ -191,7 +191,7 @@ function SellerDashboard() {
               data-testid="tab-products"
             >
               <FiPackage className="inline mr-2" />
-              Products
+              {t('products')}
             </button>
             <button
               onClick={() => setActiveTab('orders')}
@@ -203,7 +203,7 @@ function SellerDashboard() {
               data-testid="tab-orders"
             >
               <FiShoppingCart className="inline mr-2" />
-              Orders
+              {t('orders')}
             </button>
             <button
               onClick={() => setActiveTab('inventory')}
@@ -215,7 +215,7 @@ function SellerDashboard() {
               data-testid="tab-inventory"
             >
               <FiBox className="inline mr-2" />
-              Inventory
+              {t('inventory')}
             </button>
           </div>
         </div>
