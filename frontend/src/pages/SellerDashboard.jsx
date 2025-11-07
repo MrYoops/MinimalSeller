@@ -457,6 +457,7 @@ function SellerDashboard() {
                   <table className="w-full" data-testid="products-table">
                     <thead>
                       <tr className="border-b border-mm-border">
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Photo</th>
                         <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">{t('sku')}</th>
                         <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">{t('name')}</th>
                         <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">{t('price')}</th>
@@ -469,6 +470,19 @@ function SellerDashboard() {
                     <tbody>
                       {products.map((product) => (
                         <tr key={product.id} className="border-b border-mm-border hover:bg-mm-gray transition-colors">
+                          <td className="py-4 px-4">
+                            {product.minimalmod.images && product.minimalmod.images[0] ? (
+                              <img 
+                                src={product.minimalmod.images[0]} 
+                                alt={product.minimalmod.name}
+                                className="w-16 h-16 object-cover border border-mm-border"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 bg-mm-gray border border-mm-border flex items-center justify-center">
+                                <span className="text-mm-text-tertiary text-xs">NO IMG</span>
+                              </div>
+                            )}
+                          </td>
                           <td className="py-4 px-4 font-mono text-sm text-mm-cyan">{product.sku}</td>
                           <td className="py-4 px-4 font-mono text-sm">{product.minimalmod.name}</td>
                           <td className="py-4 px-4 font-mono text-sm">₽{product.price.toLocaleString()}</td>
