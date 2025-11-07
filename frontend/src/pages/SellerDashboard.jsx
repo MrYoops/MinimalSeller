@@ -301,6 +301,18 @@ function SellerDashboard() {
               <FiStar className="inline mr-2" />
               {t('reviews')}
             </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'analytics'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-analytics"
+            >
+              <FiTrendingUp className="inline mr-2" />
+              Analytics
+            </button>
           </div>
         </div>
       </nav>
