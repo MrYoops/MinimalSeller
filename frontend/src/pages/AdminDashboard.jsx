@@ -288,6 +288,15 @@ function AdminDashboard() {
                             {new Date(u.created_at).toLocaleDateString()}
                           </td>
                           <td className="py-4 px-4 text-right space-x-2">
+                            {u.role === 'seller' && (
+                              <button
+                                onClick={() => window.location.href = `/admin/sellers/${u.id}/manage`}
+                                className="px-3 py-1 border border-mm-cyan text-mm-cyan hover:bg-mm-cyan/10 transition-colors text-xs uppercase font-mono"
+                                data-testid={`manage-user-${u.id}`}
+                              >
+                                MANAGE
+                              </button>
+                            )}
                             {!u.is_active && u.role === 'seller' && (
                               <button
                                 onClick={() => approveUser(u.id)}
