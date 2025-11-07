@@ -315,15 +315,89 @@ function SellerDashboard() {
 
         {activeTab === 'products' && (
           <div>
-            <div className="mb-6">
-              <h2 className="text-2xl mb-2 text-mm-cyan">PRODUCTS</h2>
-              <p className="comment">// Manage your product catalog</p>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl mb-2 text-mm-cyan">PRODUCTS</h2>
+                <p className="comment">// Manage your product catalog</p>
+              </div>
+              <button
+                onClick={() => setShowAddProductModal(true)}
+                className="btn-primary"
+                data-testid="add-product-button"
+              >
+                + ADD PRODUCT
+              </button>
             </div>
-            <div className="card-neon text-center py-12">
-              <FiPackage className="mx-auto text-mm-text-tertiary mb-4" size={48} />
-              <p className="text-mm-text-secondary mb-2">Product management coming soon</p>
-              <p className="comment">// This feature will be available in the next update</p>
-            </div>
+
+            {products.length === 0 ? (
+              <div className="card-neon text-center py-12">
+                <FiPackage className="mx-auto text-mm-text-tertiary mb-4" size={48} />
+                <p className="text-mm-text-secondary mb-2">No products yet</p>
+                <p className="comment">// Click "ADD PRODUCT" to create your first product</p>
+              </div>
+            ) : (
+              <div className="card-neon overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full" data-testid="products-table">
+                    <thead>
+                      <tr className="border-b border-mm-border">
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">SKU</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Name</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Price</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Status</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Quality</th>
+                        <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Tags</th>
+                        <th className="text-right py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products.map((product) => (
+                        <tr key={product.id} className="border-b border-mm-border hover:bg-mm-gray transition-colors">
+                          <td className="py-4 px-4 font-mono text-sm text-mm-cyan">{product.sku}</td>
+                          <td className="py-4 px-4 font-mono text-sm">{product.minimalmod.name}</td>
+                          <td className="py-4 px-4 font-mono text-sm">₽{product.price.toLocaleString()}</td>
+                          <td className="py-4 px-4">
+                            <span className={
+                              product.status === 'active' ? 'status-active' :
+                              product.status === 'draft' ? 'status-pending' :
+                              'status-error'
+                            }>
+                              {product.status}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className={`font-mono text-sm ${getQualityColor(product.listing_quality_score.total)}`}>
+                              {Math.round(product.listing_quality_score.total)}/100
+                            </span>
+                            <span className={`ml-2 text-xs ${getQualityColor(product.listing_quality_score.total)}`}>
+                              {getQualityLabel(product.listing_quality_score.total)}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex flex-wrap gap-1">
+                              {product.minimalmod.tags.map((tag, idx) => (
+                                <span key={idx} className="px-2 py-1 text-xs font-mono border border-mm-cyan text-mm-cyan">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <button
+                              onClick={() => deleteProduct(product.id)}
+                              className="px-3 py-1 border border-mm-red text-mm-red hover:bg-mm-red/10 transition-colors text-xs uppercase font-mono"
+                              data-testid={`delete-product-${product.id}`}
+                            >
+                              DELETE
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
