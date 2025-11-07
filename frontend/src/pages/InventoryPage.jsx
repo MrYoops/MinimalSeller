@@ -25,7 +25,17 @@ function InventoryPage() {
 
   useEffect(() => {
     loadData()
+    loadProducts()
   }, [activeTab])
+
+  const loadProducts = async () => {
+    try {
+      const response = await api.get('/api/products')
+      setProducts(response.data)
+    } catch (error) {
+      console.error('Failed to load products:', error)
+    }
+  }
 
   const loadData = async () => {
     setLoading(true)
