@@ -294,6 +294,30 @@ function SellerDashboard() {
               {t('promocodes')}
             </button>
             <button
+              onClick={() => setActiveTab('promotions')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'promotions'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-promotions"
+            >
+              <FiPercent className="inline mr-2" />
+              Promotions
+            </button>
+            <button
+              onClick={() => setActiveTab('returns')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'returns'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-returns"
+            >
+              <FiRotateCcw className="inline mr-2" />
+              Returns
+            </button>
+            <button
               onClick={() => setActiveTab('questions')}
               className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
                 activeTab === 'questions'
