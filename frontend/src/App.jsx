@@ -77,6 +77,15 @@ function AppRoutes() {
         }
       />
       
+      <Route
+        path="/orders/:id"
+        element={
+          <ProtectedRoute>
+            <OrderDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
