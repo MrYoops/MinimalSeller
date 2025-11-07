@@ -621,11 +621,12 @@ async def get_fbo_inventory(
 @app.post("/api/inventory/{product_id}/adjust")
 async def adjust_inventory(
     product_id: str,
-    quantity_change: int,
-    reason: str,
+    adjustment: Dict[str, Any],
     current_user: dict = Depends(get_current_user)
 ):
     """Ручная корректировка остатков"""
+    quantity_change = adjustment.get('quantity_change', 0)
+    reason = adjustment.get('reason', 'Manual adjustment')
     product = await db.products.find_one({'_id': ObjectId(product_id)})
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
