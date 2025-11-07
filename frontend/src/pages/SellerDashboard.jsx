@@ -499,6 +499,126 @@ function SellerDashboard() {
           </div>
         </div>
       )}
+
+      {/* Add Product Modal */}
+      {showAddProductModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="card-neon max-w-2xl w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl text-mm-cyan">ADD PRODUCT</h3>
+              <button
+                onClick={() => setShowAddProductModal(false)}
+                className="text-mm-text-secondary hover:text-mm-red transition-colors"
+                data-testid="close-product-modal-button"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={addProduct} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm mb-2 text-mm-text-secondary uppercase tracking-wider">
+                    SKU *
+                  </label>
+                  <input
+                    type="text"
+                    value={newProduct.sku}
+                    onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
+                    className="input-neon w-full"
+                    placeholder="PRODUCT-NAME-db15"
+                    required
+                    data-testid="product-sku-input"
+                  />
+                  <p className="comment text-xs mt-1">// Unique product identifier</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-2 text-mm-text-secondary uppercase tracking-wider">
+                    Price *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newProduct.price}
+                    onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                    className="input-neon w-full"
+                    placeholder="1500.00"
+                    required
+                    data-testid="product-price-input"
+                  />
+                  <p className="comment text-xs mt-1">// Product price in RUB</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm mb-2 text-mm-text-secondary uppercase tracking-wider">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                  className="input-neon w-full"
+                  placeholder="Product Name"
+                  required
+                  data-testid="product-name-input"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-2 text-mm-text-secondary uppercase tracking-wider">
+                  Description
+                </label>
+                <textarea
+                  value={newProduct.description}
+                  onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                  className="input-neon w-full"
+                  placeholder="Product description..."
+                  rows="4"
+                  data-testid="product-description-input"
+                />
+                <p className="comment text-xs mt-1">// Detailed product description</p>
+              </div>
+
+              <div>
+                <label className="block text-sm mb-2 text-mm-text-secondary uppercase tracking-wider">
+                  Status
+                </label>
+                <select
+                  value={newProduct.status}
+                  onChange={(e) => setNewProduct({ ...newProduct, status: e.target.value })}
+                  className="input-neon w-full"
+                  data-testid="product-status-select"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="active">Active</option>
+                  <option value="out_of_stock">Out of Stock</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+
+              <div className="flex space-x-4">
+                <button
+                  type="submit"
+                  className="btn-primary flex-1"
+                  data-testid="submit-product-button"
+                >
+                  CREATE PRODUCT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddProductModal(false)}
+                  className="btn-secondary flex-1"
+                  data-testid="cancel-product-button"
+                >
+                  CANCEL
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
