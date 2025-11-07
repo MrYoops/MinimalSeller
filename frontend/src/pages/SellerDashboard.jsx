@@ -103,16 +103,19 @@ function SellerDashboard() {
         sku: newProduct.sku,
         price: parseFloat(newProduct.price),
         status: newProduct.status,
+        category_id: newProduct.category_id || null,
         minimalmod: {
           name: newProduct.name,
           description: newProduct.description,
           tags: [],
           images: [],
-          attributes: {}
+          attributes: newProduct.attributes
         }
       })
       setShowAddProductModal(false)
-      setNewProduct({ sku: '', name: '', description: '', price: '', status: 'draft' })
+      setNewProduct({ sku: '', name: '', description: '', price: '', status: 'draft', category_id: '', attributes: {} })
+      setNewAttrKey('')
+      setNewAttrValue('')
       loadProducts()
     } catch (error) {
       console.error('Failed to add product:', error)
