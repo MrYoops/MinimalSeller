@@ -232,7 +232,7 @@ function SellerDashboard() {
               data-testid="tab-finance"
             >
               <FiPieChart className="inline mr-2" />
-              Finance
+              {t('finance')}
             </button>
             <button
               onClick={() => setActiveTab('balance')}
@@ -244,7 +244,7 @@ function SellerDashboard() {
               data-testid="tab-balance"
             >
               <FiDollarSign className="inline mr-2" />
-              Balance
+              {t('balance')}
             </button>
             <button
               onClick={() => setActiveTab('promocodes')}
@@ -256,7 +256,7 @@ function SellerDashboard() {
               data-testid="tab-promocodes"
             >
               <FiTag className="inline mr-2" />
-              Promocodes
+              {t('promocodes')}
             </button>
             <button
               onClick={() => setActiveTab('questions')}
@@ -268,7 +268,7 @@ function SellerDashboard() {
               data-testid="tab-questions"
             >
               <FiMessageSquare className="inline mr-2" />
-              Questions
+              {t('questions')}
             </button>
             <button
               onClick={() => setActiveTab('reviews')}
@@ -280,7 +280,7 @@ function SellerDashboard() {
               data-testid="tab-reviews"
             >
               <FiStar className="inline mr-2" />
-              Reviews
+              {t('reviews')}
             </button>
           </div>
         </div>
