@@ -66,6 +66,15 @@ function AppRoutes() {
         }
       />
       
+      <Route
+        path="/products/:id/edit"
+        element={
+          <ProtectedRoute>
+            <ProductEditPage />
+          </ProtectedRoute>
+        }
+      />
+      
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
