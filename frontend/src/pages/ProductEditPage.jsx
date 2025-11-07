@@ -290,8 +290,109 @@ function ProductEditPage() {
                       />
                       <p className="comment text-xs mt-1">// Tags extracted from SKU will be added automatically</p>
                     </div>
+
+                    {/* Attributes */}
+                    <div>
+                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">
+                        Attributes (Key-Value)
+                      </label>
+                      <div className="space-y-2 mb-2">
+                        {Object.entries(product.minimalmod.attributes).map(([key, value]) => (
+                          <div key={key} className="flex items-center space-x-2">
+                            <input
+                              type="text"
+                              value={key}
+                              className="input-neon flex-1"
+                              readOnly
+                            />
+                            <span className="text-mm-text-secondary">=</span>
+                            <input
+                              type="text"
+                              value={value}
+                              className="input-neon flex-1"
+                              readOnly
+                            />
+                            <button
+                              onClick={() => {
+                                const newAttrs = {...product.minimalmod.attributes}
+                                delete newAttrs[key]
+                                setProduct({
+                                  ...product,
+                                  minimalmod: {...product.minimalmod, attributes: newAttrs}
+                                })
+                              }}
+                              className="text-mm-red hover:text-mm-red/80"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          id="attr-key"
+                          className="input-neon flex-1"
+                          placeholder="Key (e.g., Color)"
+                        />
+                        <span className="text-mm-text-secondary">=</span>
+                        <input
+                          type="text"
+                          id="attr-value"
+                          className="input-neon flex-1"
+                          placeholder="Value (e.g., Black)"
+                        />
+                        <button
+                          onClick={() => {
+                            const keyInput = document.getElementById('attr-key')
+                            const valueInput = document.getElementById('attr-value')
+                            if (keyInput.value && valueInput.value) {
+                              setProduct({
+                                ...product,
+                                minimalmod: {
+                                  ...product.minimalmod,
+                                  attributes: {
+                                    ...product.minimalmod.attributes,
+                                    [keyInput.value]: valueInput.value
+                                  }
+                                }
+                              })
+                              keyInput.value = ''
+                              valueInput.value = ''
+                            }
+                          }}
+                          className="btn-secondary px-3 py-2"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <p className="comment text-xs mt-1">// Add product characteristics</p>
+                    </div>
+
+                    {/* Category */}
+                    <div>
+                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Category</label>
+                      <select
+                        value={product.category_id || ''}
+                        onChange={(e) => setProduct({...product, category_id: e.target.value})}
+                        className="input-neon w-full"
+                      >
+                        <option value="">No Category</option>
+                        {categories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
+
+                {/* Show Marketplaces Button */}
+                <button
+                  onClick={() => setShowMarketplaces(!showMarketplaces)}
+                  className="btn-secondary w-full"
+                >
+                  {showMarketplaces ? 'Hide' : 'Show'} Marketplace Parameters
+                </button>
 
                 {/* Images */}
                 <div className="card-neon">
