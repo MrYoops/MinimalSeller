@@ -485,9 +485,16 @@ function InventoryPage() {
                       alert('Please add products')
                       return
                     }
-                    alert('FBO Shipment created! Stock will be deducted from FBS.')
-                    setShowFBOShipmentModal(false)
-                    setFBOShipment({ marketplace: 'ozon', warehouse: '', products: [] })
+                    
+                    try {
+                      const response = await api.post('/api/inventory/fbo-shipment', fboShipment)
+                      alert(response.data.message)
+                      setShowFBOShipmentModal(false)
+                      setFBOShipment({ marketplace: 'ozon', warehouse: '', products: [] })
+                      loadData() // Reload inventory
+                    } catch (error) {
+                      alert('Failed to create shipment: ' + (error.response?.data?.detail || error.message))
+                    }
                   }}
                   className="btn-primary flex-1"
                   disabled={!fboShipment.warehouse || fboShipment.products.length === 0}
