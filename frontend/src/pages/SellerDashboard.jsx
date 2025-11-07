@@ -722,6 +722,82 @@ function SellerDashboard() {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-sm mb-2 text-mm-text-secondary uppercase tracking-wider">
+                  Category
+                </label>
+                <select
+                  value={newProduct.category_id}
+                  onChange={(e) => setNewProduct({ ...newProduct, category_id: e.target.value })}
+                  className="input-neon w-full"
+                >
+                  <option value="">No Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm mb-2 text-mm-text-secondary uppercase tracking-wider">
+                  Attributes
+                </label>
+                <div className="space-y-2 mb-2">
+                  {Object.entries(newProduct.attributes).map(([key, value]) => (
+                    <div key={key} className="flex items-center space-x-2">
+                      <span className="input-neon flex-1 text-sm">{key}</span>
+                      <span className="text-mm-text-secondary">=</span>
+                      <span className="input-neon flex-1 text-sm">{value}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newAttrs = {...newProduct.attributes}
+                          delete newAttrs[key]
+                          setNewProduct({...newProduct, attributes: newAttrs})
+                        }}
+                        className="text-mm-red hover:text-mm-red/80"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    value={newAttrKey}
+                    onChange={(e) => setNewAttrKey(e.target.value)}
+                    className="input-neon flex-1"
+                    placeholder="Key (e.g., Color)"
+                  />
+                  <span className="text-mm-text-secondary">=</span>
+                  <input
+                    type="text"
+                    value={newAttrValue}
+                    onChange={(e) => setNewAttrValue(e.target.value)}
+                    className="input-neon flex-1"
+                    placeholder="Value (e.g., Black)"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newAttrKey && newAttrValue) {
+                        setNewProduct({
+                          ...newProduct,
+                          attributes: {...newProduct.attributes, [newAttrKey]: newAttrValue}
+                        })
+                        setNewAttrKey('')
+                        setNewAttrValue('')
+                      }
+                    }}
+                    className="btn-secondary px-3 py-2"
+                  >
+                    +
+                  </button>
+                </div>
+                <p className="comment text-xs mt-1">// Add product characteristics</p>
+              </div>
+
               <div className="flex space-x-4">
                 <button
                   type="submit"
