@@ -136,6 +136,7 @@ function OrdersPage() {
                       <button
                         onClick={() => window.location.href = `/orders/${order.id}`}
                         className="px-3 py-1 border border-mm-cyan text-mm-cyan hover:bg-mm-cyan/10 transition-colors text-xs uppercase font-mono"
+                        data-testid={`view-order-${order.id}`}
                       >
                         View
                       </button>
