@@ -191,6 +191,54 @@ function AdminDashboard() {
               <FiFolder className="inline mr-2" />
               {t('categories')}
             </button>
+            <button
+              onClick={() => setActiveTab('marketing')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'marketing'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-marketing"
+            >
+              <FiTag className="inline mr-2" />
+              Marketing
+            </button>
+            <button
+              onClick={() => setActiveTab('communication')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'communication'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-communication"
+            >
+              <FiMessageSquare className="inline mr-2" />
+              Communication
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'analytics'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-analytics"
+            >
+              <FiTrendingUp className="inline mr-2" />
+              Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab('cms')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'cms'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-cms"
+            >
+              <FiEdit className="inline mr-2" />
+              CMS
+            </button>
           </div>
         </div>
       </nav>
