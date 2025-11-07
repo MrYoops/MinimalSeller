@@ -804,6 +804,268 @@ async def get_returns(
     
     return returns
 
+# ========== FINANCE & ANALYTICS ROUTES (БЛОК 4) ==========
+
+@app.get("/api/finance/dashboard")
+async def get_finance_dashboard(
+    period: Optional[str] = "30d",
+    marketplace: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Финансовый дашборд с ключевыми метриками"""
+    query = {}
+    
+    if current_user['role'] == 'seller':
+        query['seller_id'] = current_user['_id']
+    
+    if marketplace:
+        query['marketplace'] = marketplace
+    
+    transactions = await db.finance_transactions.find(query).to_list(length=10000)
+    
+    total_revenue = sum(t.get('revenue', 0) for t in transactions)
+    total_costs = sum(
+        t.get('costs', {}).get('commission', 0) +
+        t.get('costs', {}).get('logistics', 0) +
+        t.get('costs', {}).get('storage', 0) +
+        t.get('costs', {}).get('advertising', 0) +
+        t.get('costs', {}).get('penalties', 0)
+        for t in transactions
+    )
+    total_cogs = sum(t.get('cogs', 0) for t in transactions)
+    gross_profit = total_revenue - total_cogs
+    net_profit = gross_profit - total_costs
+    margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
+    
+    return {
+        'revenue': total_revenue,
+        'costs': total_costs,
+        'cogs': total_cogs,
+        'gross_profit': gross_profit,
+        'net_profit': net_profit,
+        'margin': round(margin, 2),
+        'transactions_count': len(transactions)
+    }
+
+@app.get("/api/finance/transactions")
+async def get_finance_transactions(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить список финансовых транзакций"""
+    query = {}
+    
+    if current_user['role'] == 'seller':
+        query['seller_id'] = current_user['_id']
+    
+    transactions = await db.finance_transactions.find(query).sort('transaction_date', -1).limit(100).to_list(length=100)
+    
+    for t in transactions:
+        t['id'] = str(t.pop('_id'))
+        t['seller_id'] = str(t['seller_id'])
+    
+    return transactions
+
+@app.post("/api/finance/upload-report")
+async def upload_finance_report(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Загрузка и парсинг финансового отчета"""
+    marketplace = data.get('marketplace')
+    transactions_data = data.get('transactions', [])
+    
+    created_count = 0
+    
+    for trans in transactions_data:
+        transaction = {
+            'seller_id': current_user['_id'],
+            'marketplace': marketplace,
+            'transaction_date': datetime.fromisoformat(trans.get('date', datetime.utcnow().isoformat())),
+            'sku': trans.get('sku', ''),
+            'revenue': float(trans.get('revenue', 0)),
+            'costs': {
+                'commission': float(trans.get('commission', 0)),
+                'logistics': float(trans.get('logistics', 0)),
+                'storage': float(trans.get('storage', 0)),
+                'advertising': float(trans.get('advertising', 0)),
+                'penalties': float(trans.get('penalties', 0))
+            },
+            'cogs': float(trans.get('cogs', 0)),
+            'net_profit': 0
+        }
+        
+        # Расчет чистой прибыли
+        total_costs = sum(transaction['costs'].values())
+        transaction['net_profit'] = transaction['revenue'] - total_costs - transaction['cogs']
+        
+        await db.finance_transactions.insert_one(transaction)
+        created_count += 1
+    
+    return {'message': f'{created_count} transactions imported', 'count': created_count}
+
+@app.get("/api/payouts")
+async def get_payouts(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить запросы на выплату"""
+    query = {}
+    
+    if current_user['role'] == 'seller':
+        query['seller_id'] = current_user['_id']
+    
+    payouts = await db.payout_requests.find(query).sort('created_at', -1).to_list(length=100)
+    
+    for p in payouts:
+        p['id'] = str(p.pop('_id'))
+        p['seller_id'] = str(p['seller_id'])
+    
+    return payouts
+
+@app.post("/api/payouts/request")
+async def request_payout(
+    amount: float,
+    current_user: dict = Depends(require_role(UserRole.SELLER))
+):
+    """Запросить выплату"""
+    payout = {
+        'seller_id': current_user['_id'],
+        'amount': amount,
+        'status': 'pending',
+        'created_at': datetime.utcnow(),
+        'updated_at': datetime.utcnow()
+    }
+    
+    result = await db.payout_requests.insert_one(payout)
+    
+    return {'message': 'Payout request created', 'id': str(result.inserted_id)}
+
+@app.put("/api/admin/payouts/{payout_id}/approve")
+async def approve_payout(
+    payout_id: str,
+    current_user: dict = Depends(require_role(UserRole.ADMIN))
+):
+    """Одобрить выплату"""
+    await db.payout_requests.update_one(
+        {'_id': ObjectId(payout_id)},
+        {'$set': {'status': 'approved', 'updated_at': datetime.utcnow()}}
+    )
+    return {'message': 'Payout approved'}
+
+@app.put("/api/admin/payouts/{payout_id}/paid")
+async def mark_payout_paid(
+    payout_id: str,
+    current_user: dict = Depends(require_role(UserRole.ADMIN))
+):
+    """Отметить выплату как выплаченную"""
+    await db.payout_requests.update_one(
+        {'_id': ObjectId(payout_id)},
+        {'$set': {'status': 'paid', 'updated_at': datetime.utcnow()}}
+    )
+    return {'message': 'Payout marked as paid'}
+
+@app.put("/api/admin/payouts/{payout_id}/reject")
+async def reject_payout(
+    payout_id: str,
+    current_user: dict = Depends(require_role(UserRole.ADMIN))
+):
+    """Отклонить выплату"""
+    await db.payout_requests.update_one(
+        {'_id': ObjectId(payout_id)},
+        {'$set': {'status': 'rejected', 'updated_at': datetime.utcnow()}}
+    )
+    return {'message': 'Payout rejected'}
+
+# ========== ADMIN PLATFORM MANAGEMENT (БЛОК 6) ==========
+
+@app.get("/api/admin/dashboard")
+async def get_admin_dashboard(
+    current_user: dict = Depends(require_role(UserRole.ADMIN))
+):
+    """Глобальная аналитика платформы"""
+    # Подсчет метрик
+    total_sellers = await db.users.count_documents({'role': 'seller', 'is_active': True})
+    total_products = await db.products.count_documents({})
+    total_orders = await db.orders.count_documents({})
+    
+    # Финансовые метрики
+    transactions = await db.finance_transactions.find().to_list(length=100000)
+    total_revenue = sum(t.get('revenue', 0) for t in transactions)
+    total_net_profit = sum(t.get('net_profit', 0) for t in transactions)
+    
+    return {
+        'total_sellers': total_sellers,
+        'total_products': total_products,
+        'total_orders': total_orders,
+        'total_revenue': total_revenue,
+        'total_net_profit': total_net_profit
+    }
+
+@app.get("/api/admin/categories")
+async def get_categories(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить список категорий"""
+    categories = await db.categories.find().sort('order', 1).to_list(length=1000)
+    
+    for cat in categories:
+        cat['id'] = str(cat.pop('_id'))
+        if cat.get('parent_id'):
+            cat['parent_id'] = str(cat['parent_id'])
+    
+    return categories
+
+@app.post("/api/admin/categories")
+async def create_category(
+    name: str,
+    parent_id: Optional[str] = None,
+    current_user: dict = Depends(require_role(UserRole.ADMIN))
+):
+    """Создать категорию"""
+    category = {
+        'name': name,
+        'parent_id': ObjectId(parent_id) if parent_id else None,
+        'order': 0,
+        'created_at': datetime.utcnow()
+    }
+    
+    result = await db.categories.insert_one(category)
+    
+    return {'message': 'Category created', 'id': str(result.inserted_id)}
+
+@app.delete("/api/admin/categories/{category_id}")
+async def delete_category(
+    category_id: str,
+    current_user: dict = Depends(require_role(UserRole.ADMIN))
+):
+    """Удалить категорию"""
+    await db.categories.delete_one({'_id': ObjectId(category_id)})
+    return {'message': 'Category deleted'}
+
+@app.get("/api/admin/cms/pages")
+async def get_cms_pages(
+    current_user: dict = Depends(require_role(UserRole.ADMIN))
+):
+    """Получить список CMS страниц"""
+    pages = await db.cms_pages.find().to_list(length=100)
+    
+    for page in pages:
+        page['id'] = str(page.pop('_id'))
+    
+    return pages
+
+@app.put("/api/admin/cms/pages/{page_id}")
+async def update_cms_page(
+    page_id: str,
+    content: Dict[str, Any],
+    current_user: dict = Depends(require_role(UserRole.ADMIN))
+):
+    """Обновить CMS страницу"""
+    await db.cms_pages.update_one(
+        {'_id': ObjectId(page_id)},
+        {'$set': {'content': content, 'updated_at': datetime.utcnow()}}
+    )
+    return {'message': 'Page updated'}
+
 # Import and include product routes
 try:
     from products_routes import router as products_router
