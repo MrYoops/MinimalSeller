@@ -32,8 +32,13 @@ function SellerDashboard() {
     name: '',
     description: '',
     price: '',
-    status: 'draft'
+    status: 'draft',
+    category_id: '',
+    attributes: {}
   })
+  const [categories, setCategories] = useState([])
+  const [newAttrKey, setNewAttrKey] = useState('')
+  const [newAttrValue, setNewAttrValue] = useState('')
 
   useEffect(() => {
     loadApiKeys()
