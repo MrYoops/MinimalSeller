@@ -38,8 +38,21 @@ function OrderDetailPage() {
   }
 
   const createCDEKLabel = async () => {
-    alert('СДЭК интеграция: Создание накладной...')
-    // TODO: Реальная интеграция с СДЭК API
+    try {
+      // Mock CDEK API call
+      const trackingNumber = 'CDEK-' + Math.random().toString(36).substring(7).toUpperCase()
+      
+      await api.put(`/api/orders/${id}/status`, null, {
+        params: { status: 'shipped' }
+      })
+      
+      // В реальности здесь будет вызов к CDEK API
+      alert(`CDEK накладная создана!\nТрек-номер: ${trackingNumber}\n\nВ реальной системе здесь будет интеграция с API CDЕК.`)
+      
+      loadOrder()
+    } catch (error) {
+      alert('Failed to create CDEK label: ' + (error.response?.data?.detail || error.message))
+    }
   }
 
   const printLabel = () => {
