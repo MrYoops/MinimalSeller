@@ -4,6 +4,8 @@ import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiDollarSign, FiBox } from 
 import OrdersPage from './OrdersPage'
 import InventoryPage from './InventoryPage'
 import SettingsDropdown from '../components/SettingsDropdown'
+import { useTheme } from '../context/ThemeContext'
+import { useTranslation } from '../i18n/translations'
 
 function SellerDashboard() {
   const { user, logout, api } = useAuth()
