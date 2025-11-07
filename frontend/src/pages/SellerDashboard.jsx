@@ -223,7 +223,7 @@ function SellerDashboard() {
               
               <div className="card-neon">
                 <p className="comment mb-2">// Products</p>
-                <p className="text-3xl font-bold text-mm-purple">0</p>
+                <p className="text-3xl font-bold text-mm-purple">{products.length}</p>
               </div>
               
               <div className="card-neon">
