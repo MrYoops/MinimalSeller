@@ -467,7 +467,8 @@ async def get_product(
     current_user: dict = Depends(get_current_user)
 ):
     """Получить один товар"""
-    product = await db.products.find_one({'_id': ObjectId(product_id)})\n    
+    product = await db.products.find_one({'_id': ObjectId(product_id)})
+    
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
