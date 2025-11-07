@@ -87,6 +87,15 @@ function AppRoutes() {
         }
       />
       
+      <Route
+        path="/admin/sellers/:id/manage"
+        element={
+          <ProtectedRoute requiredRole="admin">
+            <SellerManagePage />
+          </ProtectedRoute>
+        }
+      />
+      
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
