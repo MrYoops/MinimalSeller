@@ -77,7 +77,7 @@ function AdminDashboard() {
               <h1 className="text-2xl font-bold">
                 MINIMAL<span className="text-mm-purple">MOD</span>
               </h1>
-              <span className="status-active">ADMIN</span>
+              <span className="status-active">{t('adminPanel')}</span>
             </div>
             
             <div className="flex items-center space-x-6">
