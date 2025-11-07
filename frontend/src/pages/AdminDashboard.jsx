@@ -11,6 +11,7 @@ import AdminMarketingPage from './AdminMarketingPage'
 import AdminCommunicationPage from './AdminCommunicationPage'
 import CMSPage from './CMSPage'
 import AnalyticsPage from './AnalyticsPage'
+import AdminAPIKeysPage from './AdminAPIKeysPage'
 import { useTheme } from '../context/ThemeContext'
 import { useTranslation } from '../i18n/translations'
 
