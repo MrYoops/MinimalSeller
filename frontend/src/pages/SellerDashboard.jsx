@@ -337,8 +337,8 @@ function SellerDashboard() {
           <div>
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl mb-2 text-mm-cyan">PRODUCTS</h2>
-                <p className="comment">// Manage your product catalog</p>
+                <h2 className="text-2xl mb-2 text-mm-cyan">{t('productList')}</h2>
+                <p className="comment">{t('manageProducts')}</p>
               </div>
               <button
                 onClick={() => setShowAddProductModal(true)}
