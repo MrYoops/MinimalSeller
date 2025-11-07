@@ -369,6 +369,26 @@ function AdminDashboard() {
             )}
           </div>
         )}
+
+        {activeTab === 'orders' && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl mb-2 text-mm-cyan">ALL ORDERS</h2>
+              <p className="comment">// View orders from all sellers</p>
+            </div>
+            <OrdersPage />
+          </div>
+        )}
+
+        {activeTab === 'inventory' && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl mb-2 text-mm-cyan">GLOBAL INVENTORY</h2>
+              <p className="comment">// View inventory from all sellers</p>
+            </div>
+            <InventoryPage />
+          </div>
+        )}
       </main>
     </div>
   )
