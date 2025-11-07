@@ -64,7 +64,7 @@ function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm mb-2 text-mm-text-secondary uppercase tracking-wider">
-                Email
+                {t('email')}
               </label>
               <input
                 type="email"
@@ -80,7 +80,7 @@ function LoginPage() {
 
             <div>
               <label className="block text-sm mb-2 text-mm-text-secondary uppercase tracking-wider">
-                Password
+                {t('password')}
               </label>
               <input
                 type="password"
@@ -100,7 +100,7 @@ function LoginPage() {
               className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="login-submit-button"
             >
-              {loading ? '// LOADING...' : '// LOGIN'}
+              {loading ? t('loading') : `// ${t('login')}`}
             </button>
           </form>
 
