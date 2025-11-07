@@ -115,6 +115,18 @@ function AdminDashboard() {
               <FiActivity className="inline mr-2" />
               Analytics
             </button>
+            <button
+              onClick={() => setActiveTab('products')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'products'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-products"
+            >
+              <FiPackage className="inline mr-2" />
+              Products
+            </button>
           </div>
         </div>
       </nav>
