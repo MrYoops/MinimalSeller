@@ -402,17 +402,14 @@ async def delete_api_key(
     return {"message": "API key deleted successfully"}
 
 # Import and include product routes
-from products_routes import router as products_router, init_routes
-from ai_routes import router as ai_router, init_ai_routes
-
-# Initialize routes with dependencies after app startup
-@app.on_event("startup")
-async def setup_routes():
-    init_routes(db, get_current_user, require_role)
-    init_ai_routes(get_current_user)
+try:
+    from products_routes import router as products_router
+    from ai_routes import router as ai_router
     app.include_router(products_router)
     app.include_router(ai_router)
-    logger.info("Product and AI routes initialized")
+    logger.info("Product and AI routes included")
+except Exception as e:
+    logger.error(f"Failed to include routes: {e}")
 
 if __name__ == "__main__":
     import uvicorn
