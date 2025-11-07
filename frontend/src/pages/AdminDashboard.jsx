@@ -7,9 +7,13 @@ import SettingsDropdown from '../components/SettingsDropdown'
 import AdminGlobalDashboard from './AdminGlobalDashboard'
 import CategoriesPage from './CategoriesPage'
 import PayoutsPage from './PayoutsPage'
+import { useTheme } from '../context/ThemeContext'
+import { useTranslation } from '../i18n/translations'
 
 function AdminDashboard() {
   const { user, logout, api } = useAuth()
+  const { language } = useTheme()
+  const { t } = useTranslation(language)
   const [users, setUsers] = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
