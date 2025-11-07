@@ -132,7 +132,7 @@ function SellerDashboard() {
               <h1 className="text-2xl font-bold">
                 MINIMAL<span className="text-mm-purple">MOD</span>
               </h1>
-              <span className="status-new">SELLER</span>
+              <span className="status-new">{t('sellerPanel')}</span>
             </div>
             
             <div className="flex items-center space-x-6">
