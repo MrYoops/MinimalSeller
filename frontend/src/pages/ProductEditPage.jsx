@@ -394,11 +394,11 @@ function ProductEditPage() {
               </div>
             )}
 
-            {/* Marketplaces Tab */}
+            {/* Marketplaces Section (shown when button clicked) */}
             {activeTab === 'minimalmod' && showMarketplaces && (
-              <div className="space-y-6 mt-6">
-                <div className="border-t-2 border-mm-cyan pt-6">
-                  <h3 className="text-xl mb-4 text-mm-purple uppercase">MARKETPLACE SETTINGS</h3>
+              <div className="space-y-6 mt-6 border-t-2 border-mm-cyan pt-6">
+                <h3 className="text-xl mb-4 text-mm-purple uppercase">MARKETPLACE SETTINGS</h3>
+                
                 {/* Marketplace Images */}
                 <div className="card-neon">
                   <h3 className="text-xl mb-4 text-mm-cyan uppercase">Marketplace Images (up to 10)</h3>
