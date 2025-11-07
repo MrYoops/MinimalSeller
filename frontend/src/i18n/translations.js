@@ -120,8 +120,8 @@ export const translations = {
     inn: 'Tax ID',
     
     // Header
-    adminPanel: 'ADMIN PANEL',
-    sellerPanel: 'SELLER PANEL',
+    adminPanel: 'ADMIN',
+    sellerPanel: 'SELLER',
     
     // Tabs
     overview: 'Overview',
@@ -131,6 +131,15 @@ export const translations = {
     orders: 'Orders',
     inventory: 'Inventory',
     apiKeys: 'API Keys',
+    finance: 'Finance',
+    balance: 'Balance',
+    promocodes: 'Promocodes',
+    questions: 'Questions',
+    reviews: 'Reviews',
+    dashboard: 'Dashboard',
+    sellers: 'Sellers',
+    payouts: 'Payouts',
+    categories: 'Categories',
     
     // Products
     addProduct: '+ ADD PRODUCT',
@@ -155,7 +164,7 @@ export const translations = {
     date: 'Date',
     
     // Inventory
-    inventoryManagement: 'INVENTORY MANAGEMENT',
+    inventoryManagement: 'INVENTORY',
     fbs: 'FBS (Own Warehouse)',
     fbo: 'FBO (Marketplace Warehouses)',
     history: 'Movement History',
