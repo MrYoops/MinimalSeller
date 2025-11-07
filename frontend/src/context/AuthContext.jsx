@@ -3,7 +3,8 @@ import axios from 'axios'
 
 const AuthContext = createContext()
 
-const API_URL = import.meta.env.REACT_APP_BACKEND_URL || 'http://localhost:8001'
+// Backend URL - используем относительный путь для preview окружения
+const API_URL = import.meta.env.REACT_APP_BACKEND_URL || ''
 
 const api = axios.create({
   baseURL: API_URL,
