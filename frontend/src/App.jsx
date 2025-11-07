@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import AdminDashboard from './pages/AdminDashboard'
 import SellerDashboard from './pages/SellerDashboard'
+import ProductEditPage from './pages/ProductEditPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 function ProtectedRoute({ children, requiredRole }) {
