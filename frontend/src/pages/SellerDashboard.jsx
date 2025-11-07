@@ -9,6 +9,8 @@ import { useTranslation } from '../i18n/translations'
 
 function SellerDashboard() {
   const { user, logout, api } = useAuth()
+  const { language } = useTheme()
+  const { t } = useTranslation(language)
   const [apiKeys, setApiKeys] = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
