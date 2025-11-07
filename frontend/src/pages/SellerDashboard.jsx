@@ -551,6 +551,10 @@ function SellerDashboard() {
         {activeTab === 'reviews' && (
           <ReviewsPage />
         )}
+
+        {activeTab === 'analytics' && (
+          <AnalyticsPage />
+        )}
       </main>
 
       {/* Add API Key Modal */}
