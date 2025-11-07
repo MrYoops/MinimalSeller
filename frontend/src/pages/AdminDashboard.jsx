@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiLogOut, FiUsers, FiKey, FiActivity, FiPackage } from 'react-icons/fi'
+import { FiLogOut, FiUsers, FiKey, FiActivity, FiPackage, FiShoppingCart, FiBox } from 'react-icons/fi'
+import OrdersPage from './OrdersPage'
+import InventoryPage from './InventoryPage'
 
 function AdminDashboard() {
   const { user, logout, api } = useAuth()
