@@ -408,14 +408,14 @@ function SellerDashboard() {
                               className="px-3 py-1 border border-mm-cyan text-mm-cyan hover:bg-mm-cyan/10 transition-colors text-xs uppercase font-mono"
                               data-testid={`edit-product-${product.id}`}
                             >
-                              EDIT
+                              {t('edit')}
                             </button>
                             <button
                               onClick={() => deleteProduct(product.id)}
                               className="px-3 py-1 border border-mm-red text-mm-red hover:bg-mm-red/10 transition-colors text-xs uppercase font-mono"
                               data-testid={`delete-product-${product.id}`}
                             >
-                              DELETE
+                              {t('delete')}
                             </button>
                           </td>
                         </tr>
