@@ -199,6 +199,18 @@ function SellerDashboard() {
               <FiShoppingCart className="inline mr-2" />
               Orders
             </button>
+            <button
+              onClick={() => setActiveTab('inventory')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'inventory'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-inventory"
+            >
+              <FiBox className="inline mr-2" />
+              Inventory
+            </button>
           </div>
         </div>
       </nav>
