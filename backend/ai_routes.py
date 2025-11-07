@@ -84,11 +84,11 @@ async def adapt_name(
         "suggestions": [text]
     }
 
-@router.post("/optimize-description")
+@router.post("/ai/optimize-description")
 async def optimize_description(
     text: str,
     marketplace: str,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """
     AI-оптимизация описания товара для конкретного маркетплейса.
