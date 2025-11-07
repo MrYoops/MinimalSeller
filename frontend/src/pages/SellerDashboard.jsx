@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiDollarSign, FiBox, FiPieChart, FiTag, FiMessageSquare, FiStar, FiTrendingUp, FiFileText, FiRotateCcw, FiPercent } from 'react-icons/fi'
+import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiBox, FiDollarSign, FiPieChart } from 'react-icons/fi'
 import OrdersPage from './OrdersPage'
 import InventoryPage from './InventoryPage'
 import SettingsDropdown from '../components/SettingsDropdown'
@@ -8,14 +8,7 @@ import { useTheme } from '../context/ThemeContext'
 import { useTranslation } from '../i18n/translations'
 import FinanceDashboard from './FinanceDashboard'
 import PayoutsPage from './PayoutsPage'
-import PromocodesPage from './PromocodesPage'
-import QuestionsPage from './QuestionsPage'
-import ReviewsPage from './ReviewsPage'
-import AnalyticsPage from './AnalyticsPage'
 import APIKeysPage from './APIKeysPage'
-import FinanceReportsPage from './FinanceReportsPage'
-import PromotionsPage from './PromotionsPage'
-import ReturnsPage from './ReturnsPage'
 
 function SellerDashboard() {
   const { user, logout, api } = useAuth()
