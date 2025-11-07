@@ -151,31 +151,7 @@ function ProductEditPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content - Left */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Tabs */}
-            <div className="flex space-x-4 border-b border-mm-border">
-              <button
-                onClick={() => setActiveTab('minimalmod')}
-                className={`px-4 py-3 font-mono uppercase text-sm transition-colors ${
-                  activeTab === 'minimalmod'
-                    ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                    : 'text-mm-text-secondary hover:text-mm-cyan'
-                }`}
-              >
-                MinimalMod
-              </button>
-              <button
-                onClick={() => setActiveTab('marketplaces')}
-                className={`px-4 py-3 font-mono uppercase text-sm transition-colors ${
-                  activeTab === 'marketplaces'
-                    ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                    : 'text-mm-text-secondary hover:text-mm-cyan'
-                }`}
-              >
-                Marketplaces
-              </button>
-            </div>
-
-            {/* MinimalMod Tab */}
+            {/* MinimalMod Data */}
             {activeTab === 'minimalmod' && (
               <div className="space-y-6">
                 {/* Basic Info */}
