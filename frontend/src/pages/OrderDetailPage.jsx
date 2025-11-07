@@ -241,11 +241,40 @@ function OrderDetailPage() {
             <div className="card-neon">
               <h3 className="text-lg mb-4 text-mm-cyan uppercase">Status</h3>
               <div className="mb-4">
-                <span className={`px-4 py-2 border-2 font-mono uppercase text-sm ${\n                  order.status === 'new' ? 'border-mm-blue text-mm-blue' :\n                  order.status === 'awaiting_shipment' ? 'border-mm-yellow text-mm-yellow' :\n                  order.status === 'shipped' ? 'border-mm-cyan text-mm-cyan' :\n                  order.status === 'delivered' ? 'border-mm-green text-mm-green' :\n                  'border-mm-red text-mm-red'\n                }`}>\n                  {order.status}\n                </span>
+                <span className={`px-4 py-2 border-2 font-mono uppercase text-sm ${
+                  order.status === 'new' ? 'border-mm-blue text-mm-blue' :
+                  order.status === 'awaiting_shipment' ? 'border-mm-yellow text-mm-yellow' :
+                  order.status === 'shipped' ? 'border-mm-cyan text-mm-cyan' :
+                  order.status === 'delivered' ? 'border-mm-green text-mm-green' :
+                  'border-mm-red text-mm-red'
+                }`}>
+                  {order.status}
+                </span>
               </div>
               
               <div className="space-y-2">
-                {order.status === 'new' && (\n                  <button\n                    onClick={() => updateStatus('awaiting_shipment')}\n                    className="btn-primary w-full"\n                  >\n                    Mark as Awaiting Shipment\n                  </button>\n                )}\n                {order.status === 'awaiting_shipment' && (\n                  <button\n                    onClick={() => updateStatus('shipped')}\n                    className="btn-primary w-full"\n                  >\n                    Mark as Shipped\n                  </button>\n                )}\n                <button\n                  onClick={() => updateStatus('cancelled')}\n                  className="btn-secondary w-full text-mm-red border-mm-red"\n                >\n                  Cancel Order\n                </button>
+                {order.status === 'new' && (
+                  <button
+                    onClick={() => updateStatus('awaiting_shipment')}
+                    className="btn-primary w-full"
+                  >
+                    Mark as Awaiting Shipment
+                  </button>
+                )}
+                {order.status === 'awaiting_shipment' && (
+                  <button
+                    onClick={() => updateStatus('shipped')}
+                    className="btn-primary w-full"
+                  >
+                    Mark as Shipped
+                  </button>
+                )}
+                <button
+                  onClick={() => updateStatus('cancelled')}
+                  className="btn-secondary w-full text-mm-red border-mm-red"
+                >
+                  Cancel Order
+                </button>
               </div>
             </div>
 
