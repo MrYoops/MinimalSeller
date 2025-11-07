@@ -258,6 +258,18 @@ function SellerDashboard() {
               {t('finance')}
             </button>
             <button
+              onClick={() => setActiveTab('reports')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'reports'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-reports"
+            >
+              <FiFileText className="inline mr-2" />
+              Reports
+            </button>
+            <button
               onClick={() => setActiveTab('balance')}
               className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
                 activeTab === 'balance'
