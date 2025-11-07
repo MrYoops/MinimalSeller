@@ -10,11 +10,18 @@ function InventoryPage() {
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdjustModal, setShowAdjustModal] = useState(false)
+  const [showFBOShipmentModal, setShowFBOShipmentModal] = useState(false)
   const [adjustData, setAdjustData] = useState({
     product_id: '',
     quantity_change: '',
     reason: ''
   })
+  const [fboShipment, setFBOShipment] = useState({
+    marketplace: 'ozon',
+    warehouse: '',
+    products: []
+  })
+  const [products, setProducts] = useState([])
 
   useEffect(() => {
     loadData()
