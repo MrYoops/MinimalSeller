@@ -99,6 +99,18 @@ function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8 h-12">
             <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'dashboard'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-dashboard"
+            >
+              <FiActivity className="inline mr-2" />
+              Dashboard
+            </button>
+            <button
               onClick={() => setActiveTab('users')}
               className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
                 activeTab === 'users'
@@ -108,19 +120,7 @@ function AdminDashboard() {
               data-testid="tab-users"
             >
               <FiUsers className="inline mr-2" />
-              Users
-            </button>
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
-                activeTab === 'analytics'
-                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                  : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-              data-testid="tab-analytics"
-            >
-              <FiActivity className="inline mr-2" />
-              Analytics
+              Sellers
             </button>
             <button
               onClick={() => setActiveTab('products')}
@@ -157,6 +157,30 @@ function AdminDashboard() {
             >
               <FiBox className="inline mr-2" />
               Inventory
+            </button>
+            <button
+              onClick={() => setActiveTab('payouts')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'payouts'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-payouts"
+            >
+              <FiDollarSign className="inline mr-2" />
+              Payouts
+            </button>
+            <button
+              onClick={() => setActiveTab('categories')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'categories'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-categories"
+            >
+              <FiFolder className="inline mr-2" />
+              Categories
             </button>
           </div>
         </div>
