@@ -13,6 +13,51 @@
     padding: 0;
   }
   
+  /* Light Theme */
+  .light-theme body {
+    @apply bg-white text-gray-900;
+  }
+  
+  .light-theme .bg-mm-black {
+    @apply bg-white;
+  }
+  
+  .light-theme .bg-mm-dark {
+    @apply bg-gray-50;
+  }
+  
+  .light-theme .bg-mm-darker {
+    @apply bg-gray-100;
+  }
+  
+  .light-theme .bg-mm-gray {
+    @apply bg-gray-200;
+  }
+  
+  .light-theme .text-mm-text {
+    @apply text-gray-900;
+  }
+  
+  .light-theme .text-mm-text-secondary {
+    @apply text-gray-600;
+  }
+  
+  .light-theme .text-mm-text-tertiary {
+    @apply text-gray-500;
+  }
+  
+  .light-theme .border-mm-border {
+    @apply border-gray-300;
+  }
+  
+  .light-theme .card-neon {
+    @apply bg-white border-gray-300;
+  }
+  
+  .light-theme .input-neon {
+    @apply bg-gray-50 border-gray-300;
+  }
+  
   h1, h2, h3, h4, h5, h6 {
     @apply font-sans font-bold;
   }
