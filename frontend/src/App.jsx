@@ -6,6 +6,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import SellerDashboard from './pages/SellerDashboard'
 import ProductEditPage from './pages/ProductEditPage'
 import OrderDetailPage from './pages/OrderDetailPage'
+import SellerManagePage from './pages/SellerManagePage'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 
