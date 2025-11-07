@@ -13,7 +13,7 @@ function AdminDashboard() {
   const [users, setUsers] = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('users')
+  const [activeTab, setActiveTab] = useState('dashboard')
 
   useEffect(() => {
     loadUsers()
