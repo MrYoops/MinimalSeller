@@ -59,7 +59,6 @@ function ProductEditPage() {
   const handleCategoryChange = (categoryId) => {
     const cat = categories.find(c => c.id === categoryId)
     setSelectedCategory(cat)
-    setProduct({...product, category_id: categoryId})
     
     // Инициализируем атрибуты категории
     if (cat && cat.attributes) {
@@ -72,6 +71,8 @@ function ProductEditPage() {
         category_id: categoryId,
         minimalmod: {...product.minimalmod, attributes: attrs}
       })
+    } else {
+      setProduct({...product, category_id: categoryId})
     }
   }
 
