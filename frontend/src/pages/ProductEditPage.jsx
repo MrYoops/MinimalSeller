@@ -516,6 +516,7 @@ function ProductEditPage() {
                       className="input-neon w-full"
                       placeholder="Укажите цену для Ozon"
                     />
+                    <p className="comment text-xs mt-1">// Если пусто, будет использована базовая цена</p>
                   </div>
                   
                   <div>
@@ -530,48 +531,7 @@ function ProductEditPage() {
                       rows="4"
                       placeholder="Описание для Ozon (может отличаться от основного)"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm mb-2 text-mm-text-secondary uppercase">
-                      Фото для Ozon (до 10 шт)
-                    </label>
-                    <div className="space-y-2">
-                      {product.marketplaces.images.map((url, idx) => (
-                        <div key={idx} className="flex items-center space-x-2">
-                          <input
-                            type="text"
-                            value={url}
-                            onChange={(e) => {
-                              const newImages = [...product.marketplaces.images]
-                              newImages[idx] = e.target.value
-                              setProduct({...product, marketplaces: {...product.marketplaces, images: newImages}})
-                            }}
-                            className="input-neon flex-1"
-                          />
-                          <button
-                            onClick={() => setProduct({
-                              ...product,
-                              marketplaces: {...product.marketplaces, images: product.marketplaces.images.filter((_, i) => i !== idx)}
-                            })}
-                            className="text-mm-red"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                      {product.marketplaces.images.length < 10 && (
-                        <button
-                          onClick={() => setProduct({
-                            ...product,
-                            marketplaces: {...product.marketplaces, images: [...product.marketplaces.images, '']}
-                          })}
-                          className="btn-secondary w-full text-xs"
-                        >
-                          + Добавить
-                        </button>
-                      )}
-                    </div>
+                    <p className="comment text-xs mt-1">// Если пусто, будет использовано основное описание</p>
                   </div>
                 </div>
               </div>
