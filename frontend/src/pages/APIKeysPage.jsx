@@ -276,6 +276,7 @@ function APIKeysPage() {
                     </td>
                     <td className="py-4 px-4 text-right space-x-2">
                       <button
+                        onClick={() => openEditModal(key)}
                         className="px-3 py-1 border border-mm-cyan text-mm-cyan hover:bg-mm-cyan/10 text-xs uppercase font-mono"
                       >
                         <FiEdit className="inline mr-1" />
