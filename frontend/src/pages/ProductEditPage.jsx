@@ -190,7 +190,7 @@ function ProductEditPage() {
         <div className="card-neon mb-6">
           <p className="comment mb-3">// Выберите на какие площадки отправить товар:</p>
           <div className="flex space-x-4">
-            <label className="flex items-center space-x-2 p-4 border-2 border-mm-border hover:border-mm-blue transition-all cursor-pointer">
+            <label className="flex items-center space-x-2 p-4 border-2 border-mm-border hover:border-mm-cyan transition-all cursor-pointer">
               <input
                 type="checkbox"
                 checked={true}
@@ -200,7 +200,7 @@ function ProductEditPage() {
               <span className="font-mono text-mm-cyan">ОСНОВНОЙ САЙТ (обязательно)</span>
             </label>
             
-            <label className="flex items-center space-x-2 p-4 border-2 transition-all cursor-pointer ${
+            <label className={`flex items-center space-x-2 p-4 border-2 transition-all cursor-pointer ${
               product.marketplaces.ozon.enabled ? 'border-mm-blue bg-mm-blue/10' : 'border-mm-border hover:border-mm-blue'
             }`}>
               <input
@@ -220,7 +220,7 @@ function ProductEditPage() {
               </span>
             </label>
             
-            <label className="flex items-center space-x-2 p-4 border-2 transition-all cursor-pointer ${
+            <label className={`flex items-center space-x-2 p-4 border-2 transition-all cursor-pointer ${
               product.marketplaces.wildberries.enabled ? 'border-mm-purple bg-mm-purple/10' : 'border-mm-border hover:border-mm-purple'
             }`}>
               <input
@@ -240,7 +240,7 @@ function ProductEditPage() {
               </span>
             </label>
             
-            <label className="flex items-center space-x-2 p-4 border-2 transition-all cursor-pointer ${
+            <label className={`flex items-center space-x-2 p-4 border-2 transition-all cursor-pointer ${
               product.marketplaces.yandex_market.enabled ? 'border-mm-yellow bg-mm-yellow/10' : 'border-mm-border hover:border-mm-yellow'
             }`}>
               <input
