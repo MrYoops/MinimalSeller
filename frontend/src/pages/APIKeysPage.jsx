@@ -7,6 +7,8 @@ function APIKeysPage() {
   const [apiKeys, setApiKeys] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingKey, setEditingKey] = useState(null)
   const [modalStep, setModalStep] = useState(1)
   const [selectedMarketplace, setSelectedMarketplace] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -18,7 +20,13 @@ function APIKeysPage() {
     yandex_token: '',
     yandex_campaign_id: '',
     auto_sync_stock: true,
-    auto_update_prices: true
+    auto_update_prices: true,
+    auto_get_orders: true
+  })
+  const [editKey, setEditKey] = useState({
+    auto_sync_stock: true,
+    auto_update_prices: true,
+    auto_get_orders: true
   })
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState(null)
