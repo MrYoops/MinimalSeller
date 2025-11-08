@@ -339,6 +339,9 @@ function ProductEditPage() {
               <div className="space-y-2">
                 {product.minimalmod.images.map((url, idx) => (
                   <div key={idx} className="flex items-center space-x-2">
+                    {url && (
+                      <img src={url} alt="" className="w-16 h-16 object-cover border border-mm-border" />
+                    )}
                     <input
                       type="text"
                       value={url}
@@ -350,6 +353,20 @@ function ProductEditPage() {
                       className="input-neon flex-1"
                       placeholder="https://example.com/image.jpg"
                     />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id={`file-mm-${idx}`}
+                      onChange={(e) => {
+                        if (e.target.files[0]) {
+                          alert('Файл выбран: ' + e.target.files[0].name + '\\nВ реальной системе загрузится на сервер')
+                        }
+                      }}
+                    />
+                    <label htmlFor={`file-mm-${idx}`} className="btn-secondary px-3 py-2 cursor-pointer">
+                      📁
+                    </label>
                     <button
                       onClick={() => {
                         setProduct({
@@ -360,7 +377,7 @@ function ProductEditPage() {
                           }
                         })
                       }}
-                      className="text-mm-red hover:text-mm-red/80"
+                      className="text-mm-red hover:text-mm-red/80 text-xl"
                     >
                       ×
                     </button>
@@ -378,6 +395,70 @@ function ProductEditPage() {
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* Images for Marketplaces */}
+            <div className="card-neon border-2 border-mm-purple">
+              <h3 className="text-xl mb-4 text-mm-purple uppercase">
+                <FiImage className="inline mr-2" />
+                Фото для МАРКЕТПЛЕЙСОВ (до 10 шт, формат 3:4)
+              </h3>
+              <p className="comment mb-3">// Эти фото используются на Ozon, Wildberries, Яндекс.Маркет</p>
+              <div className="space-y-2">
+                {product.marketplaces.images.map((url, idx) => (
+                  <div key={idx} className="flex items-center space-x-2">
+                    {url && (
+                      <img src={url} alt="" className="w-16 h-16 object-cover border border-mm-border" />
+                    )}
+                    <input
+                      type="text"
+                      value={url}
+                      onChange={(e) => {
+                        const newImages = [...product.marketplaces.images]
+                        newImages[idx] = e.target.value
+                        setProduct({...product, marketplaces: {...product.marketplaces, images: newImages}})
+                      }}
+                      className="input-neon flex-1"
+                      placeholder="https://example.com/marketplace-image.jpg"
+                    />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id={`file-mp-${idx}`}
+                      onChange={(e) => {
+                        if (e.target.files[0]) {
+                          alert('Файл выбран: ' + e.target.files[0].name + '\\nВ реальной системе загрузится на сервер')
+                        }
+                      }}
+                    />
+                    <label htmlFor={`file-mp-${idx}`} className="btn-secondary px-3 py-2 cursor-pointer">
+                      📁
+                    </label>
+                    <button
+                      onClick={() => setProduct({
+                        ...product,
+                        marketplaces: {...product.marketplaces, images: product.marketplaces.images.filter((_, i) => i !== idx)}
+                      })}
+                      className="text-mm-red hover:text-mm-red/80 text-xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {product.marketplaces.images.length < 10 && (
+                  <button
+                    onClick={() => setProduct({
+                      ...product,
+                      marketplaces: {...product.marketplaces, images: [...product.marketplaces.images, '']}
+                    })}
+                    className="btn-secondary w-full"
+                  >
+                    + Добавить фото
+                  </button>
+                )}
+              </div>
+              <p className="comment text-xs mt-3">// Рекомендуемый формат: 3:4 (например, 900x1200px)</p>
             </div>
 
             {/* Category Attributes */}
