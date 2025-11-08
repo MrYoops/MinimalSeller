@@ -1016,15 +1016,20 @@ async def get_categories(
 
 @app.post("/api/admin/categories")
 async def create_category(
-    name: str,
-    parent_id: Optional[str] = None,
+    data: Dict[str, Any],
     current_user: dict = Depends(require_role(UserRole.ADMIN))
 ):
     """Создать категорию"""
     category = {
-        'name': name,
-        'parent_id': ObjectId(parent_id) if parent_id else None,
+        'name': data.get('name'),
+        'parent_id': ObjectId(data.get('parent_id')) if data.get('parent_id') else None,
         'order': 0,
+        'attributes': data.get('attributes', []),  # Характеристики категории
+        'marketplace_mapping': {
+            'ozon': data.get('ozon_attributes', {}),
+            'wildberries': data.get('wb_attributes', {}),
+            'yandex': data.get('yandex_attributes', {})
+        },
         'created_at': datetime.utcnow()
     }
     
