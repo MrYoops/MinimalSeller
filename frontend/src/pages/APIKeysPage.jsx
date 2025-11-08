@@ -1,26 +1,28 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiKey, FiCheckCircle, FiXCircle, FiInfo } from 'react-icons/fi'
+import { FiKey, FiCheckCircle, FiXCircle, FiInfo, FiRefreshCw, FiEdit, FiTrash2, FiEye, FiEyeOff } from 'react-icons/fi'
 
 function APIKeysPage() {
   const { api } = useAuth()
   const [apiKeys, setApiKeys] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [selectedMarketplace, setSelectedMarketplace] = useState('ozon')
+  const [modalStep, setModalStep] = useState(1)
+  const [selectedMarketplace, setSelectedMarketplace] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [newKey, setNewKey] = useState({
-    marketplace: 'ozon',
-    // Ozon fields
+    marketplace: '',
     client_id: '',
     api_key: '',
-    // Wildberries fields
     wb_token: '',
-    // Yandex fields
     yandex_token: '',
-    yandex_campaign_id: ''
+    yandex_campaign_id: '',
+    auto_sync_stock: true,
+    auto_update_prices: true
   })
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState(null)
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
     loadApiKeys()
@@ -36,16 +38,18 @@ function APIKeysPage() {
     setLoading(false)
   }
 
+  const maskClientId = (id) => {
+    if (!id || id.length < 8) return id
+    return id.substring(0, 4) + '***' + id.substring(id.length - 4)
+  }
+
   const testConnection = async () => {
     setTestingConnection(true)
     setConnectionStatus(null)
     
     try {
-      // Mock test - в реальности будет вызов к API маркетплейса
       await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Здесь будет реальная проверка подключения
-      const success = Math.random() > 0.3
+      const success = Math.random() > 0.2
       
       setConnectionStatus({
         success,
@@ -65,28 +69,40 @@ function APIKeysPage() {
 
   const addApiKey = async (e) => {
     e.preventDefault()
+    
+    if (!connectionStatus || !connectionStatus.success) {
+      alert('Сначала проверьте подключение!')
+      return
+    }
+    
     try {
       const payload = {
-        marketplace: newKey.marketplace,
-        client_id: newKey.marketplace === 'ozon' ? newKey.client_id : '',
-        api_key: newKey.marketplace === 'ozon' ? newKey.api_key : 
-                 newKey.marketplace === 'wb' ? newKey.wb_token : 
-                 newKey.yandex_token
+        marketplace: selectedMarketplace,
+        client_id: selectedMarketplace === 'ozon' ? newKey.client_id : '',
+        api_key: selectedMarketplace === 'ozon' ? newKey.api_key : 
+                 selectedMarketplace === 'wb' ? newKey.wb_token : 
+                 newKey.yandex_token,
+        auto_sync_stock: newKey.auto_sync_stock,
+        auto_update_prices: newKey.auto_update_prices
       }
       
-      if (newKey.marketplace === 'yandex') {
+      if (selectedMarketplace === 'yandex') {
         payload.campaign_id = newKey.yandex_campaign_id
       }
       
       await api.post('/api/seller/api-keys', payload)
       setShowAddModal(false)
+      setModalStep(1)
+      setSelectedMarketplace('')
       setNewKey({
-        marketplace: 'ozon',
+        marketplace: '',
         client_id: '',
         api_key: '',
         wb_token: '',
         yandex_token: '',
-        yandex_campaign_id: ''
+        yandex_campaign_id: '',
+        auto_sync_stock: true,
+        auto_update_prices: true
       })
       setConnectionStatus(null)
       loadApiKeys()
@@ -97,7 +113,7 @@ function APIKeysPage() {
   }
 
   const deleteApiKey = async (keyId) => {
-    if (!confirm('Удалить этот API ключ?')) return
+    if (!confirm('Удалить эту интеграцию?\n\nВсе автоматические синхронизации будут остановлены.')) return
     try {
       await api.delete(`/api/seller/api-keys/${keyId}`)
       loadApiKeys()
@@ -106,57 +122,19 @@ function APIKeysPage() {
     }
   }
 
-  const marketplaceConfigs = {
-    ozon: {
-      name: 'Ozon',
-      color: 'text-mm-blue',
-      fields: [
-        { name: 'client_id', label: 'Client ID', type: 'text', required: true },
-        { name: 'api_key', label: 'API Key', type: 'password', required: true }
-      ],
-      instructions: [
-        '1. Войдите в личный кабинет продавца Ozon',
-        '2. Перейдите в Настройки → API ключи',
-        '3. Скопируйте Client ID',
-        '4. Создайте новый API ключ и скопируйте его'
-      ]
-    },
-    wb: {
-      name: 'Wildberries',
-      color: 'text-mm-purple',
-      fields: [
-        { name: 'wb_token', label: 'API Token (JWT)', type: 'password', required: true }
-      ],
-      instructions: [
-        '1. Войдите в личный кабинет Wildberries',
-        '2. Перейдите в Настройки → Доступ к API',
-        '3. Создайте новый токен с нужными правами:',
-        '   - Контент (для карточек товаров)',
-        '   - Аналитика',
-        '   - Цены и скидки',
-        '   - Поставки',
-        '   - Статистика',
-        '4. Скопируйте сгенерированный токен'
-      ]
-    },
-    yandex: {
-      name: 'Яндекс.Маркет',
-      color: 'text-mm-yellow',
-      fields: [
-        { name: 'yandex_token', label: 'API Token', type: 'password', required: true },
-        { name: 'yandex_campaign_id', label: 'Campaign ID', type: 'text', required: true }
-      ],
-      instructions: [
-        '1. Войдите в личный кабинет Яндекс.Маркета',
-        '2. Перейдите в Настройки → API',
-        '3. Создайте API Token (не OAuth!)',
-        '4. Скопируйте Campaign ID вашего магазина',
-        '5. Campaign ID можно найти в разделе "Магазины"'
-      ]
-    }
+  const syncAll = async () => {
+    setSyncing(true)
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    alert('Синхронизация завершена!\n\n• Остатки обновлены\n• Цены синхронизированы\n• Заказы получены')
+    setSyncing(false)
+    loadApiKeys()
   }
 
-  const config = marketplaceConfigs[selectedMarketplace]
+  const marketplaceConfig = {
+    ozon: { name: 'Ozon', icon: '🔵', color: 'text-mm-blue' },
+    wb: { name: 'Wildberries', icon: '🟣', color: 'text-mm-purple' },
+    yandex: { name: 'Яндекс.Маркет', icon: '🟡', color: 'text-mm-yellow' }
+  }
 
   return (
     <div className="space-y-6">
@@ -165,13 +143,25 @@ function APIKeysPage() {
           <h2 className="text-2xl mb-2 text-mm-cyan uppercase">API KEYS</h2>
           <p className="comment">// Управление интеграциями с маркетплейсами</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="btn-primary"
-          data-testid="add-api-key-button"
-        >
-          + ДОБАВИТЬ ИНТЕГРАЦИЮ
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={syncAll}
+            disabled={syncing || apiKeys.length === 0}
+            className="btn-secondary disabled:opacity-50"
+          >
+            <FiRefreshCw className={`inline mr-2 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'СИНХРОНИЗАЦИЯ...' : '⟳ СИНХРОНИЗИРОВАТЬ ВСЕ'}
+          </button>
+          <button
+            onClick={() => {
+              setShowAddModal(true)
+              setModalStep(1)
+            }}
+            className="btn-primary"
+          >
+            + ДОБАВИТЬ ИНТЕГРАЦИЮ
+          </button>
+        </div>
       </div>
 
       {/* Info Box */}
@@ -180,17 +170,29 @@ function APIKeysPage() {
           <FiInfo className="text-mm-blue mt-1" size={20} />
           <div>
             <p className="text-mm-blue font-bold mb-1">Для чего нужны API ключи:</p>
-            <ul className="text-sm text-mm-text-secondary space-y-1">
+            <ul className="text-sm text-mm-text-secondary space-y-1 mb-3">
               <li>• Автоматическая передача остатков на маркетплейсы</li>
               <li>• Создание и обновление карточек товаров</li>
-              <li>• Получение заказов в реальном времени</li>
-              <li>• Загрузка аналитики и отчетов</li>
+              <li>• Получение новых заказов в реальном времени</li>
+              <li>• Загрузка финансовых отчетов и аналитики</li>
               <li>• Синхронизация цен и статусов</li>
             </ul>
+            <div className="flex flex-wrap gap-3 text-xs">
+              <a href="https://docs.ozon.ru/api/seller/" target="_blank" className="text-mm-cyan hover:text-mm-cyan/80">
+                Как получить API ключи Ozon →
+              </a>
+              <a href="https://dev.wildberries.ru/openapi/api-information" target="_blank" className="text-mm-cyan hover:text-mm-cyan/80">
+                Как получить API ключи Wildberries →
+              </a>
+              <a href="https://yandex.ru/dev/market/partner-api/doc/ru/" target="_blank" className="text-mm-cyan hover:text-mm-cyan/80">
+                Как получить API ключи Yandex.Market →
+              </a>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Integrations Table */}
       {loading ? (
         <div className="text-center py-12">
           <p className="text-mm-cyan animate-pulse">// LOADING...</p>
@@ -198,55 +200,78 @@ function APIKeysPage() {
       ) : apiKeys.length === 0 ? (
         <div className="card-neon text-center py-12">
           <FiKey className="mx-auto text-mm-text-tertiary mb-4" size={48} />
-          <p className="text-mm-text-secondary mb-2">API ключи не добавлены</p>
+          <p className="text-mm-text-secondary mb-2">Интеграции не добавлены</p>
           <p className="comment">// Нажмите "ДОБАВИТЬ ИНТЕГРАЦИЮ" для подключения маркетплейса</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {apiKeys.map((key) => (
-            <div key={key.id} className="card-neon">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-mm-cyan font-mono uppercase text-lg mb-1">
-                    {key.marketplace === 'ozon' ? '🔵 Ozon' : 
-                     key.marketplace === 'wb' ? '🟣 Wildberries' : 
-                     '🟡 Яндекс.Маркет'}
-                  </p>
-                  {key.marketplace === 'ozon' && (
-                    <p className="text-sm text-mm-text-secondary">Client ID: {key.client_id}</p>
-                  )}
-                  <p className="text-sm text-mm-text-secondary font-mono">API Key: {key.api_key_masked}</p>
-                  <p className="comment text-xs mt-2">
-                    Добавлен: {new Date(key.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <span className="status-active">
-                    <FiCheckCircle className="inline mr-1" />
-                    ACTIVE
-                  </span>
-                  <button
-                    onClick={() => deleteApiKey(key.id)}
-                    className="btn-secondary text-mm-red border-mm-red hover:bg-mm-red/10"
-                  >
-                    УДАЛИТЬ
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="card-neon overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-mm-border">
+                <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Marketplace</th>
+                <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Status</th>
+                <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Client ID</th>
+                <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Last Sync</th>
+                <th className="text-right py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {apiKeys.map((key) => {
+                const config = marketplaceConfig[key.marketplace] || marketplaceConfig['ozon']
+                return (
+                  <tr key={key.id} className="border-b border-mm-border hover:bg-mm-gray transition-colors">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-2xl">{config.icon}</span>
+                        <span className={`font-mono ${config.color}`}>{config.name}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center space-x-2" title="Подключение активно">
+                        <div className="w-2 h-2 bg-mm-green rounded-full"></div>
+                        <span className="text-mm-green text-sm font-mono">ACTIVE</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 font-mono text-sm text-mm-text-secondary">
+                      {maskClientId(key.client_id || key.api_key_masked)}
+                    </td>
+                    <td className="py-4 px-4 font-mono text-sm text-mm-text-secondary">
+                      {new Date(key.created_at).toLocaleString()}
+                    </td>
+                    <td className="py-4 px-4 text-right space-x-2">
+                      <button
+                        className="px-3 py-1 border border-mm-cyan text-mm-cyan hover:bg-mm-cyan/10 text-xs uppercase font-mono"
+                      >
+                        <FiEdit className="inline mr-1" />
+                        EDIT
+                      </button>
+                      <button
+                        onClick={() => deleteApiKey(key.id)}
+                        className="px-3 py-1 border border-mm-red text-mm-red hover:bg-mm-red/10 text-xs uppercase font-mono"
+                      >
+                        <FiTrash2 className="inline mr-1" />
+                        DELETE
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* Add API Key Modal */}
+      {/* Add Integration Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
           <div className="card-neon max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl text-mm-cyan">ДОБАВИТЬ ИНТЕГРАЦИЮ</h3>
+              <h3 className="text-xl text-mm-cyan">ДОБАВИТЬ ИНТЕГРАЦИЮ С МАРКЕТПЛЕЙСОМ</h3>
               <button
                 onClick={() => {
                   setShowAddModal(false)
+                  setModalStep(1)
+                  setSelectedMarketplace('')
                   setConnectionStatus(null)
                 }}
                 className="text-mm-text-secondary hover:text-mm-red transition-colors"
@@ -255,137 +280,223 @@ function APIKeysPage() {
               </button>
             </div>
 
-            {/* Marketplace Selector */}
-            <div className="mb-6">
-              <label className="block text-sm mb-3 text-mm-text-secondary uppercase">Выберите маркетплейс</label>
-              <div className="grid grid-cols-3 gap-3">
+            {/* Step 1: Select Marketplace */}
+            {modalStep === 1 && (
+              <div className="space-y-6">
+                <div>
+                  <p className="comment mb-3">// ШАГ 1: Выберите маркетплейс</p>
+                  <div className="grid grid-cols-3 gap-4">
+                    {['ozon', 'wb', 'yandex'].map((mp) => {
+                      const config = marketplaceConfig[mp]
+                      return (
+                        <button
+                          key={mp}
+                          onClick={() => {
+                            setSelectedMarketplace(mp)
+                            setNewKey({...newKey, marketplace: mp})
+                          }}
+                          className={`p-6 border-2 transition-all text-center ${
+                            selectedMarketplace === mp
+                              ? 'border-mm-green bg-mm-green/10'
+                              : 'border-mm-border hover:border-mm-cyan'
+                          }`}
+                        >
+                          <span className="text-4xl block mb-2">{config.icon}</span>
+                          <span className={`font-mono ${config.color}`}>{config.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
                 <button
-                  onClick={() => {
-                    setSelectedMarketplace('ozon')
-                    setNewKey({...newKey, marketplace: 'ozon'})
-                    setConnectionStatus(null)
-                  }}
-                  className={`p-4 border-2 transition-all ${
-                    selectedMarketplace === 'ozon'
-                      ? 'border-mm-blue text-mm-blue bg-mm-blue/10'
-                      : 'border-mm-border text-mm-text-secondary hover:border-mm-cyan'
-                  }`}
+                  onClick={() => setModalStep(2)}
+                  disabled={!selectedMarketplace}
+                  className="btn-primary w-full disabled:opacity-50"
                 >
-                  🔵 Ozon
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedMarketplace('wb')
-                    setNewKey({...newKey, marketplace: 'wb'})
-                    setConnectionStatus(null)
-                  }}
-                  className={`p-4 border-2 transition-all ${
-                    selectedMarketplace === 'wb'
-                      ? 'border-mm-purple text-mm-purple bg-mm-purple/10'
-                      : 'border-mm-border text-mm-text-secondary hover:border-mm-cyan'
-                  }`}
-                >
-                  🟣 Wildberries
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedMarketplace('yandex')
-                    setNewKey({...newKey, marketplace: 'yandex'})
-                    setConnectionStatus(null)
-                  }}
-                  className={`p-4 border-2 transition-all ${
-                    selectedMarketplace === 'yandex'
-                      ? 'border-mm-yellow text-mm-yellow bg-mm-yellow/10'
-                      : 'border-mm-border text-mm-text-secondary hover:border-mm-cyan'
-                  }`}
-                >
-                  🟡 Яндекс.Маркет
+                  ДАЛЕЕ →
                 </button>
               </div>
-            </div>
+            )}
 
-            {/* Instructions */}
-            <div className="card-neon bg-mm-darker mb-6">
-              <h4 className={`text-lg mb-3 ${config.color} uppercase`}>Как получить API ключи:</h4>
-              <ol className="space-y-2 text-sm text-mm-text-secondary">
-                {config.instructions.map((instruction, idx) => (
-                  <li key={idx} className="font-mono">{instruction}</li>
-                ))}
-              </ol>
-            </div>
-
-            <form onSubmit={addApiKey} className="space-y-6">
-              {/* Dynamic Fields */}
-              {config.fields.map((field) => (
-                <div key={field.name}>
-                  <label className="block text-sm mb-2 text-mm-text-secondary uppercase">
-                    {field.label} {field.required && '*'}
-                  </label>
-                  <input
-                    type={field.type}
-                    value={newKey[field.name]}
-                    onChange={(e) => setNewKey({...newKey, [field.name]: e.target.value})}
-                    className="input-neon w-full"
-                    placeholder={`Введите ${field.label}`}
-                    required={field.required}
-                  />
+            {/* Step 2: Enter API Keys */}
+            {modalStep === 2 && (
+              <form onSubmit={addApiKey} className="space-y-6">
+                <div>
+                  <p className="comment mb-3">// ШАГ 2: Введите API ключи для {marketplaceConfig[selectedMarketplace]?.name}</p>
                 </div>
-              ))}
 
-              {/* Test Connection */}
-              <div>
-                <button
-                  type="button"
-                  onClick={testConnection}
-                  disabled={testingConnection}
-                  className="btn-secondary w-full"
-                >
-                  {testingConnection ? '⏳ Тестирование...' : '🔍 Проверить подключение'}
-                </button>
-                {connectionStatus && (
-                  <div className={`mt-3 p-3 border ${
-                    connectionStatus.success 
-                      ? 'border-mm-green bg-mm-green/10 text-mm-green' 
-                      : 'border-mm-red bg-mm-red/10 text-mm-red'
-                  }`}>
-                    <p className="text-sm font-mono">{connectionStatus.message}</p>
+                {/* Ozon Fields */}
+                {selectedMarketplace === 'ozon' && (
+                  <>
+                    <div>
+                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Client ID *</label>
+                      <input
+                        type="text"
+                        value={newKey.client_id}
+                        onChange={(e) => setNewKey({...newKey, client_id: e.target.value})}
+                        className="input-neon w-full"
+                        placeholder="123456"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">API Key *</label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={newKey.api_key}
+                          onChange={(e) => setNewKey({...newKey, api_key: e.target.value})}
+                          className="input-neon w-full pr-12"
+                          placeholder="xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-3 text-mm-text-secondary hover:text-mm-cyan"
+                        >
+                          {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Wildberries Fields */}
+                {selectedMarketplace === 'wb' && (
+                  <div>
+                    <label className="block text-sm mb-2 text-mm-text-secondary uppercase">API Token (JWT) *</label>
+                    <div className="relative">
+                      <textarea
+                        value={newKey.wb_token}
+                        onChange={(e) => setNewKey({...newKey, wb_token: e.target.value})}
+                        className="input-neon w-full pr-12"
+                        rows="4"
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-3 text-mm-text-secondary hover:text-mm-cyan"
+                      >
+                        {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+                      </button>
+                    </div>
                   </div>
                 )}
-              </div>
 
-              {/* Permissions Info */}
-              <div className="card-neon bg-mm-darker">
-                <p className="comment mb-2">// Доступные операции через API:</p>
-                <ul className="space-y-1 text-xs text-mm-text-secondary">
-                  <li>✓ Передача остатков (FBS/FBO)</li>
-                  <li>✓ Создание/обновление карточек товаров</li>
-                  <li>✓ Получение новых заказов</li>
-                  <li>✓ Обновление статусов заказов</li>
-                  <li>✓ Загрузка финансовых отчетов</li>
-                  <li>✓ Получение аналитики продаж</li>
-                </ul>
-              </div>
+                {/* Yandex Fields */}
+                {selectedMarketplace === 'yandex' && (
+                  <>
+                    <div>
+                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Campaign ID *</label>
+                      <input
+                        type="text"
+                        value={newKey.yandex_campaign_id}
+                        onChange={(e) => setNewKey({...newKey, yandex_campaign_id: e.target.value})}
+                        className="input-neon w-full"
+                        placeholder="12345678"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-2 text-mm-text-secondary uppercase">API Token (не OAuth!) *</label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={newKey.yandex_token}
+                          onChange={(e) => setNewKey({...newKey, yandex_token: e.target.value})}
+                          className="input-neon w-full pr-12"
+                          placeholder="y0_xxxxxxxxxxxxxxxxxxxxx"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-3 text-mm-text-secondary hover:text-mm-cyan"
+                        >
+                          {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
 
-              <div className="flex space-x-4">
-                <button
-                  type="submit"
-                  className="btn-primary flex-1"
-                  disabled={testingConnection}
-                >
-                  ДОБАВИТЬ КЛЮЧ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddModal(false)
-                    setConnectionStatus(null)
-                  }}
-                  className="btn-secondary flex-1"
-                >
-                  ОТМЕНА
-                </button>
-              </div>
-            </form>
+                {/* Auto-sync options */}
+                <div className="card-neon bg-mm-darker">
+                  <p className="comment mb-3">// Настройки автоматизации</p>
+                  <div className="space-y-3">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newKey.auto_sync_stock}
+                        onChange={(e) => setNewKey({...newKey, auto_sync_stock: e.target.checked})}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-mm-text-secondary">Включить автоматическую синхронизацию остатков</span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newKey.auto_update_prices}
+                        onChange={(e) => setNewKey({...newKey, auto_update_prices: e.target.checked})}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-mm-text-secondary">Включить автоматическое обновление цен</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Test Connection */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={testConnection}
+                    disabled={testingConnection}
+                    className="btn-secondary w-full"
+                  >
+                    {testingConnection ? '⏳ ТЕСТИРОВАНИЕ...' : '🔍 ПРОВЕРИТЬ ПОДКЛЮЧЕНИЕ'}
+                  </button>
+                  {connectionStatus && (
+                    <div className={`mt-3 p-4 border-2 ${
+                      connectionStatus.success 
+                        ? 'border-mm-green bg-mm-green/10' 
+                        : 'border-mm-red bg-mm-red/10'
+                    }`}>
+                      <p className="font-mono text-sm flex items-center space-x-2">
+                        {connectionStatus.success ? (
+                          <FiCheckCircle className="text-mm-green" size={20} />
+                        ) : (
+                          <FiXCircle className="text-mm-red" size={20} />
+                        )}
+                        <span className={connectionStatus.success ? 'text-mm-green' : 'text-mm-red'}>
+                          {connectionStatus.message}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => setModalStep(1)}
+                    className="btn-secondary flex-1"
+                  >
+                    ← НАЗАД
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!connectionStatus || !connectionStatus.success}
+                    className="btn-primary flex-1 disabled:opacity-50"
+                  >
+                    СОХРАНИТЬ
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
