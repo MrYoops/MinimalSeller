@@ -75,6 +75,17 @@ function SellerDashboard() {
               {t('overview')}
             </button>
             <button
+              onClick={() => setActiveTab('api-keys')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors whitespace-nowrap ${
+                activeTab === 'api-keys'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+            >
+              <FiKey className="inline mr-2" />
+              API KEYS
+            </button>
+            <button
               onClick={() => setActiveTab('products')}
               className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'products'
