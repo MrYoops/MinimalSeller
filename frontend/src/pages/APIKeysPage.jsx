@@ -483,6 +483,15 @@ function APIKeysPage() {
                       />
                       <span className="text-mm-text-secondary">Включить автоматическое обновление цен</span>
                     </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newKey.auto_get_orders}
+                        onChange={(e) => setNewKey({...newKey, auto_get_orders: e.target.checked})}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-mm-text-secondary">Включить получение заказов с маркетплейса</span>
+                    </label>
                   </div>
                 </div>
 
