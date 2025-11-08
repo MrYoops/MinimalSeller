@@ -1,51 +1,36 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import AdminDashboard from './pages/AdminDashboard'
+import SellerDashboard from './pages/SellerDashboard'
+import ProductEditPage from './pages/ProductEditPage'
+import OrderDetailPage from './pages/OrderDetailPage'
+import SellerManagePage from './pages/SellerManagePage'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 
-function Dashboard() {
-  const { user, logout } = useAuth()
-  
-  return (
-    <div className="min-h-screen bg-mm-black">
-      <header className="border-b border-mm-border bg-mm-darker">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-mm-text">
-              MINIMAL<span className="text-mm-purple">MOD</span>
-            </h1>
-            <div className="flex items-center space-x-4">
-              <span className="text-mm-text-secondary">{user?.email}</span>
-              <button onClick={logout} className="btn-primary">LOGOUT</button>
-            </div>
-          </div>
-        </div>
-      </header>
-      
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="card-neon">
-          <h2 className="text-xl mb-4 text-mm-cyan">WELCOME TO MINIMALMOD</h2>
-          <p className="text-mm-text-secondary mb-4">Role: {user?.role}</p>
-          <p className="comment">// System is loading...</p>
-        </div>
-      </main>
-    </div>
-  )
-}
-
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children, requiredRole }) {
   const { user, loading } = useAuth()
   
   if (loading) {
     return (
       <div className="min-h-screen bg-mm-black flex items-center justify-center">
-        <p className="text-mm-cyan animate-pulse">// LOADING...</p>
+        <div className="text-mm-cyan font-mono text-lg animate-pulse">
+          // LOADING...
+        </div>
       </div>
     )
   }
   
-  if (!user) return <Navigate to="/login" />
+  if (!user) {
+    return <Navigate to="/login" />
+  }
+  
+  if (requiredRole && user.role !== requiredRole) {
+    return <Navigate to="/" />
+  }
+  
   return children
 }
 
@@ -55,7 +40,44 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
-      <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/register" element={user ? <Navigate to="/" /> : <RegisterPage />} />
+      
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            {user?.role === 'admin' ? <AdminDashboard /> : <SellerDashboard />}
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/products/:id/edit"
+        element={
+          <ProtectedRoute>
+            <ProductEditPage />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/orders/:id"
+        element={
+          <ProtectedRoute>
+            <OrderDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/admin/sellers/:id/manage"
+        element={
+          <ProtectedRoute requiredRole="admin">
+            <SellerManagePage />
+          </ProtectedRoute>
+        }
+      />
+      
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
