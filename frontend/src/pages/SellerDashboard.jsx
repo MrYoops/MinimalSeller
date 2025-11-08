@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiBox, FiDollarSign, FiPieChart } from 'react-icons/fi'
+import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiDollarSign, FiBox, FiPieChart, FiTag, FiMessageSquare, FiStar, FiTrendingUp, FiFileText, FiRotateCcw, FiPercent } from 'react-icons/fi'
 import OrdersPage from './OrdersPage'
 import InventoryPage from './InventoryPage'
 import SettingsDropdown from '../components/SettingsDropdown'
@@ -8,7 +8,14 @@ import { useTheme } from '../context/ThemeContext'
 import { useTranslation } from '../i18n/translations'
 import FinanceDashboard from './FinanceDashboard'
 import PayoutsPage from './PayoutsPage'
+import PromocodesPage from './PromocodesPage'
+import QuestionsPage from './QuestionsPage'
+import ReviewsPage from './ReviewsPage'
+import AnalyticsPage from './AnalyticsPage'
 import APIKeysPage from './APIKeysPage'
+import FinanceReportsPage from './FinanceReportsPage'
+import PromotionsPage from './PromotionsPage'
+import ReturnsPage from './ReturnsPage'
 
 function SellerDashboard() {
   const { user, logout, api } = useAuth()
@@ -251,6 +258,18 @@ function SellerDashboard() {
               {t('finance')}
             </button>
             <button
+              onClick={() => setActiveTab('reports')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'reports'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-reports"
+            >
+              <FiFileText className="inline mr-2" />
+              Reports
+            </button>
+            <button
               onClick={() => setActiveTab('balance')}
               className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
                 activeTab === 'balance'
@@ -261,6 +280,78 @@ function SellerDashboard() {
             >
               <FiDollarSign className="inline mr-2" />
               {t('balance')}
+            </button>
+            <button
+              onClick={() => setActiveTab('promocodes')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'promocodes'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-promocodes"
+            >
+              <FiTag className="inline mr-2" />
+              {t('promocodes')}
+            </button>
+            <button
+              onClick={() => setActiveTab('promotions')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'promotions'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-promotions"
+            >
+              <FiPercent className="inline mr-2" />
+              Promotions
+            </button>
+            <button
+              onClick={() => setActiveTab('returns')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'returns'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-returns"
+            >
+              <FiRotateCcw className="inline mr-2" />
+              Returns
+            </button>
+            <button
+              onClick={() => setActiveTab('questions')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'questions'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-questions"
+            >
+              <FiMessageSquare className="inline mr-2" />
+              {t('questions')}
+            </button>
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'reviews'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-reviews"
+            >
+              <FiStar className="inline mr-2" />
+              {t('reviews')}
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-4 font-mono uppercase tracking-wider text-sm transition-colors ${
+                activeTab === 'analytics'
+                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                  : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+              data-testid="tab-analytics"
+            >
+              <FiTrendingUp className="inline mr-2" />
+              Analytics
             </button>
           </div>
         </div>
@@ -451,8 +542,36 @@ function SellerDashboard() {
           <FinanceDashboard />
         )}
 
+        {activeTab === 'reports' && (
+          <FinanceReportsPage />
+        )}
+
         {activeTab === 'balance' && (
           <PayoutsPage />
+        )}
+
+        {activeTab === 'promocodes' && (
+          <PromocodesPage />
+        )}
+
+        {activeTab === 'promotions' && (
+          <PromotionsPage />
+        )}
+
+        {activeTab === 'returns' && (
+          <ReturnsPage />
+        )}
+
+        {activeTab === 'questions' && (
+          <QuestionsPage />
+        )}
+
+        {activeTab === 'reviews' && (
+          <ReviewsPage />
+        )}
+
+        {activeTab === 'analytics' && (
+          <AnalyticsPage />
         )}
       </main>
 
