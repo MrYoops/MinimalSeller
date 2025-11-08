@@ -435,8 +435,15 @@ function ProductEditPage() {
                       className="hidden"
                       id={`file-mp-${idx}`}
                       onChange={(e) => {
-                        if (e.target.files[0]) {
-                          alert('Файл выбран: ' + e.target.files[0].name + '\\nВ реальной системе загрузится на сервер')
+                        const file = e.target.files[0]
+                        if (file) {
+                          const reader = new FileReader()
+                          reader.onload = (event) => {
+                            const newImages = [...product.marketplaces.images]
+                            newImages[idx] = event.target.result
+                            setProduct({...product, marketplaces: {...product.marketplaces, images: newImages}})
+                          }
+                          reader.readAsDataURL(file)
                         }
                       }}
                     />
