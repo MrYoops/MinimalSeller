@@ -537,6 +537,135 @@ function APIKeysPage() {
           </div>
         </div>
       )}
+
+      {/* Edit Integration Modal */}
+      {showEditModal && editingKey && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
+          <div className="card-neon max-w-2xl w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl text-mm-cyan">РЕДАКТИРОВАНИЕ ИНТЕГРАЦИИ</h3>
+              <button
+                onClick={() => {
+                  setShowEditModal(false)
+                  setConnectionStatus(null)
+                }}
+                className="text-mm-text-secondary hover:text-mm-red"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="p-4 bg-mm-darker border border-mm-border">
+                <p className="text-lg font-mono mb-2">
+                  {marketplaceConfig[editingKey.marketplace]?.icon} {marketplaceConfig[editingKey.marketplace]?.name}
+                </p>
+                <p className="text-sm text-mm-text-secondary">Client ID: {maskClientId(editingKey.client_id)}</p>
+              </div>
+
+              {/* Settings Checkboxes */}
+              <div className="card-neon bg-mm-darker">
+                <p className="comment mb-4">// Настройки автоматизации</p>
+                <div className="space-y-4">
+                  <label className="flex items-start space-x-3 p-3 border border-mm-border hover:border-mm-cyan transition-colors cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editKey.auto_sync_stock}
+                      onChange={(e) => setEditKey({...editKey, auto_sync_stock: e.target.checked})}
+                      className="w-5 h-5 mt-1"
+                    />
+                    <div>
+                      <p className="font-mono text-mm-cyan">Автосинхронизация остатков</p>
+                      <p className="text-xs text-mm-text-secondary mt-1">
+                        Данная функция отправляет остатки с основного склада на маркетплейс
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start space-x-3 p-3 border border-mm-border hover:border-mm-cyan transition-colors cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editKey.auto_update_prices}
+                      onChange={(e) => setEditKey({...editKey, auto_update_prices: e.target.checked})}
+                      className="w-5 h-5 mt-1"
+                    />
+                    <div>
+                      <p className="font-mono text-mm-cyan">Автообновление цен</p>
+                      <p className="text-xs text-mm-text-secondary mt-1">
+                        Обновляет цены указанные в карточке товара
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start space-x-3 p-3 border border-mm-border hover:border-mm-cyan transition-colors cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editKey.auto_get_orders}
+                      onChange={(e) => setEditKey({...editKey, auto_get_orders: e.target.checked})}
+                      className="w-5 h-5 mt-1"
+                    />
+                    <div>
+                      <p className="font-mono text-mm-cyan">Получение заказов</p>
+                      <p className="text-xs text-mm-text-secondary mt-1">
+                        Получать и загружать в базу заказы приходящие с маркетплейсов в Orders
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Test Connection */}
+              <div>
+                <button
+                  type="button"
+                  onClick={testConnection}
+                  disabled={testingConnection}
+                  className="btn-secondary w-full"
+                >
+                  {testingConnection ? '⏳ ТЕСТИРОВАНИЕ...' : '🔍 ПРОВЕРИТЬ ПОДКЛЮЧЕНИЕ'}
+                </button>
+                {connectionStatus && (
+                  <div className={`mt-3 p-4 border-2 ${
+                    connectionStatus.success 
+                      ? 'border-mm-green bg-mm-green/10' 
+                      : 'border-mm-red bg-mm-red/10'
+                  }`}>
+                    <p className="font-mono text-sm flex items-center space-x-2">
+                      {connectionStatus.success ? (
+                        <FiCheckCircle className="text-mm-green" size={20} />
+                      ) : (
+                        <FiXCircle className="text-mm-red" size={20} />
+                      )}
+                      <span className={connectionStatus.success ? 'text-mm-green' : 'text-mm-red'}>
+                        {connectionStatus.message}
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Buttons */}
+              <div className="flex space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="btn-secondary flex-1"
+                >
+                  ОТМЕНА
+                </button>
+                <button
+                  type="button"
+                  onClick={saveEditKey}
+                  disabled={!connectionStatus || !connectionStatus.success}
+                  className="btn-primary flex-1 disabled:opacity-50"
+                >
+                  СОХРАНИТЬ
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
