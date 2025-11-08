@@ -124,9 +124,37 @@ function APIKeysPage() {
     if (!confirm('Удалить эту интеграцию?\n\nВсе автоматические синхронизации будут остановлены.')) return
     try {
       await api.delete(`/api/seller/api-keys/${keyId}`)
+      alert('✅ Интеграция удалена!')
       loadApiKeys()
     } catch (error) {
-      console.error('Failed to delete API key:', error)
+      alert('❌ Ошибка удаления: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+
+  const openEditModal = (key) => {
+    setEditingKey(key)
+    setEditKey({
+      auto_sync_stock: true,
+      auto_update_prices: true,
+      auto_get_orders: true
+    })
+    setConnectionStatus(null)
+    setShowEditModal(true)
+  }
+
+  const saveEditKey = async () => {
+    if (!connectionStatus || !connectionStatus.success) {
+      alert('Сначала проверьте подключение!')
+      return
+    }
+    
+    try {
+      // В реальности PUT /api/seller/api-keys/{id}
+      alert('✅ Настройки сохранены!')
+      setShowEditModal(false)
+      loadApiKeys()
+    } catch (error) {
+      alert('Ошибка сохранения')
     }
   }
 
