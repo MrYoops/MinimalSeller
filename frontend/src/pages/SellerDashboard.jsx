@@ -4,6 +4,7 @@ import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiBox, FiDollarSign, FiPieC
 import SettingsDropdown from '../components/SettingsDropdown'
 import { useTheme } from '../context/ThemeContext'
 import { useTranslation } from '../i18n/translations'
+import APIKeysPage from './APIKeysPage'
 
 function SellerDashboard() {
   const { user, logout, api } = useAuth()
