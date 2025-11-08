@@ -1,12 +1,9 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
 import AdminDashboard from './pages/AdminDashboard'
 import SellerDashboard from './pages/SellerDashboard'
 import ProductEditPage from './pages/ProductEditPage'
-import OrderDetailPage from './pages/OrderDetailPage'
-import SellerManagePage from './pages/SellerManagePage'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 
@@ -16,21 +13,13 @@ function ProtectedRoute({ children, requiredRole }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-mm-black flex items-center justify-center">
-        <div className="text-mm-cyan font-mono text-lg animate-pulse">
-          // LOADING...
-        </div>
+        <p className="text-mm-cyan animate-pulse">// LOADING...</p>
       </div>
     )
   }
   
-  if (!user) {
-    return <Navigate to="/login" />
-  }
-  
-  if (requiredRole && user.role !== requiredRole) {
-    return <Navigate to="/" />
-  }
-  
+  if (!user) return <Navigate to="/login" />
+  if (requiredRole && user.role !== requiredRole) return <Navigate to="/" />
   return children
 }
 
@@ -40,44 +29,14 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
-      <Route path="/register" element={user ? <Navigate to="/" /> : <RegisterPage />} />
-      
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            {user?.role === 'admin' ? <AdminDashboard /> : <SellerDashboard />}
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/products/:id/edit"
-        element={
-          <ProtectedRoute>
-            <ProductEditPage />
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/orders/:id"
-        element={
-          <ProtectedRoute>
-            <OrderDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/admin/sellers/:id/manage"
-        element={
-          <ProtectedRoute requiredRole="admin">
-            <SellerManagePage />
-          </ProtectedRoute>
-        }
-      />
-      
+      <Route path="/" element={
+        <ProtectedRoute>
+          {user?.role === 'admin' ? <AdminDashboard /> : <SellerDashboard />}
+        </ProtectedRoute>
+      } />
+      <Route path="/products/:id/edit" element={
+        <ProtectedRoute><ProductEditPage /></ProtectedRoute>
+      } />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
