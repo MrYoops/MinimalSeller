@@ -85,24 +85,28 @@ function ProductMappingPage() {
   }
 
   const importSelected = async () => {
-    if (!importSettings.category_id) {
-      alert('Выберите категорию')
-      return
-    }
-    
     try {
-      for (const mpId of selectedForImport) {
-        await api.post(`/api/marketplaces/${marketplace}/import-product`, {
-          marketplace_product_id: mpId
-        })
+      let imported = 0
+      for (const mpProductId of selectedForImport) {
+        try {
+          const response = await api.post(`/api/marketplaces/wb/import-product`, {
+            marketplace_product_id: mpProductId,
+            tag: importSettings.tag
+          })
+          imported++
+          console.log('Imported:', response.data)
+        } catch (error) {
+          console.error('Failed to import:', mpProductId, error)
+        }
       }
       
-      alert(`Загружено ${selectedForImport.length} товаров!`)
+      alert(`✅ Загружено ${imported} товаров!\\n\\nТовары появятся во вкладке PRODUCTS.\\nКатегория определена автоматически.`)
       setShowImportModal(false)
       setSelectedForImport([])
+      setImportSettings({ category_id: '', tag: '' })
       loadLocalProducts()
     } catch (error) {
-      alert('Ошибка')
+      alert('Ошибка импорта')
     }
   }
 
