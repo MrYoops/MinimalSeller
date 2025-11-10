@@ -1309,6 +1309,48 @@ async def delete_review(
     await db.product_reviews.delete_one({'_id': ObjectId(review_id)})
     return {'message': 'Review deleted'}
 
+# ========== MARKETPLACE PRODUCTS LOADING ==========
+
+@app.get("/api/marketplaces/{marketplace}/products")
+async def get_marketplace_products(
+    marketplace: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить товары с маркетплейса по API"""
+    from connectors import get_connector
+    
+    # Получаем API ключи продавца
+    profile = await db.seller_profiles.find_one({'user_id': current_user['_id']})
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Seller profile not found")
+    
+    # Находим ключ для маркетплейса
+    api_keys = profile.get('api_keys', [])
+    marketplace_key = next(
+        (k for k in api_keys if k['marketplace'] == marketplace),
+        None
+    )
+    
+    if not marketplace_key:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No API key found for {marketplace}. Please add integration first."
+        )
+    
+    # Получаем товары через коннектор
+    connector = get_connector(
+        marketplace,
+        marketplace_key.get('client_id', ''),
+        marketplace_key['api_key']
+    )
+    
+    logger.info(f"Loading products from {marketplace} using connector")
+    products = await connector.get_products()
+    logger.info(f"Loaded {len(products)} products from {marketplace}")
+    
+    return products
+
 # ========== FBO SHIPMENTS ==========
 
 @app.post("/api/inventory/fbo-shipment")
