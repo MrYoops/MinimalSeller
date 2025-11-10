@@ -50,12 +50,20 @@ function ProductMappingPage() {
   }
 
   const loadMarketplaceProducts = async () => {
+    if (!selectedIntegration) {
+      alert('Выберите интеграцию!')
+      return
+    }
+    
+    const integration = integrations.find(i => i.id === selectedIntegration)
+    if (!integration) return
+    
     setLoading(true)
     try {
-      const response = await api.get(`/api/marketplaces/${marketplace}/products`)
+      const response = await api.get(`/api/marketplaces/${integration.marketplace}/products`)
       setMpProducts(response.data || [])
     } catch (error) {
-      alert('Ошибка загрузки')
+      alert('Ошибка загрузки товаров: ' + (error.response?.data?.detail || error.message))
     }
     setLoading(false)
   }
