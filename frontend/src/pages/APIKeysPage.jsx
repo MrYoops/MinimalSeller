@@ -601,6 +601,19 @@ function APIKeysPage() {
                 <p className="text-sm text-mm-text-secondary">Client ID: {maskClientId(editingKey.client_id)}</p>
               </div>
 
+              {/* Integration Name */}
+              <div>
+                <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Название интеграции</label>
+                <input
+                  type="text"
+                  value={editKey.name}
+                  onChange={(e) => setEditKey({...editKey, name: e.target.value})}
+                  className="input-neon w-full"
+                  placeholder="Например: WB Основной аккаунт"
+                />
+                <p className="comment text-xs mt-1">// Для удобства, если у вас несколько аккаунтов</p>
+              </div>
+
               {/* Settings Checkboxes */}
               <div className="card-neon bg-mm-darker">
                 <p className="comment mb-4">// Настройки автоматизации</p>
