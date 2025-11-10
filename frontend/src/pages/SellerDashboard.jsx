@@ -179,6 +179,7 @@ function SellerDashboard() {
           </div>
         )}
 
+        {activeTab === 'mapping' && <ProductMappingPage />}
         {activeTab === 'orders' && <OrdersPage />}
         {activeTab === 'inventory' && <InventoryPage />}
         {activeTab === 'finance' && <FinanceDashboard />}
