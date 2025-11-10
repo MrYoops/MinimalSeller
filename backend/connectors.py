@@ -78,33 +78,64 @@ class WildberriesConnector(BaseConnector):
         """Get all products from Wildberries"""
         logger.info("[WB] Getting products using API token")
         
-        # MOCK данные для демонстрации (в продакшене будет реальный API)
-        # В реальной системе здесь запрос к suppliers-api.wildberries.ru
+        # MOCK данные с РЕАЛЬНОЙ структурой WB
+        # vendorCode - это артикул ПРОДАВЦА (ваш артикул)
         mock_products = [
             {
                 "id": "123456789",
-                "sku": "WB-PRODUCT-001",
-                "name": "Товар 1 с Wildberries",
+                "sku": "YOUR-ARTICLE-001",  # vendorCode - артикул продавца
+                "name": "Ваш товар 1",
+                "description": "Полное описание товара 1 с Wildberries",
                 "price": 1500,
-                "images": ["https://via.placeholder.com/400?text=WB+Product+1"]
+                "category": "Электроника",
+                "attributes": {
+                    "Бренд": "Samsung",
+                    "Цвет": "Черный",
+                    "Размер": "M"
+                },
+                "images": [
+                    "https://via.placeholder.com/900x1200?text=Product+1+Photo+1",
+                    "https://via.placeholder.com/900x1200?text=Product+1+Photo+2"
+                ]
             },
             {
                 "id": "123456790",
-                "sku": "WB-PRODUCT-002",
-                "name": "Товар 2 с Wildberries",
+                "sku": "YOUR-ARTICLE-002",
+                "name": "Ваш товар 2",
+                "description": "Полное описание товара 2 с Wildberries",
                 "price": 2500,
-                "images": ["https://via.placeholder.com/400?text=WB+Product+2"]
+                "category": "Одежда",
+                "attributes": {
+                    "Бренд": "Nike",
+                    "Размер": "L",
+                    "Цвет": "Синий",
+                    "Материал": "Хлопок"
+                },
+                "images": [
+                    "https://via.placeholder.com/900x1200?text=Product+2+Photo+1"
+                ]
             },
             {
                 "id": "123456791",
-                "sku": "WB-PRODUCT-003",
-                "name": "Товар 3 с Wildberries",
+                "sku": "YOUR-ARTICLE-003",
+                "name": "Ваш товар 3",
+                "description": "Полное описание товара 3 с Wildberries",
                 "price": 3500,
-                "images": ["https://via.placeholder.com/400?text=WB+Product+3"]
+                "category": "Электроника",
+                "attributes": {
+                    "Бренд": "Apple",
+                    "Модель": "iPhone 15",
+                    "Цвет": "Белый"
+                },
+                "images": [
+                    "https://via.placeholder.com/900x1200?text=Product+3+Photo+1",
+                    "https://via.placeholder.com/900x1200?text=Product+3+Photo+2",
+                    "https://via.placeholder.com/900x1200?text=Product+3+Photo+3"
+                ]
             }
         ]
         
-        logger.info(f"[WB] Returning {len(mock_products)} mock products")
+        logger.info(f"[WB] Returning {len(mock_products)} products with full data")
         return mock_products
         
         # РЕАЛЬНЫЙ КОД (раскомментировать для продакшена):
