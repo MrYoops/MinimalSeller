@@ -26,6 +26,7 @@ function APIKeysPage() {
     auto_get_orders: true
   })
   const [editKey, setEditKey] = useState({
+    name: '',
     auto_sync_stock: true,
     auto_update_prices: true,
     auto_get_orders: true
