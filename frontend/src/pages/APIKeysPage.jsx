@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiKey, FiCheckCircle, FiXCircle, FiInfo, FiRefreshCw, FiEdit, FiTrash2, FiEye, FiEyeOff } from 'react-icons/fi'
+import { FiKey, FiCheckCircle, FiXCircle, FiInfo, FiRefreshCw, FiEdit, FiTrash2, FiEye, FiEyeOff, FiLink } from 'react-icons/fi'
+import ProductMappingPage from './ProductMappingPage'
 
 function APIKeysPage() {
   const { api } = useAuth()
+  const [subTab, setSubTab] = useState('keys')
   const [apiKeys, setApiKeys] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
