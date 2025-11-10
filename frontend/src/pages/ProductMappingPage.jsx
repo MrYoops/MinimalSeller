@@ -136,12 +136,30 @@ function ProductMappingPage() {
 
       <div className="card-neon">
         <div className="grid grid-cols-2 gap-4">
-          <select value={marketplace} onChange={(e) => setMarketplace(e.target.value)} className="input-neon">
-            <option value="ozon">Ozon</option>
-            <option value="wb">Wildberries</option>
-            <option value="yandex">Яндекс.Маркет</option>
-          </select>
-          <button onClick={loadMarketplaceProducts} className="btn-primary">ЗАГРУЗИТЬ ТОВАРЫ</button>
+          <div>
+            <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Выберите интеграцию</label>
+            <select 
+              value={selectedIntegration} 
+              onChange={(e) => setSelectedIntegration(e.target.value)} 
+              className="input-neon w-full"
+            >
+              <option value="">Выберите интеграцию...</option>
+              {integrations.map(int => (
+                <option key={int.id} value={int.id}>
+                  {int.marketplace.toUpperCase()} - {int.client_id || 'Интеграция ' + int.id.substring(0, 8)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button 
+              onClick={loadMarketplaceProducts} 
+              disabled={!selectedIntegration}
+              className="btn-primary w-full disabled:opacity-50"
+            >
+              ЗАГРУЗИТЬ ТОВАРЫ
+            </button>
+          </div>
         </div>
       </div>
 
