@@ -399,76 +399,67 @@ async def auto_match_products(
 @router.post("/marketplaces/{marketplace}/import-product")
 async def import_marketplace_product(
     marketplace: str,
-    marketplace_product_id: str,
+    data: Dict[str, Any],
     current_user: dict = Depends(get_current_user)
 ):
     """Импортировать товар с маркетплейса"""
-    # Получаем товар с маркетплейса
+    marketplace_product_id = data.get('marketplace_product_id')
+    tag = data.get('tag', '')
+    
+    # Получаем API ключи
     profile = await db.seller_profiles.find_one({'user_id': current_user['_id']})
     api_keys = profile.get('api_keys', [])
-    marketplace_key = next(
-        (k for k in api_keys if k['marketplace'] == marketplace),
-        None
-    )
+    marketplace_key = next((k for k in api_keys if k['marketplace'] == marketplace), None)
     
     if not marketplace_key:
-        raise HTTPException(
-            status_code=400,
-            detail=f"No API key found for {marketplace}"
-        )
+        raise HTTPException(status_code=400, detail=f"No API key for {marketplace}")
     
-    connector = get_connector(
-        marketplace,
-        marketplace_key['client_id'],
-        marketplace_key['api_key']
-    )
-    
+    # Получаем товары с МП
+    connector = get_connector(marketplace, marketplace_key.get('client_id', ''), marketplace_key['api_key'])
     marketplace_products = await connector.get_products()
-    marketplace_product = next(
-        (p for p in marketplace_products if p.get('id') == marketplace_product_id),
-        None
-    )
+    mp_product = next((p for p in marketplace_products if str(p.get('id')) == str(marketplace_product_id)), None)
     
-    if not marketplace_product:
+    if not mp_product:
         raise HTTPException(status_code=404, detail="Product not found on marketplace")
     
-    # Создание товара в локальной БД
+    # АВТОМАТИЧЕСКОЕ определение категории по названию категории с МП
+    category_name = mp_product.get('category', '')
+    category = None
+    
+    if category_name:
+        # Ищем категорию по имени (Electronics, Одежда и т.д.)
+        category = await db.categories.find_one({'name': {'$regex': category_name, '$options': 'i'}})
+    
+    # Если не нашли, берем первую доступную
+    if not category:
+        category = await db.categories.find_one({})
+    
+    # Создание товара с ПОЛНЫМИ данными
     new_product = {
         'seller_id': current_user['_id'],
-        'sku': marketplace_product.get('sku', f"{marketplace}-{marketplace_product_id}"),
-        'price': marketplace_product.get('price', 0),
+        'sku': mp_product.get('sku', f"{marketplace}-{marketplace_product_id}"),
+        'price': mp_product.get('price', 0),
+        'category_id': category['_id'] if category else None,
         'status': 'draft',
-        'visibility': {
-            'show_on_minimalmod': False,
-            'show_in_search': False,
-            'is_featured': False
-        },
-        'seo': {},
-        'dates': {
-            'created_at': datetime.utcnow(),
-            'updated_at': datetime.utcnow()
-        },
+        'visibility': {'show_on_minimalmod': False, 'show_in_search': False, 'is_featured': False},
+        'seo': {'meta_title': '', 'meta_description': '', 'url_slug': ''},
+        'dates': {'created_at': datetime.utcnow(), 'updated_at': datetime.utcnow()},
         'minimalmod': {
-            'name': marketplace_product.get('name', ''),
+            'name': mp_product.get('name', ''),
             'variant_name': '',
-            'description': marketplace_product.get('description', ''),
-            'tags': [],
-            'images': marketplace_product.get('images', []),
-            'attributes': {}
+            'description': mp_product.get('description', ''),
+            'tags': [tag] if tag else [],
+            'images': mp_product.get('images', [])[:8],  # До 8 для сайта
+            'attributes': mp_product.get('attributes', {})
         },
         'marketplaces': {
-            'images': marketplace_product.get('images', []),
+            'images': mp_product.get('images', [])[:10],  # До 10 для МП
             'ozon': {'enabled': False},
-            'wildberries': {'enabled': False},
+            'wildberries': {'enabled': True, 'product_id': str(marketplace_product_id)} if marketplace == 'wb' else {'enabled': False},
             'yandex_market': {'enabled': False}
         },
         'listing_quality_score': {}
     }
-    
-    # Извлечение тега
-    investor_tag = extract_investor_tag(new_product['sku'])
-    if investor_tag:
-        new_product['minimalmod']['tags'].append(investor_tag)
     
     # Генерация slug
     new_product['seo']['url_slug'] = generate_url_slug(new_product['minimalmod']['name'])
@@ -479,17 +470,16 @@ async def import_marketplace_product(
     result = await db.products.insert_one(new_product)
     
     # Создание mapping
-    mapping = {
+    await db.product_mappings.insert_one({
         'product_id': result.inserted_id,
         'marketplace': marketplace,
         'marketplace_product_id': marketplace_product_id,
-        'marketplace_sku': marketplace_product.get('sku', ''),
+        'marketplace_sku': mp_product.get('sku', ''),
         'created_at': datetime.utcnow()
-    }
-    
-    await db.product_mappings.insert_one(mapping)
+    })
     
     return {
         'message': 'Product imported successfully',
-        'product_id': str(result.inserted_id)
+        'product_id': str(result.inserted_id),
+        'category': category['name'] if category else 'Без категории'
     }
