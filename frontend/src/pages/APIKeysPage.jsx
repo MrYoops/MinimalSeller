@@ -288,7 +288,12 @@ function APIKeysPage() {
                     <td className="py-4 px-4">
                       <div className="flex items-center space-x-2">
                         <span className="text-2xl">{config.icon}</span>
-                        <span className={`font-mono ${config.color}`}>{config.name}</span>
+                        <div>
+                          <span className={`font-mono ${config.color}`}>{config.name}</span>
+                          {key.name && (
+                            <p className="text-xs text-mm-text-secondary">// {key.name}</p>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="py-4 px-4">
