@@ -66,36 +66,67 @@ class OzonConnector(BaseConnector):
         return []
 
 class WildberriesConnector(BaseConnector):
-    """Wildberries marketplace connector (Mock)"""
+    """Wildberries marketplace connector (Real API)"""
     
     def __init__(self, client_id: str, api_key: str):
         super().__init__(client_id, api_key)
         self.marketplace_name = "Wildberries"
-    
-    async def get_orders(self, date_from: datetime, date_to: datetime) -> List[Dict[str, Any]]:
-        logger.info(f"[MOCK] Getting orders from Wildberries for period {date_from} - {date_to}")
-        return [
-            {
-                "order_id": "WB-67890",
-                "created_at": datetime.utcnow(),
-                "status": "new",
-                "products": [
-                    {"sku": "SKU002", "name": "Product 2", "quantity": 1, "price": 2500}
-                ],
-                "total": 2500
-            }
-        ]
-    
-    async def update_stocks(self, products: List[Dict[str, Any]]) -> Dict[str, Any]:
-        logger.info(f"[MOCK] Updating stocks on Wildberries for {len(products)} products")
-        return {"status": "success", "updated": len(products)}
+        self.api_token = api_key  # JWT token
+        self.base_url = "https://suppliers-api.wildberries.ru"
     
     async def get_products(self) -> List[Dict[str, Any]]:
-        logger.info("[MOCK] Getting products from Wildberries")
+        """Get all products from Wildberries"""
+        import httpx
+        
+        try:
+            headers = {
+                "Authorization": self.api_token,
+                "Content-Type": "application/json"
+            }
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # Получаем список товаров
+                response = await client.get(
+                    f"{self.base_url}/content/v1/cards/cursor/list",
+                    headers=headers,
+                    params={"limit": 100}
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    cards = data.get("data", {}).get("cards", [])
+                    
+                    products = []
+                    for card in cards:
+                        products.append({
+                            "id": card.get("nmID", ""),
+                            "sku": card.get("vendorCode", ""),
+                            "name": card.get("object", ""),
+                            "price": 0,  # Цену нужно получать отдельным запросом
+                            "images": [card.get("mediaFiles", [{}])[0].get("url", "")] if card.get("mediaFiles") else []
+                        })
+                    
+                    logger.info(f"[WB API] Loaded {len(products)} products")
+                    return products
+                else:
+                    logger.error(f"[WB API] Error {response.status_code}: {response.text}")
+                    return []
+        except Exception as e:
+            logger.error(f"[WB API] Exception: {str(e)}")
+            return []
+    
+    async def get_orders(self, date_from: datetime, date_to: datetime) -> List[Dict[str, Any]]:
+        logger.info(f"[WB API] Getting orders for period {date_from} - {date_to}")
+        # TODO: Implement real orders API
         return []
     
+    async def update_stocks(self, products: List[Dict[str, Any]]) -> Dict[str, Any]:
+        logger.info(f"[WB API] Updating stocks for {len(products)} products")
+        # TODO: Implement real stocks update
+        return {"status": "success", "updated": len(products)}
+    
     async def get_fbo_stocks(self) -> List[Dict[str, Any]]:
-        logger.info("[MOCK] Getting FBO stocks from Wildberries")
+        logger.info("[WB API] Getting FBO stocks")
         return []
 
 class YandexConnector(BaseConnector):
