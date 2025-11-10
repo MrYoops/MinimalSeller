@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiBox, FiDollarSign, FiPieChart } from 'react-icons/fi'
+import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiBox, FiDollarSign, FiPieChart, FiLink } from 'react-icons/fi'
 import SettingsDropdown from '../components/SettingsDropdown'
 import APIKeysPage from './APIKeysPage'
 import OrdersPage from './OrdersPage'
 import InventoryPage from './InventoryPage'
 import FinanceDashboard from './FinanceDashboard'
 import PayoutsPage from './PayoutsPage'
+import ProductMappingPage from './ProductMappingPage'
 
 function SellerDashboard() {
   const { user, logout, api } = useAuth()
