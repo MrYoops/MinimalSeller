@@ -702,6 +702,13 @@ function APIKeysPage() {
           </div>
         </div>
       )}
+        </>
+      )}
+
+      {/* Mapping Content */}
+      {subTab === 'mapping' && (
+        <ProductMappingPage />
+      )}
     </div>
   )
 }
