@@ -137,6 +137,7 @@ function APIKeysPage() {
   const openEditModal = (key) => {
     setEditingKey(key)
     setEditKey({
+      name: key.name || '',
       auto_sync_stock: true,
       auto_update_prices: true,
       auto_get_orders: true
