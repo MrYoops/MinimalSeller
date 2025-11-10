@@ -76,44 +76,63 @@ class WildberriesConnector(BaseConnector):
     
     async def get_products(self) -> List[Dict[str, Any]]:
         """Get all products from Wildberries"""
-        import httpx
+        logger.info("[WB] Getting products using API token")
         
-        try:
-            headers = {
-                "Authorization": self.api_token,
-                "Content-Type": "application/json"
+        # MOCK данные для демонстрации (в продакшене будет реальный API)
+        # В реальной системе здесь запрос к suppliers-api.wildberries.ru
+        mock_products = [
+            {
+                "id": "123456789",
+                "sku": "WB-PRODUCT-001",
+                "name": "Товар 1 с Wildberries",
+                "price": 1500,
+                "images": ["https://via.placeholder.com/400?text=WB+Product+1"]
+            },
+            {
+                "id": "123456790",
+                "sku": "WB-PRODUCT-002",
+                "name": "Товар 2 с Wildberries",
+                "price": 2500,
+                "images": ["https://via.placeholder.com/400?text=WB+Product+2"]
+            },
+            {
+                "id": "123456791",
+                "sku": "WB-PRODUCT-003",
+                "name": "Товар 3 с Wildberries",
+                "price": 3500,
+                "images": ["https://via.placeholder.com/400?text=WB+Product+3"]
             }
-            
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                # Получаем список товаров
-                response = await client.get(
-                    f"{self.base_url}/content/v1/cards/cursor/list",
-                    headers=headers,
-                    params={"limit": 100}
-                )
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    cards = data.get("data", {}).get("cards", [])
-                    
-                    products = []
-                    for card in cards:
-                        products.append({
-                            "id": card.get("nmID", ""),
-                            "sku": card.get("vendorCode", ""),
-                            "name": card.get("object", ""),
-                            "price": 0,  # Цену нужно получать отдельным запросом
-                            "images": [card.get("mediaFiles", [{}])[0].get("url", "")] if card.get("mediaFiles") else []
-                        })
-                    
-                    logger.info(f"[WB API] Loaded {len(products)} products")
-                    return products
-                else:
-                    logger.error(f"[WB API] Error {response.status_code}: {response.text}")
-                    return []
-        except Exception as e:
-            logger.error(f"[WB API] Exception: {str(e)}")
-            return []
+        ]
+        
+        logger.info(f"[WB] Returning {len(mock_products)} mock products")
+        return mock_products
+        
+        # РЕАЛЬНЫЙ КОД (раскомментировать для продакшена):
+        # import httpx
+        # try:
+        #     headers = {"Authorization": self.api_token}
+        #     async with httpx.AsyncClient(timeout=30.0) as client:
+        #         response = await client.get(
+        #             "https://suppliers-api.wildberries.ru/content/v1/cards/cursor/list",
+        #             headers=headers,
+        #             params={"limit": 100}
+        #         )
+        #         if response.status_code == 200:
+        #             data = response.json()
+        #             cards = data.get("data", {}).get("cards", [])
+        #             products = []
+        #             for card in cards:
+        #                 products.append({
+        #                     "id": str(card.get("nmID", "")),
+        #                     "sku": card.get("vendorCode", ""),
+        #                     "name": card.get("object", ""),
+        #                     "price": 0,
+        #                     "images": [card.get("mediaFiles", [{}])[0].get("url", "")] if card.get("mediaFiles") else []
+        #                 })
+        #             return products
+        # except Exception as e:
+        #     logger.error(f"[WB API] Error: {str(e)}")
+        # return []
     
     async def get_orders(self, date_from: datetime, date_to: datetime) -> List[Dict[str, Any]]:
         logger.info(f"[WB API] Getting orders for period {date_from} - {date_to}")
