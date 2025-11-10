@@ -67,6 +67,14 @@ function SellerDashboard() {
               <FiPackage className="inline mr-2" />PRODUCTS
             </button>
             <button
+              onClick={() => setActiveTab('mapping')}
+              className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
+                activeTab === 'mapping' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+            >
+              <FiLink className="inline mr-2" />СОПОСТАВЛЕНИЕ
+            </button>
+            <button
               onClick={() => setActiveTab('orders')}
               className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'orders' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
