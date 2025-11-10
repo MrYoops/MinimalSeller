@@ -59,15 +59,16 @@ function APIKeysPage() {
     setConnectionStatus(null)
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      const success = Math.random() > 0.2
+      const testData = {
+        marketplace: selectedMarketplace,
+        client_id: selectedMarketplace === 'ozon' ? newKey.client_id : '',
+        api_key: selectedMarketplace === 'ozon' ? newKey.api_key : 
+                 selectedMarketplace === 'wb' ? newKey.wb_token : 
+                 newKey.yandex_token
+      }
       
-      setConnectionStatus({
-        success,
-        message: success 
-          ? '✅ Подключение успешно! API работает корректно.' 
-          : '❌ Ошибка подключения. Проверьте правильность ключей.'
-      })
+      const response = await api.post('/api/seller/api-keys/test', testData)
+      setConnectionStatus(response.data)
     } catch (error) {
       setConnectionStatus({
         success: false,
