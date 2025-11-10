@@ -176,7 +176,32 @@ function APIKeysPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Sub-tabs */}
+      <div className="flex space-x-4 border-b border-mm-border">
+        <button
+          onClick={() => setSubTab('keys')}
+          className={`px-4 py-3 font-mono uppercase text-sm transition-colors ${
+            subTab === 'keys' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
+          }`}
+        >
+          <FiKey className="inline mr-2" />
+          API KEYS
+        </button>
+        <button
+          onClick={() => setSubTab('mapping')}
+          className={`px-4 py-3 font-mono uppercase text-sm transition-colors ${
+            subTab === 'mapping' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
+          }`}
+        >
+          <FiLink className="inline mr-2" />
+          СОПОСТАВЛЕНИЕ ТОВАРОВ
+        </button>
+      </div>
+
+      {/* API Keys Content */}
+      {subTab === 'keys' && (
+        <>
+          <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl mb-2 text-mm-cyan uppercase">API KEYS</h2>
           <p className="comment">// Управление интеграциями с маркетплейсами</p>
