@@ -93,19 +93,18 @@ function APIKeysPage() {
         client_id: selectedMarketplace === 'ozon' ? newKey.client_id : '',
         api_key: selectedMarketplace === 'ozon' ? newKey.api_key : 
                  selectedMarketplace === 'wb' ? newKey.wb_token : 
-                 newKey.yandex_token,
-        auto_sync_stock: newKey.auto_sync_stock,
-        auto_update_prices: newKey.auto_update_prices
-      }
-      
-      if (selectedMarketplace === 'yandex') {
-        payload.campaign_id = newKey.yandex_campaign_id
+                 newKey.yandex_token
       }
       
       await api.post('/api/seller/api-keys', payload)
+      
+      // Закрываем модалку
       setShowAddModal(false)
       setModalStep(1)
       setSelectedMarketplace('')
+      setConnectionStatus(null)
+      
+      // Сбрасываем форму
       setNewKey({
         marketplace: '',
         client_id: '',
@@ -114,13 +113,16 @@ function APIKeysPage() {
         yandex_token: '',
         yandex_campaign_id: '',
         auto_sync_stock: true,
-        auto_update_prices: true
+        auto_update_prices: true,
+        auto_get_orders: true
       })
-      setConnectionStatus(null)
-      loadApiKeys()
-      alert('API ключ добавлен успешно!')
+      
+      // ОБЯЗАТЕЛЬНО перезагружаем список
+      await loadApiKeys()
+      
+      alert('✅ API ключ добавлен успешно!')
     } catch (error) {
-      alert('Ошибка добавления: ' + (error.response?.data?.detail || error.message))
+      alert('❌ Ошибка: ' + (error.response?.data?.detail || error.message))
     }
   }
 
