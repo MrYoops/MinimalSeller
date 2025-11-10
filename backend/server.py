@@ -359,6 +359,40 @@ async def get_api_keys(current_user: dict = Depends(require_role(UserRole.SELLER
         for key in api_keys
     ]
 
+@app.post("/api/seller/api-keys/test")
+async def test_api_key(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """РЕАЛЬНАЯ проверка подключения к API маркетплейса"""
+    from connectors import get_connector
+    
+    marketplace = data.get('marketplace')
+    client_id = data.get('client_id', '')
+    api_key = data.get('api_key', '')
+    
+    try:
+        connector = get_connector(marketplace, client_id, api_key)
+        products = await connector.get_products()
+        
+        if products is not None:
+            return {
+                'success': True,
+                'message': f'✅ Подключение успешно! Найдено {len(products)} товаров.',
+                'products_count': len(products)
+            }
+        else:
+            return {
+                'success': False,
+                'message': '❌ Не удалось получить товары. Проверьте ключи.'
+            }
+    except Exception as e:
+        logger.error(f"API test failed: {str(e)}")
+        return {
+            'success': False,
+            'message': f'❌ Ошибка подключения: {str(e)}'
+        }
+
 @app.post("/api/seller/api-keys")
 async def add_api_key(
     key_data: APIKeyCreate,
