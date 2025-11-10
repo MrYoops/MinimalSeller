@@ -75,68 +75,57 @@ class WildberriesConnector(BaseConnector):
         self.base_url = "https://suppliers-api.wildberries.ru"
     
     async def get_products(self) -> List[Dict[str, Any]]:
-        """Get all products from Wildberries"""
-        logger.info("[WB] Getting products using API token")
+        """Get all products from Wildberries - REAL API"""
+        logger.info(f"[WB API] Getting products with token: {self.api_token[:20]}...")
         
-        # MOCK данные с РЕАЛЬНОЙ структурой WB
-        # vendorCode - это артикул ПРОДАВЦА (ваш артикул)
-        mock_products = [
-            {
-                "id": "123456789",
-                "sku": "YOUR-ARTICLE-001",  # vendorCode - артикул продавца
-                "name": "Ваш товар 1",
-                "description": "Полное описание товара 1 с Wildberries",
-                "price": 1500,
-                "category": "Электроника",
-                "attributes": {
-                    "Бренд": "Samsung",
-                    "Цвет": "Черный",
-                    "Размер": "M"
-                },
-                "images": [
-                    "https://via.placeholder.com/900x1200?text=Product+1+Photo+1",
-                    "https://via.placeholder.com/900x1200?text=Product+1+Photo+2"
-                ]
-            },
-            {
-                "id": "123456790",
-                "sku": "YOUR-ARTICLE-002",
-                "name": "Ваш товар 2",
-                "description": "Полное описание товара 2 с Wildberries",
-                "price": 2500,
-                "category": "Одежда",
-                "attributes": {
-                    "Бренд": "Nike",
-                    "Размер": "L",
-                    "Цвет": "Синий",
-                    "Материал": "Хлопок"
-                },
-                "images": [
-                    "https://via.placeholder.com/900x1200?text=Product+2+Photo+1"
-                ]
-            },
-            {
-                "id": "123456791",
-                "sku": "YOUR-ARTICLE-003",
-                "name": "Ваш товар 3",
-                "description": "Полное описание товара 3 с Wildberries",
-                "price": 3500,
-                "category": "Электроника",
-                "attributes": {
-                    "Бренд": "Apple",
-                    "Модель": "iPhone 15",
-                    "Цвет": "Белый"
-                },
-                "images": [
-                    "https://via.placeholder.com/900x1200?text=Product+3+Photo+1",
-                    "https://via.placeholder.com/900x1200?text=Product+3+Photo+2",
-                    "https://via.placeholder.com/900x1200?text=Product+3+Photo+3"
-                ]
+        import httpx
+        
+        try:
+            headers = {
+                "Authorization": self.api_token,
+                "Content-Type": "application/json"
             }
-        ]
-        
-        logger.info(f"[WB] Returning {len(mock_products)} products with full data")
-        return mock_products
+            
+            logger.info("[WB API] Sending request to suppliers-api.wildberries.ru")
+            
+            async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+                response = await client.get(
+                    "https://suppliers-api.wildberries.ru/content/v1/cards/cursor/list",
+                    headers=headers,
+                    params={"limit": 100}
+                )
+                
+                logger.info(f"[WB API] Response status: {response.status_code}")
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    logger.info(f"[WB API] Response data: {str(data)[:200]}")
+                    
+                    cards = data.get("data", {}).get("cards", [])
+                    
+                    products = []
+                    for card in cards:
+                        products.append({
+                            "id": str(card.get("nmID", "")),
+                            "sku": card.get("vendorCode", ""),  # АРТИКУЛ ПРОДАВЦА
+                            "name": card.get("object", ""),
+                            "description": card.get("description", ""),
+                            "category": card.get("subjectName", ""),
+                            "price": 0,
+                            "attributes": {},
+                            "images": [m.get("big") for m in card.get("mediaFiles", []) if m.get("big")][:10]
+                        })
+                    
+                    logger.info(f"[WB API] Loaded {len(products)} real products")
+                    return products
+                else:
+                    logger.error(f"[WB API] Error {response.status_code}: {response.text}")
+                    return []
+                    
+        except Exception as e:
+            logger.error(f"[WB API] Exception: {str(e)}")
+            logger.error(f"[WB API] Full error: {repr(e)}")
+            return []
         
         # РЕАЛЬНЫЙ КОД (раскомментировать для продакшена):
         # import httpx
