@@ -56,7 +56,7 @@ function SellerDashboard() {
                 activeTab === 'api-keys' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
               }`}
             >
-              <FiKey className="inline mr-2" />API KEYS
+              <FiKey className="inline mr-2" />ИНТЕГРАЦИИ
             </button>
             <button
               onClick={() => setActiveTab('products')}
