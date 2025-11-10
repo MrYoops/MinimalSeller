@@ -12,10 +12,7 @@ function ProductMappingPage() {
   const [filter, setFilter] = useState('all')
   const [showImportModal, setShowImportModal] = useState(false)
   const [selectedForImport, setSelectedForImport] = useState([])
-  const [importSettings, setImportSettings] = useState({
-    category_id: '',
-    tag: ''
-  })
+  const [importSettings, setImportSettings] = useState({ category_id: '', tag: '' })
   const [categories, setCategories] = useState([])
 
   useEffect(() => {
@@ -28,7 +25,7 @@ function ProductMappingPage() {
       const response = await api.get('/api/products')
       setLocalProducts(response.data)
     } catch (error) {
-      console.error('Failed to load local products:', error)
+      console.error('Failed:', error)
     }
   }
 
@@ -37,7 +34,7 @@ function ProductMappingPage() {
       const response = await api.get('/api/admin/categories')
       setCategories(response.data)
     } catch (error) {
-      console.error('Failed to load categories:', error)
+      console.error('Failed:', error)
     }
   }
 
@@ -47,243 +44,165 @@ function ProductMappingPage() {
       const response = await api.get(`/api/marketplaces/${marketplace}/products`)
       setMpProducts(response.data || [])
     } catch (error) {
-      alert('Ошибка загрузки товаров с маркетплейса')
+      alert('Ошибка загрузки')
     }
     setLoading(false)
   }
 
   const autoMatchBySKU = () => {
     const newMappings = {...mappings}
-    let matchCount = 0
+    let count = 0
     
-    mpProducts.forEach(mpProduct => {
-      const localMatch = localProducts.find(lp => lp.sku === mpProduct.sku)
-      if (localMatch) {
-        newMappings[mpProduct.id] = localMatch.id
-        matchCount++
+    mpProducts.forEach(mp => {
+      const local = localProducts.find(lp => lp.sku === mp.sku)
+      if (local) {
+        newMappings[mp.id] = local.id
+        count++
       }
     })
     
     setMappings(newMappings)
-    alert(`✅ Сопоставлено ${matchCount} товаров по артикулу!`)
+    alert(`Сопоставлено ${count} товаров!`)
   }
 
   const importSelected = async () => {
-    if (selectedForImport.length === 0) {
-      alert('Выберите товары для загрузки')
-      return
-    }
-    
     if (!importSettings.category_id) {
       alert('Выберите категорию')
       return
     }
     
     try {
-      for (const mpProductId of selectedForImport) {
+      for (const mpId of selectedForImport) {
         await api.post(`/api/marketplaces/${marketplace}/import-product`, {
-          marketplace_product_id: mpProductId,
-          category_id: importSettings.category_id,
-          tag: importSettings.tag
+          marketplace_product_id: mpId
         })
       }
       
-      alert(`✅ Загружено ${selectedForImport.length} товаров!\\nТовары появятся во вкладке Products.`)
+      alert(`Загружено ${selectedForImport.length} товаров!`)
       setShowImportModal(false)
       setSelectedForImport([])
       loadLocalProducts()
-      loadMarketplaceProducts()
     } catch (error) {
-      alert('Ошибка импорта: ' + (error.response?.data?.detail || error.message))
+      alert('Ошибка')
     }
   }
 
-  const getFilteredProducts = () => {
-    if (filter === 'mapped') {
-      return mpProducts.filter(mp => mappings[mp.id])
-    } else if (filter === 'unmapped') {
-      return mpProducts.filter(mp => !mappings[mp.id])
-    } else if (filter === 'duplicates') {
+  const getFiltered = () => {
+    if (filter === 'mapped') return mpProducts.filter(mp => mappings[mp.id])
+    if (filter === 'unmapped') return mpProducts.filter(mp => !mappings[mp.id])
+    if (filter === 'duplicates') {
       const skus = mpProducts.map(p => p.sku)
-      const duplicates = skus.filter((sku, idx) => skus.indexOf(sku) !== idx)
-      return mpProducts.filter(p => duplicates.includes(p.sku))
+      const dups = skus.filter((s, i) => skus.indexOf(s) !== i)
+      return mpProducts.filter(p => dups.includes(p.sku))
     }
     return mpProducts
   }
-
-  const filteredProducts = getFilteredProducts()
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl mb-2 text-mm-cyan uppercase">СОПОСТАВЛЕНИЕ ТОВАРОВ</h2>
-          <p className="comment">// Связывание товаров из базы с товарами на маркетплейсе</p>
+          <p className="comment">// Связывание товаров</p>
         </div>
-        <div className=\"flex space-x-3\">
-          <button
-            onClick={autoMatchBySKU}
-            disabled={mpProducts.length === 0}
-            className=\"btn-secondary disabled:opacity-50\"
-          >
-            <FiLink className=\"inline mr-2\" />
-            СОПОСТАВИТЬ ПО АРТИКУЛАМ
+        <div className="flex space-x-3">
+          <button onClick={autoMatchBySKU} disabled={mpProducts.length === 0} className="btn-secondary disabled:opacity-50">
+            <FiLink className="inline mr-2" />СОПОСТАВИТЬ ПО АРТИКУЛАМ
           </button>
-          <button
-            onClick={() => setShowImportModal(true)}
-            disabled={selectedForImport.length === 0}
-            className=\"btn-primary disabled:opacity-50\"
-          >
-            <FiDownload className=\"inline mr-2\" />
-            ЗАГРУЗИТЬ В БАЗУ ({selectedForImport.length})
+          <button onClick={() => setShowImportModal(true)} disabled={selectedForImport.length === 0} className="btn-primary disabled:opacity-50">
+            <FiDownload className="inline mr-2" />ЗАГРУЗИТЬ ({selectedForImport.length})
           </button>
         </div>
       </div>
 
-      {/* Marketplace Selector */}
-      <div className=\"card-neon\">
-        <div className=\"grid grid-cols-2 gap-4\">
-          <div>
-            <label className=\"block text-sm mb-2 text-mm-text-secondary uppercase\">Маркетплейс</label>
-            <select
-              value={marketplace}
-              onChange={(e) => setMarketplace(e.target.value)}
-              className=\"input-neon w-full\"
-            >
-              <option value=\"ozon\">🔵 Ozon</option>
-              <option value=\"wb\">🟣 Wildberries</option>
-              <option value=\"yandex\">🟡 Яндекс.Маркет</option>
-            </select>
-          </div>
-          <div className=\"flex items-end\">
-            <button
-              onClick={loadMarketplaceProducts}
-              className=\"btn-primary w-full\"
-            >
-              ЗАГРУЗИТЬ ТОВАРЫ С {marketplace.toUpperCase()}
-            </button>
-          </div>
+      <div className="card-neon">
+        <div className="grid grid-cols-2 gap-4">
+          <select value={marketplace} onChange={(e) => setMarketplace(e.target.value)} className="input-neon">
+            <option value="ozon">Ozon</option>
+            <option value="wb">Wildberries</option>
+            <option value="yandex">Яндекс.Маркет</option>
+          </select>
+          <button onClick={loadMarketplaceProducts} className="btn-primary">ЗАГРУЗИТЬ ТОВАРЫ</button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className=\"flex space-x-3\">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 border-2 font-mono text-sm transition-all ${
-            filter === 'all' ? 'border-mm-cyan text-mm-cyan bg-mm-cyan/10' : 'border-mm-border text-mm-text-secondary'
-          }`}
-        >
-          <FiFilter className=\"inline mr-2\" />
+      <div className="flex space-x-3">
+        <button onClick={() => setFilter('all')} className={`px-4 py-2 border-2 ${filter === 'all' ? 'border-mm-cyan text-mm-cyan' : 'border-mm-border text-mm-text-secondary'}`}>
           ВСЕ ({mpProducts.length})
         </button>
-        <button
-          onClick={() => setFilter('mapped')}
-          className={`px-4 py-2 border-2 font-mono text-sm transition-all ${
-            filter === 'mapped' ? 'border-mm-green text-mm-green bg-mm-green/10' : 'border-mm-border text-mm-text-secondary'
-          }`}
-        >
-          СОПОСТАВЛЕННЫЕ ({mpProducts.filter(mp => mappings[mp.id]).length})
+        <button onClick={() => setFilter('mapped')} className={`px-4 py-2 border-2 ${filter === 'mapped' ? 'border-mm-green text-mm-green' : 'border-mm-border text-mm-text-secondary'}`}>
+          СОПОСТАВЛЕННЫЕ
         </button>
-        <button
-          onClick={() => setFilter('unmapped')}
-          className={`px-4 py-2 border-2 font-mono text-sm transition-all ${
-            filter === 'unmapped' ? 'border-mm-yellow text-mm-yellow bg-mm-yellow/10' : 'border-mm-border text-mm-text-secondary'
-          }`}
-        >
-          БЕЗ СВЯЗИ ({mpProducts.filter(mp => !mappings[mp.id]).length})
+        <button onClick={() => setFilter('unmapped')} className={`px-4 py-2 border-2 ${filter === 'unmapped' ? 'border-mm-yellow text-mm-yellow' : 'border-mm-border text-mm-text-secondary'}`}>
+          БЕЗ СВЯЗИ
         </button>
-        <button
-          onClick={() => setFilter('duplicates')}
-          className={`px-4 py-2 border-2 font-mono text-sm transition-all ${
-            filter === 'duplicates' ? 'border-mm-red text-mm-red bg-mm-red/10' : 'border-mm-border text-mm-text-secondary'
-          }`}
-        >
+        <button onClick={() => setFilter('duplicates')} className={`px-4 py-2 border-2 ${filter === 'duplicates' ? 'border-mm-red text-mm-red' : 'border-mm-border text-mm-text-secondary'}`}>
           ДУБЛИКАТЫ
         </button>
       </div>
 
-      {/* Products Table */}
       {loading ? (
-        <div className=\"text-center py-12\">
-          <p className=\"text-mm-cyan animate-pulse\">// LOADING...</p>
-        </div>
-      ) : filteredProducts.length === 0 ? (
-        <div className=\"card-neon text-center py-12\">
-          <p className=\"text-mm-text-secondary mb-2\">Нет товаров</p>
-          <p className=\"comment\">// Загрузите товары с маркетплейса</p>
+        <div className="text-center py-12"><p className="text-mm-cyan animate-pulse">// LOADING...</p></div>
+      ) : getFiltered().length === 0 ? (
+        <div className="card-neon text-center py-12">
+          <p className="text-mm-text-secondary">Нет товаров</p>
         </div>
       ) : (
-        <div className=\"card-neon overflow-hidden\">
-          <table className=\"w-full\">
+        <div className="card-neon overflow-hidden">
+          <table className="w-full">
             <thead>
-              <tr className=\"border-b border-mm-border\">
-                <th className=\"py-4 px-4\">
-                  <input
-                    type=\"checkbox\"
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedForImport(filteredProducts.map(p => p.id))
-                      } else {
-                        setSelectedForImport([])
-                      }
-                    }}
-                    className=\"w-4 h-4\"
-                  />
-                </th>
-                <th className=\"text-left py-4 px-4 text-mm-text-secondary uppercase text-sm\">Артикул (МП)</th>
-                <th className=\"text-left py-4 px-4 text-mm-text-secondary uppercase text-sm\">Название (МП)</th>
-                <th className=\"text-left py-4 px-4 text-mm-text-secondary uppercase text-sm\">Сопоставление</th>
-                <th className=\"text-left py-4 px-4 text-mm-text-secondary uppercase text-sm\">Статус</th>
+              <tr className="border-b border-mm-border">
+                <th className="py-4 px-4"><input type="checkbox" className="w-4 h-4" /></th>
+                <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Артикул</th>
+                <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Название</th>
+                <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Сопоставление</th>
+                <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Статус</th>
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((mpProduct) => {
-                const localProductId = mappings[mpProduct.id]
-                const localProduct = localProducts.find(lp => lp.id === localProductId)
-                
+              {getFiltered().map((mp) => {
+                const local = localProducts.find(lp => lp.id === mappings[mp.id])
                 return (
-                  <tr key={mpProduct.id} className=\"border-b border-mm-border hover:bg-mm-gray\">
-                    <td className=\"py-4 px-4\">
+                  <tr key={mp.id} className="border-b border-mm-border hover:bg-mm-gray">
+                    <td className="py-4 px-4">
                       <input
-                        type=\"checkbox\"
-                        checked={selectedForImport.includes(mpProduct.id)}
+                        type="checkbox"
+                        checked={selectedForImport.includes(mp.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedForImport([...selectedForImport, mpProduct.id])
+                            setSelectedForImport([...selectedForImport, mp.id])
                           } else {
-                            setSelectedForImport(selectedForImport.filter(id => id !== mpProduct.id))
+                            setSelectedForImport(selectedForImport.filter(id => id !== mp.id))
                           }
                         }}
-                        className=\"w-4 h-4\"
+                        className="w-4 h-4"
                       />
                     </td>
-                    <td className=\"py-4 px-4 font-mono text-sm text-mm-cyan\">{mpProduct.sku}</td>
-                    <td className=\"py-4 px-4 text-sm\">{mpProduct.name}</td>
-                    <td className=\"py-4 px-4\">
-                      {localProduct ? (
-                        <span className=\"font-mono text-sm text-mm-green\">{localProduct.sku}</span>
+                    <td className="py-4 px-4 font-mono text-sm text-mm-cyan">{mp.sku}</td>
+                    <td className="py-4 px-4 text-sm">{mp.name}</td>
+                    <td className="py-4 px-4">
+                      {local ? (
+                        <span className="font-mono text-sm text-mm-green">{local.sku}</span>
                       ) : (
                         <select
-                          value={mappings[mpProduct.id] || ''}
-                          onChange={(e) => setMappings({...mappings, [mpProduct.id]: e.target.value})}
-                          className=\"input-neon text-sm\"
+                          value={mappings[mp.id] || ''}
+                          onChange={(e) => setMappings({...mappings, [mp.id]: e.target.value})}
+                          className="input-neon text-sm"
                         >
-                          <option value=\"\">Выбрать товар...</option>
+                          <option value="">Выбрать...</option>
                           {localProducts.map(lp => (
-                            <option key={lp.id} value={lp.id}>{lp.sku} - {lp.minimalmod.name}</option>
+                            <option key={lp.id} value={lp.id}>{lp.sku}</option>
                           ))}
                         </select>
                       )}
                     </td>
-                    <td className=\"py-4 px-4\">
-                      {localProduct ? (
-                        <span className=\"flex items-center space-x-1 text-mm-green\">
-                          <FiCheckCircle />
-                          <span className=\"text-xs\">СВЯЗАН</span>
+                    <td className="py-4 px-4">
+                      {local ? (
+                        <span className="flex items-center space-x-1 text-mm-green text-xs">
+                          <FiCheckCircle />СВЯЗАН
                         </span>
                       ) : (
-                        <span className=\"text-xs text-mm-yellow\">НЕ СВЯЗАН</span>
+                        <span className="text-xs text-mm-yellow">НЕ СВЯЗАН</span>
                       )}
                     </td>
                   </tr>
@@ -294,63 +213,25 @@ function ProductMappingPage() {
         </div>
       )}
 
-      {/* Import Modal */}
       {showImportModal && (
-        <div className=\"fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50\">
-          <div className=\"card-neon max-w-2xl w-full\">
-            <div className=\"flex items-center justify-between mb-6\">
-              <h3 className=\"text-xl text-mm-cyan\">ЗАГРУЗИТЬ ТОВАРЫ В БАЗУ</h3>
-              <button onClick={() => setShowImportModal(false)} className=\"text-mm-text-secondary hover:text-mm-red\">✕</button>
-            </div>
-
-            <div className=\"space-y-6\">
-              <div className=\"p-4 bg-mm-blue/5 border border-mm-blue\">
-                <p className=\"text-mm-blue font-bold mb-2\">Выбрано товаров: {selectedForImport.length}</p>
-                <p className=\"text-sm text-mm-text-secondary\">
-                  Товары будут импортированы в вашу базу и автоматически сопоставлены по артикулу.
-                </p>
-              </div>
-
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
+          <div className="card-neon max-w-md w-full">
+            <h3 className="text-xl text-mm-cyan mb-6">ЗАГРУЗИТЬ В БАЗУ</h3>
+            <div className="space-y-4">
               <div>
-                <label className=\"block text-sm mb-2 text-mm-text-secondary uppercase\">Категория *</label>
-                <select
-                  value={importSettings.category_id}
-                  onChange={(e) => setImportSettings({...importSettings, category_id: e.target.value})}
-                  className=\"input-neon w-full\"
-                  required
-                >
-                  <option value=\"\">Выберите категорию</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
+                <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Категория *</label>
+                <select value={importSettings.category_id} onChange={(e) => setImportSettings({...importSettings, category_id: e.target.value})} className="input-neon w-full">
+                  <option value="">Выберите</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-
               <div>
-                <label className=\"block text-sm mb-2 text-mm-text-secondary uppercase\">Тег (опционально)</label>
-                <input
-                  type=\"text\"
-                  value={importSettings.tag}
-                  onChange={(e) => setImportSettings({...importSettings, tag: e.target.value})}
-                  className=\"input-neon w-full\"
-                  placeholder=\"например: новинка, акция\"
-                />
+                <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Тег</label>
+                <input type="text" value={importSettings.tag} onChange={(e) => setImportSettings({...importSettings, tag: e.target.value})} className="input-neon w-full" />
               </div>
-
-              <div className=\"flex space-x-4\">
-                <button
-                  onClick={importSelected}
-                  disabled={!importSettings.category_id}
-                  className=\"btn-primary flex-1 disabled:opacity-50\"
-                >
-                  ЗАГРУЗИТЬ
-                </button>
-                <button
-                  onClick={() => setShowImportModal(false)}
-                  className=\"btn-secondary flex-1\"
-                >
-                  ОТМЕНА
-                </button>
+              <div className="flex space-x-4">
+                <button onClick={importSelected} className="btn-primary flex-1">ЗАГРУЗИТЬ</button>
+                <button onClick={() => setShowImportModal(false)} className="btn-secondary flex-1">ОТМЕНА</button>
               </div>
             </div>
           </div>
