@@ -264,17 +264,28 @@ function ProductMappingPage() {
           <div className="card-neon max-w-md w-full">
             <h3 className="text-xl text-mm-cyan mb-6">ЗАГРУЗИТЬ В БАЗУ</h3>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Категория *</label>
-                <select value={importSettings.category_id} onChange={(e) => setImportSettings({...importSettings, category_id: e.target.value})} className="input-neon w-full">
-                  <option value="">Выберите</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+              <div className="p-4 bg-mm-blue/5 border border-mm-blue">
+                <p className="text-mm-blue font-bold mb-2">Выбрано товаров: {selectedForImport.length}</p>
+                <p className="text-sm text-mm-text-secondary">
+                  • Категория определится автоматически<br/>
+                  • Артикул продавца сохранится<br/>
+                  • Описание и фото импортируются<br/>
+                  • Характеристики перенесутся
+                </p>
               </div>
+
               <div>
-                <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Тег</label>
-                <input type="text" value={importSettings.tag} onChange={(e) => setImportSettings({...importSettings, tag: e.target.value})} className="input-neon w-full" />
+                <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Тег (опционально)</label>
+                <input 
+                  type="text" 
+                  value={importSettings.tag} 
+                  onChange={(e) => setImportSettings({...importSettings, tag: e.target.value})} 
+                  className="input-neon w-full"
+                  placeholder="например: новинка, акция"
+                />
+                <p className="comment text-xs mt-1">// Добавляется к тегам товара</p>
               </div>
+
               <div className="flex space-x-4">
                 <button onClick={importSelected} className="btn-primary flex-1">ЗАГРУЗИТЬ</button>
                 <button onClick={() => setShowImportModal(false)} className="btn-secondary flex-1">ОТМЕНА</button>
