@@ -4,7 +4,8 @@ import { FiLink, FiDownload, FiFilter, FiCheckCircle } from 'react-icons/fi'
 
 function ProductMappingPage() {
   const { api } = useAuth()
-  const [marketplace, setMarketplace] = useState('ozon')
+  const [selectedIntegration, setSelectedIntegration] = useState('')
+  const [integrations, setIntegrations] = useState([])
   const [mpProducts, setMpProducts] = useState([])
   const [localProducts, setLocalProducts] = useState([])
   const [mappings, setMappings] = useState({})
@@ -18,7 +19,17 @@ function ProductMappingPage() {
   useEffect(() => {
     loadLocalProducts()
     loadCategories()
+    loadIntegrations()
   }, [])
+
+  const loadIntegrations = async () => {
+    try {
+      const response = await api.get('/api/seller/api-keys')
+      setIntegrations(response.data)
+    } catch (error) {
+      console.error('Failed:', error)
+    }
+  }
 
   const loadLocalProducts = async () => {
     try {
