@@ -144,12 +144,17 @@ function ProductMappingPage() {
               className="input-neon w-full"
             >
               <option value="">Выберите интеграцию...</option>
-              {integrations.map(int => (
-                <option key={int.id} value={int.id}>
-                  {int.marketplace.toUpperCase()} - {int.client_id || 'Интеграция ' + int.id.substring(0, 8)}
-                </option>
-              ))}
+              {integrations.map(int => {
+                const mpName = int.marketplace.toUpperCase()
+                const displayName = int.name || `${mpName} - ${int.client_id?.substring(0, 8) || 'Интеграция'}`
+                return (
+                  <option key={int.id} value={int.id}>
+                    {displayName}
+                  </option>
+                )
+              })}
             </select>
+            <p className="comment text-xs mt-1">// Настраиваются во вкладке API KEYS</p>
           </div>
           <div className="flex items-end">
             <button 
@@ -157,7 +162,7 @@ function ProductMappingPage() {
               disabled={!selectedIntegration}
               className="btn-primary w-full disabled:opacity-50"
             >
-              ЗАГРУЗИТЬ ТОВАРЫ
+              ЗАГРУЗИТЬ ТОВАРЫ С МП
             </button>
           </div>
         </div>
