@@ -114,11 +114,11 @@ function ProductMappingPage() {
   const filteredProducts = getFilteredProducts()
 
   return (
-    <div className=\"space-y-6\">
-      <div className=\"flex items-center justify-between\">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className=\"text-2xl mb-2 text-mm-cyan uppercase\">СОПОСТАВЛЕНИЕ ТОВАРОВ</h2>
-          <p className=\"comment\">// Связывание товаров из базы с товарами на маркетплейсе</p>
+          <h2 className="text-2xl mb-2 text-mm-cyan uppercase">СОПОСТАВЛЕНИЕ ТОВАРОВ</h2>
+          <p className="comment">// Связывание товаров из базы с товарами на маркетплейсе</p>
         </div>
         <div className=\"flex space-x-3\">
           <button
