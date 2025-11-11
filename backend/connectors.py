@@ -95,3 +95,61 @@ class BaseConnector:
             )
 
 # Connectors in next file
+
+class OzonConnector(BaseConnector):
+    """Ozon marketplace connector - REAL API"""
+    
+    def __init__(self, client_id: str, api_key: str):
+        super().__init__(client_id, api_key)
+        self.marketplace_name = "Ozon"
+        self.base_url = "https://api-seller.ozon.ru"
+    
+    def _get_headers(self) -> Dict[str, str]:
+        return {
+            "Client-Id": self.client_id,
+            "Api-Key": self.api_key,
+            "Content-Type": "application/json"
+        }
+    
+    async def get_products(self) -> List[Dict[str, Any]]:
+        """Get products from Ozon - REAL API CALL"""
+        logger.info("[Ozon] Fetching products from API (v3/product/list)")
+        
+        url = f"{self.base_url}/v3/product/list"
+        headers = self._get_headers()
+        
+        payload = {
+            "filter": {
+                "visibility": "ALL"
+            },
+            "last_id": "",
+            "limit": 100
+        }
+        
+        all_products = []
+        
+        try:
+            response_data = await self._make_request("POST", url, headers, json_data=payload)
+            
+            items = response_data.get('result', {}).get('items', [])
+            logger.info(f"[Ozon] Received {len(items)} products")
+            
+            # Transform to unified format
+            for item in items:
+                all_products.append({
+                    "id": str(item.get('product_id', '')),
+                    "sku": item.get('offer_id', ''),
+                    "name": item.get('name', 'Unnamed product'),
+                    "price": float(item.get('price', 0)),
+                    "stock": 0,
+                    "marketplace": "ozon",
+                    "status": item.get('status', {}).get('state', 'unknown'),
+                    "barcode": item.get('barcode', '')
+                })
+            
+            logger.info(f"[Ozon] Successfully transformed {len(all_products)} products")
+            return all_products
+            
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Failed to fetch products: {e.message}")
+            raise
