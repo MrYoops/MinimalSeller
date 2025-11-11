@@ -518,6 +518,59 @@ async def delete_api_key(
     
     logger.info(f"✅ API key {key_id} deleted successfully")
     return {"message": "API key deleted successfully"}
+@app.put("/api/seller/api-keys/{key_id}")
+async def update_api_key(
+    key_id: str,
+    update_data: Dict[str, Any],
+    current_user: dict = Depends(require_role(UserRole.SELLER))
+):
+    logger.info(f"✏️ Updating API key {key_id} for user {current_user['_id']}")
+    logger.info(f"   Update data: {update_data}")
+    
+    # Получаем текущие ключи
+    profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    api_keys = profile.get("api_keys", [])
+    key_index = None
+    
+    # Находим ключ по ID
+    for i, key in enumerate(api_keys):
+        if key.get("id") == key_id or str(key.get("_id")) == key_id:
+            key_index = i
+            break
+    
+    if key_index is None:
+        logger.error(f"❌ API key {key_id} not found")
+        raise HTTPException(status_code=404, detail="API key not found")
+    
+    # Обновляем поля (только те что переданы)
+    if "name" in update_data:
+        api_keys[key_index]["name"] = update_data["name"]
+    if "auto_sync_stock" in update_data:
+        api_keys[key_index]["auto_sync_stock"] = update_data["auto_sync_stock"]
+    if "auto_update_prices" in update_data:
+        api_keys[key_index]["auto_update_prices"] = update_data["auto_update_prices"]
+    if "auto_get_orders" in update_data:
+        api_keys[key_index]["auto_get_orders"] = update_data["auto_get_orders"]
+    
+    # Сохраняем обновлённый массив
+    result = await db.seller_profiles.update_one(
+        {"user_id": current_user["_id"]},
+        {"$set": {"api_keys": api_keys}}
+    )
+    
+    if result.modified_count == 0:
+        logger.warning(f"⚠️ No changes made to API key {key_id}")
+    else:
+        logger.info(f"✅ API key {key_id} updated successfully")
+    
+    return {
+        "message": "API key updated successfully",
+        "key_id": key_id
+    }
+
 
 # ========== PRODUCT MANAGEMENT ROUTES ==========
 from models import ProductCreate, ProductUpdate
