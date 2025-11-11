@@ -216,3 +216,72 @@ class WildberriesConnector(BaseConnector):
         except MarketplaceError as e:
             logger.error(f"[WB] Failed to fetch products: {e.message}")
             raise
+
+class YandexMarketConnector(BaseConnector):
+    """Yandex.Market connector - REAL API"""
+    
+    def __init__(self, client_id: str, api_key: str):
+        super().__init__(client_id, api_key)
+        self.marketplace_name = "Yandex.Market"
+        self.campaign_id = client_id
+        self.oauth_token = api_key
+        self.base_url = "https://api.partner.market.yandex.ru"
+    
+    def _get_headers(self) -> Dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.oauth_token}",
+            "Content-Type": "application/json"
+        }
+    
+    async def get_products(self) -> List[Dict[str, Any]]:
+        """Get products from Yandex.Market - REAL API CALL"""
+        logger.info(f"[Yandex] Fetching products for campaign {self.campaign_id}")
+        
+        url = f"{self.base_url}/campaigns/{self.campaign_id}/offers"
+        headers = self._get_headers()
+        
+        params = {
+            "limit": 200,
+            "page_token": ""
+        }
+        
+        all_products = []
+        
+        try:
+            response_data = await self._make_request("GET", url, headers, params=params)
+            
+            offers = response_data.get('result', {}).get('offers', [])
+            logger.info(f"[Yandex] Received {len(offers)} products")
+            
+            for offer in offers:
+                all_products.append({
+                    "id": offer.get('id', ''),
+                    "sku": offer.get('shopSku', ''),
+                    "name": offer.get('name', 'Unnamed product'),
+                    "price": float(offer.get('price', 0)),
+                    "stock": offer.get('stock', {}).get('count', 0),
+                    "marketplace": "yandex",
+                    "status": offer.get('availability', 'UNKNOWN'),
+                    "barcode": offer.get('barcodes', [''])[0] if offer.get('barcodes') else ''
+                })
+            
+            logger.info(f"[Yandex] Successfully transformed {len(all_products)} products")
+            return all_products
+            
+        except MarketplaceError as e:
+            logger.error(f"[Yandex] Failed to fetch products: {e.message}")
+            raise
+
+def get_connector(marketplace: str, client_id: str, api_key: str) -> BaseConnector:
+    """Factory function to get appropriate connector"""
+    connectors = {
+        "ozon": OzonConnector,
+        "wb": WildberriesConnector,
+        "yandex": YandexMarketConnector
+    }
+    
+    connector_class = connectors.get(marketplace)
+    if not connector_class:
+        raise ValueError(f"Unknown marketplace: {marketplace}")
+    
+    return connector_class(client_id, api_key)
