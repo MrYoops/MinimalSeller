@@ -149,19 +149,22 @@ function APIKeysPage() {
       auto_get_orders: true
     })
     setConnectionStatus(null)
+    setFormTouched(false)
     setShowEditModal(true)
   }
 
   const saveEditKey = async () => {
-    if (!connectionStatus || !connectionStatus.success) {
-      alert('Сначала проверьте подключение!')
-      return
-    }
+    // Больше не требуем обязательной проверки подключения
+    // if (!connectionStatus || !connectionStatus.success) {
+    //   alert('Сначала проверьте подключение!')
+    //   return
+    // }
     
     try {
       // В реальности PUT /api/seller/api-keys/{id}
       alert('✅ Настройки сохранены!')
       setShowEditModal(false)
+      setFormTouched(false)
       loadApiKeys()
     } catch (error) {
       alert('Ошибка сохранения')
