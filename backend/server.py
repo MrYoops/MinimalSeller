@@ -474,11 +474,15 @@ async def delete_api_key(
     key_id: str,
     current_user: dict = Depends(require_role(UserRole.SELLER))
 ):
+    logger.info(f"🗑️ Attempting to delete API key {key_id} for user {current_user['_id']}")
+    
     # Try to delete by UUID first, then by ObjectId for backward compatibility
     result = await db.seller_profiles.update_one(
         {"user_id": current_user["_id"]},
         {"$pull": {"api_keys": {"id": key_id}}}
     )
+    
+    logger.info(f"UUID deletion attempt: matched={result.matched_count}, modified={result.modified_count}")
     
     # If UUID deletion didn't work, try ObjectId (for old data)
     if result.modified_count == 0:
@@ -487,12 +491,15 @@ async def delete_api_key(
                 {"user_id": current_user["_id"]},
                 {"$pull": {"api_keys": {"_id": ObjectId(key_id)}}}
             )
-        except:
-            pass
+            logger.info(f"ObjectId deletion attempt: matched={result.matched_count}, modified={result.modified_count}")
+        except Exception as e:
+            logger.error(f"ObjectId deletion failed: {e}")
     
     if result.modified_count == 0:
+        logger.error(f"❌ Failed to delete API key {key_id}")
         raise HTTPException(status_code=404, detail="API key not found")
     
+    logger.info(f"✅ API key {key_id} deleted successfully")
     return {"message": "API key deleted successfully"}
 
 # ========== PRODUCT MANAGEMENT ROUTES ==========
