@@ -764,7 +764,6 @@ function APIKeysPage() {
                 <button
                   type="button"
                   onClick={saveEditKey}
-                  
                   className="btn-primary flex-1 disabled:opacity-50"
                 >
                   СОХРАНИТЬ
