@@ -155,19 +155,22 @@ function APIKeysPage() {
   }
 
   const saveEditKey = async () => {
-    // Больше не требуем обязательной проверки подключения
-    // if (!connectionStatus || !connectionStatus.success) {
-    //   alert('Сначала проверьте подключение!')
-    //   return
-    // }
-    
     try {
-      // В реальности PUT /api/seller/api-keys/{id}
+      console.log('💾 Saving API key settings:', editKey, 'for key:', editingKey.id)
+      
+      await api.put(`/api/seller/api-keys/${editingKey.id}`, {
+        name: editKey.name,
+        auto_sync_stock: editKey.auto_sync_stock,
+        auto_update_prices: editKey.auto_update_prices,
+        auto_get_orders: editKey.auto_get_orders
+      })
+      
       alert('✅ Настройки сохранены!')
       setShowEditModal(false)
-      loadApiKeys()
+      await loadApiKeys()
     } catch (error) {
-      alert('Ошибка сохранения')
+      console.error('❌ Save error:', error)
+      alert('❌ Ошибка сохранения: ' + (error.response?.data?.detail || error.message))
     }
   }
 
