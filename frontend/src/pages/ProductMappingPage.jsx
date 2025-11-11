@@ -224,10 +224,12 @@ function ProductMappingPage() {
             <thead>
               <tr className="border-b border-mm-border">
                 <th className="py-4 px-4"><input type="checkbox" className="w-4 h-4" /></th>
+                <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Фото</th>
                 <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Артикул</th>
                 <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Название</th>
                 <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Сопоставление</th>
                 <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Статус</th>
+                <th className="text-right py-4 px-4 text-mm-text-secondary uppercase text-sm">Действия</th>
               </tr>
             </thead>
             <tbody>
