@@ -462,10 +462,21 @@ async def delete_api_key(
     key_id: str,
     current_user: dict = Depends(require_role(UserRole.SELLER))
 ):
+    # Try to delete by UUID first, then by ObjectId for backward compatibility
     result = await db.seller_profiles.update_one(
         {"user_id": current_user["_id"]},
-        {"$pull": {"api_keys": {"_id": ObjectId(key_id)}}}
+        {"$pull": {"api_keys": {"id": key_id}}}
     )
+    
+    # If UUID deletion didn't work, try ObjectId (for old data)
+    if result.modified_count == 0:
+        try:
+            result = await db.seller_profiles.update_one(
+                {"user_id": current_user["_id"]},
+                {"$pull": {"api_keys": {"_id": ObjectId(key_id)}}}
+            )
+        except:
+            pass
     
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="API key not found")
