@@ -5,16 +5,13 @@ const AuthContext = createContext()
 
 // Backend URL - автоматическое определение для локальной и preview версий
 const getBackendURL = () => {
-  // Если явно указан VITE_BACKEND_URL в .env
-  const envURL = import.meta.env.VITE_BACKEND_URL
-  
   // Если запускается локально (localhost или 127.0.0.1)
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return 'http://localhost:8001'
   }
   
-  // Для preview и production используем env или пустую строку (relative path)
-  return envURL || ''
+  // Для preview используем относительный путь (проксируется через nginx)
+  return ''
 }
 
 const API_URL = getBackendURL()
