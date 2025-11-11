@@ -481,7 +481,10 @@ function APIKeysPage() {
                       <input
                         type="text"
                         value={newKey.yandex_campaign_id}
-                        onChange={(e) => setNewKey({...newKey, yandex_campaign_id: e.target.value})}
+                        onChange={(e) => {
+                          setNewKey({...newKey, yandex_campaign_id: e.target.value})
+                          setFormTouched(true)
+                        }}
                         className="input-neon w-full"
                         placeholder="12345678"
                         required
@@ -493,7 +496,10 @@ function APIKeysPage() {
                         <input
                           type={showPassword ? 'text' : 'password'}
                           value={newKey.yandex_token}
-                          onChange={(e) => setNewKey({...newKey, yandex_token: e.target.value})}
+                          onChange={(e) => {
+                            setNewKey({...newKey, yandex_token: e.target.value})
+                            setFormTouched(true)
+                          }}
                           className="input-neon w-full pr-12"
                           placeholder="y0_xxxxxxxxxxxxxxxxxxxxx"
                           required
