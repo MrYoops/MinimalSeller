@@ -1,11 +1,10 @@
-# Real connectors for marketplaces - NO MOCK DATA!
-# Full implementation with error handling
+# Real connectors for marketplaces - FULL BROWSER HEADERS
+# Complete implementation with CORS-compatible headers
 
 import httpx
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
-import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +26,19 @@ class BaseConnector:
         self.marketplace_name = "Base"
         self.timeout = 30.0
     
+    def _get_browser_headers(self) -> Dict[str, str]:
+        """Get browser-like headers to bypass CORS/bot detection"""
+        return {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+        }
+    
     async def _make_request(
         self,
         method: str,
@@ -35,10 +47,15 @@ class BaseConnector:
         json_data: Optional[Dict] = None,
         params: Optional[Dict] = None
     ) -> Dict[str, Any]:
-        """Make HTTP request with error handling"""
+        """Make HTTP request with full browser headers"""
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, verify=True) as client:
+            async with httpx.AsyncClient(
+                timeout=self.timeout, 
+                verify=True,
+                follow_redirects=True
+            ) as client:
                 logger.info(f"[{self.marketplace_name}] {method} {url}")
+                logger.info(f"[{self.marketplace_name}] Headers: {list(headers.keys())}")
                 
                 if method == "GET":
                     response = await client.get(url, headers=headers, params=params)
@@ -56,11 +73,12 @@ class BaseConnector:
                     error_text = response.text
                     try:
                         error_json = response.json()
-                        error_message = error_json.get('message') or error_json.get('error') or error_json.get('detail') or error_text
+                        error_message = error_json.get('message') or error_json.get('error') or error_json.get('detail') or str(error_json)
+                        logger.error(f"[{self.marketplace_name}] API Error JSON: {error_json}")
                     except:
-                        error_message = error_text
+                        error_message = error_text[:200] if error_text else "Unknown error"
                     
-                    logger.error(f"[{self.marketplace_name}] API Error: {error_message}")
+                    logger.error(f"[{self.marketplace_name}] API Error [{response.status_code}]: {error_message}")
                     raise MarketplaceError(
                         marketplace=self.marketplace_name,
                         status_code=response.status_code,
@@ -68,7 +86,11 @@ class BaseConnector:
                         details=error_text
                     )
                 
-                return response.json()
+                try:
+                    return response.json()
+                except:
+                    # If response is not JSON, return text
+                    return {"raw_response": response.text}
                 
         except httpx.TimeoutException as e:
             logger.error(f"[{self.marketplace_name}] Request timeout: {str(e)}")
@@ -82,7 +104,7 @@ class BaseConnector:
             raise MarketplaceError(
                 marketplace=self.marketplace_name,
                 status_code=503,
-                message="Cannot connect to marketplace server"
+                message=f"Cannot connect to marketplace server: {str(e)}"
             )
         except MarketplaceError:
             raise
@@ -94,10 +116,8 @@ class BaseConnector:
                 message=f"Internal error: {str(e)}"
             )
 
-# Connectors in next file
-
 class OzonConnector(BaseConnector):
-    """Ozon marketplace connector - REAL API"""
+    """Ozon marketplace connector - REAL API with full headers"""
     
     def __init__(self, client_id: str, api_key: str):
         super().__init__(client_id, api_key)
@@ -105,11 +125,16 @@ class OzonConnector(BaseConnector):
         self.base_url = "https://api-seller.ozon.ru"
     
     def _get_headers(self) -> Dict[str, str]:
-        return {
+        """Get Ozon-specific headers with browser simulation"""
+        headers = self._get_browser_headers()
+        headers.update({
             "Client-Id": self.client_id,
             "Api-Key": self.api_key,
-            "Content-Type": "application/json"
-        }
+            "Content-Type": "application/json",
+            "Origin": "https://seller.ozon.ru",
+            "Referer": "https://seller.ozon.ru/"
+        })
+        return headers
     
     async def get_products(self) -> List[Dict[str, Any]]:
         """Get products from Ozon - REAL API CALL"""
@@ -143,7 +168,7 @@ class OzonConnector(BaseConnector):
                     "price": float(item.get('price', 0)),
                     "stock": 0,
                     "marketplace": "ozon",
-                    "status": item.get('status', {}).get('state', 'unknown'),
+                    "status": item.get('status', {}).get('state', 'unknown') if isinstance(item.get('status'), dict) else str(item.get('status', 'unknown')),
                     "barcode": item.get('barcode', '')
                 })
             
@@ -155,20 +180,26 @@ class OzonConnector(BaseConnector):
             raise
 
 class WildberriesConnector(BaseConnector):
-    """Wildberries marketplace connector - REAL API"""
+    """Wildberries marketplace connector - REAL API with full headers"""
     
     def __init__(self, client_id: str, api_key: str):
         super().__init__(client_id, api_key)
         self.marketplace_name = "Wildberries"
         self.api_token = api_key
+        # Updated domains as of Jan 2025
         self.content_api_url = "https://content-api.wildberries.ru"
         self.marketplace_api_url = "https://marketplace-api.wildberries.ru"
     
     def _get_headers(self) -> Dict[str, str]:
-        return {
+        """Get WB-specific headers with browser simulation"""
+        headers = self._get_browser_headers()
+        headers.update({
             "Authorization": self.api_token,
-            "Content-Type": "application/json"
-        }
+            "Content-Type": "application/json",
+            "Origin": "https://seller.wildberries.ru",
+            "Referer": "https://seller.wildberries.ru/"
+        })
+        return headers
     
     async def get_products(self) -> List[Dict[str, Any]]:
         """Get products from Wildberries - REAL API CALL"""
@@ -198,16 +229,29 @@ class WildberriesConnector(BaseConnector):
             
             for card in cards:
                 sizes = card.get('sizes', [])
-                for size in sizes:
+                if sizes:
+                    for size in sizes:
+                        all_products.append({
+                            "id": str(card.get('nmID', '')),
+                            "sku": size.get('skus', [''])[0],
+                            "name": card.get('title', 'Unnamed product'),
+                            "price": 0,
+                            "stock": 0,
+                            "marketplace": "wb",
+                            "barcode": size.get('skus', [''])[0],
+                            "size": size.get('techSize', '')
+                        })
+                else:
+                    # If no sizes, add main product
                     all_products.append({
                         "id": str(card.get('nmID', '')),
-                        "sku": size.get('skus', [''])[0],
+                        "sku": card.get('vendorCode', ''),
                         "name": card.get('title', 'Unnamed product'),
                         "price": 0,
                         "stock": 0,
                         "marketplace": "wb",
-                        "barcode": size.get('skus', [''])[0],
-                        "size": size.get('techSize', '')
+                        "barcode": '',
+                        "size": ''
                     })
             
             logger.info(f"[WB] Successfully transformed {len(all_products)} products")
@@ -218,7 +262,7 @@ class WildberriesConnector(BaseConnector):
             raise
 
 class YandexMarketConnector(BaseConnector):
-    """Yandex.Market connector - REAL API"""
+    """Yandex.Market connector - REAL API with full headers"""
     
     def __init__(self, client_id: str, api_key: str):
         super().__init__(client_id, api_key)
@@ -228,10 +272,15 @@ class YandexMarketConnector(BaseConnector):
         self.base_url = "https://api.partner.market.yandex.ru"
     
     def _get_headers(self) -> Dict[str, str]:
-        return {
+        """Get Yandex-specific headers with browser simulation"""
+        headers = self._get_browser_headers()
+        headers.update({
             "Authorization": f"Bearer {self.oauth_token}",
-            "Content-Type": "application/json"
-        }
+            "Content-Type": "application/json",
+            "Origin": "https://partner.market.yandex.ru",
+            "Referer": "https://partner.market.yandex.ru/"
+        })
+        return headers
     
     async def get_products(self) -> List[Dict[str, Any]]:
         """Get products from Yandex.Market - REAL API CALL"""
@@ -259,7 +308,7 @@ class YandexMarketConnector(BaseConnector):
                     "sku": offer.get('shopSku', ''),
                     "name": offer.get('name', 'Unnamed product'),
                     "price": float(offer.get('price', 0)),
-                    "stock": offer.get('stock', {}).get('count', 0),
+                    "stock": offer.get('stock', {}).get('count', 0) if isinstance(offer.get('stock'), dict) else 0,
                     "marketplace": "yandex",
                     "status": offer.get('availability', 'UNKNOWN'),
                     "barcode": offer.get('barcodes', [''])[0] if offer.get('barcodes') else ''
