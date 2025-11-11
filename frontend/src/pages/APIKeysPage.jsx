@@ -603,7 +603,12 @@ function APIKeysPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={!formTouched}
+                    disabled={
+                      selectedMarketplace === 'ozon' ? (!newKey.client_id || !newKey.api_key) :
+                      selectedMarketplace === 'wb' ? !newKey.wb_token :
+                      selectedMarketplace === 'yandex' ? (!newKey.yandex_campaign_id || !newKey.yandex_token) :
+                      true
+                    }
                     className="btn-primary flex-1 disabled:opacity-50"
                   >
                     СОХРАНИТЬ
