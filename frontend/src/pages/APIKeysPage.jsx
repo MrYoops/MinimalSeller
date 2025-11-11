@@ -34,6 +34,7 @@ function APIKeysPage() {
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState(null)
   const [syncing, setSyncing] = useState(false)
+  const [formTouched, setFormTouched] = useState(false)
 
   useEffect(() => {
     loadApiKeys()
