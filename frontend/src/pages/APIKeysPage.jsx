@@ -83,10 +83,11 @@ function APIKeysPage() {
   const addApiKey = async (e) => {
     e.preventDefault()
     
-    if (!connectionStatus || !connectionStatus.success) {
-      alert('Сначала проверьте подключение!')
-      return
-    }
+    // Больше не требуем обязательной проверки подключения
+    // if (!connectionStatus || !connectionStatus.success) {
+    //   alert('Сначала проверьте подключение!')
+    //   return
+    // }
     
     try {
       const payload = {
@@ -104,6 +105,7 @@ function APIKeysPage() {
       setModalStep(1)
       setSelectedMarketplace('')
       setConnectionStatus(null)
+      setFormTouched(false)
       
       // Сбрасываем форму
       setNewKey({
