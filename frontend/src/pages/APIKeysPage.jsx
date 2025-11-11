@@ -663,7 +663,10 @@ function APIKeysPage() {
                     <input
                       type="checkbox"
                       checked={editKey.auto_sync_stock}
-                      onChange={(e) => setEditKey({...editKey, auto_sync_stock: e.target.checked})}
+                      onChange={(e) => {
+                        setEditKey({...editKey, auto_sync_stock: e.target.checked})
+                        setFormTouched(true)
+                      }}
                       className="w-5 h-5 mt-1"
                     />
                     <div>
@@ -678,7 +681,10 @@ function APIKeysPage() {
                     <input
                       type="checkbox"
                       checked={editKey.auto_update_prices}
-                      onChange={(e) => setEditKey({...editKey, auto_update_prices: e.target.checked})}
+                      onChange={(e) => {
+                        setEditKey({...editKey, auto_update_prices: e.target.checked})
+                        setFormTouched(true)
+                      }}
                       className="w-5 h-5 mt-1"
                     />
                     <div>
@@ -693,7 +699,10 @@ function APIKeysPage() {
                     <input
                       type="checkbox"
                       checked={editKey.auto_get_orders}
-                      onChange={(e) => setEditKey({...editKey, auto_get_orders: e.target.checked})}
+                      onChange={(e) => {
+                        setEditKey({...editKey, auto_get_orders: e.target.checked})
+                        setFormTouched(true)
+                      }}
                       className="w-5 h-5 mt-1"
                     />
                     <div>
