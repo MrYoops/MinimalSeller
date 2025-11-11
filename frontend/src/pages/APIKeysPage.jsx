@@ -645,7 +645,10 @@ function APIKeysPage() {
                 <input
                   type="text"
                   value={editKey.name}
-                  onChange={(e) => setEditKey({...editKey, name: e.target.value})}
+                  onChange={(e) => {
+                    setEditKey({...editKey, name: e.target.value})
+                    setFormTouched(true)
+                  }}
                   className="input-neon w-full"
                   placeholder="Например: WB Основной аккаунт"
                 />
