@@ -1434,8 +1434,8 @@ async def get_marketplace_products(
     marketplace: str,
     current_user: dict = Depends(get_current_user)
 ):
-    """Получить товары с маркетплейса по API"""
-    from connectors import get_connector
+    """Получить товары с маркетплейса (Mock-версия для разработки)"""
+    logger.info(f"📦 Loading products from {marketplace} (MOCK mode)")
     
     # Получаем API ключи продавца
     profile = await db.seller_profiles.find_one({'user_id': current_user['_id']})
@@ -1456,18 +1456,37 @@ async def get_marketplace_products(
             detail=f"No API key found for {marketplace}. Please add integration first."
         )
     
-    # Получаем товары через коннектор
-    connector = get_connector(
-        marketplace,
-        marketplace_key.get('client_id', ''),
-        marketplace_key['api_key']
-    )
+    # Mock данные для разработки
+    logger.info(f"✅ Returning mock products for {marketplace}")
     
-    logger.info(f"Loading products from {marketplace} using connector")
-    products = await connector.get_products()
-    logger.info(f"Loaded {len(products)} products from {marketplace}")
+    mock_products = [
+        {
+            "id": f"{marketplace}_001",
+            "sku": "TEST-SKU-001",
+            "name": f"Тестовый товар 1 ({marketplace.upper()})",
+            "price": 1500,
+            "stock": 10,
+            "marketplace": marketplace
+        },
+        {
+            "id": f"{marketplace}_002",
+            "sku": "TEST-SKU-002",
+            "name": f"Тестовый товар 2 ({marketplace.upper()})",
+            "price": 2500,
+            "stock": 5,
+            "marketplace": marketplace
+        },
+        {
+            "id": f"{marketplace}_003",
+            "sku": "TEST-SKU-003",
+            "name": f"Тестовый товар 3 ({marketplace.upper()})",
+            "price": 3500,
+            "stock": 15,
+            "marketplace": marketplace
+        }
+    ]
     
-    return products
+    return mock_products
 
 # ========== FBO SHIPMENTS ==========
 
