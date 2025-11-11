@@ -348,16 +348,31 @@ async def get_api_keys(current_user: dict = Depends(require_role(UserRole.SELLER
         return []
     
     api_keys = profile.get("api_keys", [])
-    return [
-        APIKey(
-            id=str(key.get("_id", "")),
+    result = []
+    
+    for key in api_keys:
+        # Handle both old ObjectId format and new UUID format
+        key_id = str(key.get("id", "")) or str(key.get("_id", ""))
+        
+        # Parse created_at - handle both datetime and ISO string
+        created_at = key.get("created_at")
+        if isinstance(created_at, str):
+            try:
+                created_at = datetime.fromisoformat(created_at)
+            except:
+                created_at = datetime.utcnow()
+        elif not isinstance(created_at, datetime):
+            created_at = datetime.utcnow()
+        
+        result.append(APIKey(
+            id=key_id,
             marketplace=key["marketplace"],
-            client_id=key["client_id"],
-            api_key_masked="***" + key["api_key"][-4:] if len(key["api_key"]) > 4 else "***",
-            created_at=key.get("created_at", datetime.utcnow())
-        )
-        for key in api_keys
-    ]
+            client_id=key.get("client_id", ""),
+            api_key_masked="***" + key["api_key"][-4:] if len(key.get("api_key", "")) > 4 else "***",
+            created_at=created_at
+        ))
+    
+    return result
 
 @app.post("/api/seller/api-keys/test")
 async def test_api_key(
