@@ -411,7 +411,10 @@ function APIKeysPage() {
                       <input
                         type="text"
                         value={newKey.client_id}
-                        onChange={(e) => setNewKey({...newKey, client_id: e.target.value})}
+                        onChange={(e) => {
+                          setNewKey({...newKey, client_id: e.target.value})
+                          setFormTouched(true)
+                        }}
                         className="input-neon w-full"
                         placeholder="123456"
                         required
@@ -423,7 +426,10 @@ function APIKeysPage() {
                         <input
                           type={showPassword ? 'text' : 'password'}
                           value={newKey.api_key}
-                          onChange={(e) => setNewKey({...newKey, api_key: e.target.value})}
+                          onChange={(e) => {
+                            setNewKey({...newKey, api_key: e.target.value})
+                            setFormTouched(true)
+                          }}
                           className="input-neon w-full pr-12"
                           placeholder="xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx"
                           required
