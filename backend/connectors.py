@@ -202,8 +202,8 @@ class WildberriesConnector(BaseConnector):
         return headers
     
     async def get_products(self) -> List[Dict[str, Any]]:
-        """Get products from Wildberries - REAL API CALL"""
-        logger.info("[WB] Fetching products from Content API (v2/get/cards/list)")
+        """Get products from Wildberries with FULL INFO - REAL API CALL"""
+        logger.info("[WB] Fetching products with full details from Content API")
         
         url = f"{self.content_api_url}/content/v2/get/cards/list"
         headers = self._get_headers()
@@ -225,36 +225,66 @@ class WildberriesConnector(BaseConnector):
             response_data = await self._make_request("POST", url, headers, json_data=payload)
             
             cards = response_data.get('cards', [])
-            logger.info(f"[WB] Received {len(cards)} products")
+            logger.info(f"[WB] Received {len(cards)} product cards")
             
             for card in cards:
+                # Extract vendor code (артикул продавца)
+                vendor_code = card.get('vendorCode', '')
+                
+                # Extract photos
+                photos = []
+                for photo in card.get('photos', []):
+                    photos.append(photo.get('big', photo.get('c516x688', '')))
+                
+                # Extract characteristics (характеристики)
+                characteristics = []
+                for char in card.get('characteristics', []):
+                    characteristics.append({
+                        "name": char.get('name', ''),
+                        "value": char.get('value', '')
+                    })
+                
+                # Extract description
+                description = card.get('description', '')
+                
+                # Extract sizes if available
                 sizes = card.get('sizes', [])
                 if sizes:
                     for size in sizes:
                         all_products.append({
                             "id": str(card.get('nmID', '')),
-                            "sku": size.get('skus', [''])[0],
+                            "sku": vendor_code,  # Артикул продавца
+                            "barcode": size.get('skus', [''])[0],  # Баркод
                             "name": card.get('title', 'Unnamed product'),
+                            "description": description,
+                            "photos": photos,
+                            "characteristics": characteristics,
                             "price": 0,
                             "stock": 0,
                             "marketplace": "wb",
-                            "barcode": size.get('skus', [''])[0],
-                            "size": size.get('techSize', '')
+                            "size": size.get('techSize', ''),
+                            "category": card.get('object', ''),
+                            "brand": card.get('brand', '')
                         })
                 else:
-                    # If no sizes, add main product
+                    # Single product without sizes
                     all_products.append({
                         "id": str(card.get('nmID', '')),
-                        "sku": card.get('vendorCode', ''),
+                        "sku": vendor_code,
+                        "barcode": '',
                         "name": card.get('title', 'Unnamed product'),
+                        "description": description,
+                        "photos": photos,
+                        "characteristics": characteristics,
                         "price": 0,
                         "stock": 0,
                         "marketplace": "wb",
-                        "barcode": '',
-                        "size": ''
+                        "size": '',
+                        "category": card.get('object', ''),
+                        "brand": card.get('brand', '')
                     })
             
-            logger.info(f"[WB] Successfully transformed {len(all_products)} products")
+            logger.info(f"[WB] Successfully transformed {len(all_products)} products with full details")
             return all_products
             
         except MarketplaceError as e:
