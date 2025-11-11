@@ -1647,3 +1647,75 @@ except Exception as e:
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
+@app.post("/api/products/import-from-marketplace")
+async def import_product_from_marketplace(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Import product from marketplace and auto-map by SKU"""
+    import uuid
+    
+    marketplace_product = data.get('product')
+    if not marketplace_product:
+        raise HTTPException(status_code=400, detail="Product data required")
+    
+    sku = marketplace_product.get('sku', '')
+    if not sku:
+        raise HTTPException(status_code=400, detail="SKU required")
+    
+    logger.info(f"📦 Importing product from marketplace: SKU={sku}")
+    
+    # Check if product with this SKU already exists
+    existing_product = await db.products.find_one({"sku": sku})
+    
+    if existing_product:
+        logger.info(f"✅ Product already exists: {existing_product.get('name')}")
+        return {
+            "message": "Product already exists",
+            "product_id": str(existing_product.get("_id")),
+            "action": "existing"
+        }
+    
+    # Create new product from marketplace data
+    product_id = str(uuid.uuid4())
+    
+    new_product = {
+        "_id": product_id,
+        "sku": sku,
+        "name": marketplace_product.get('name', 'Imported product'),
+        "description": marketplace_product.get('description', ''),
+        "price": marketplace_product.get('price', 0),
+        "images": marketplace_product.get('photos', [])[:5],  # Max 5 photos
+        "category_id": None,  # User can set later
+        "status": "draft",
+        "seller_id": current_user["_id"],
+        "created_at": datetime.utcnow().isoformat(),
+        "updated_at": datetime.utcnow().isoformat(),
+        
+        # Marketplace specific data
+        "marketplace_data": {
+            marketplace_product.get('marketplace', 'unknown'): {
+                "id": marketplace_product.get('id'),
+                "barcode": marketplace_product.get('barcode', ''),
+                "characteristics": marketplace_product.get('characteristics', []),
+                "category": marketplace_product.get('category', ''),
+                "brand": marketplace_product.get('brand', '')
+            }
+        }
+    }
+    
+    # Insert product
+    await db.products.insert_one(new_product)
+    
+    logger.info(f"✅ Product imported: {new_product['name']} (SKU: {sku})")
+    
+    return {
+        "message": "Product imported successfully",
+        "product_id": product_id,
+        "action": "created",
+        "product": {
+            "id": product_id,
+            "sku": sku,
+            "name": new_product['name']
+        }
+    }
