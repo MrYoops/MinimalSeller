@@ -453,7 +453,10 @@ function APIKeysPage() {
                     <div className="relative">
                       <textarea
                         value={newKey.wb_token}
-                        onChange={(e) => setNewKey({...newKey, wb_token: e.target.value})}
+                        onChange={(e) => {
+                          setNewKey({...newKey, wb_token: e.target.value})
+                          setFormTouched(true)
+                        }}
                         className="input-neon w-full pr-12"
                         rows="4"
                         placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
