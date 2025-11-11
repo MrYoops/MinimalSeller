@@ -379,51 +379,68 @@ async def test_api_key(
     data: Dict[str, Any],
     current_user: dict = Depends(get_current_user)
 ):
-    """Mock-проверка подключения (для разработки без реальных API)"""
+    """REAL API connection test - no mock data!"""
+    from connectors import get_connector, MarketplaceError
+    
     marketplace = data.get('marketplace')
     client_id = data.get('client_id', '')
     api_key = data.get('api_key', '')
     
-    logger.info(f"🔍 Testing API connection for {marketplace}")
+    logger.info(f"🔍 REAL API test for {marketplace}")
     logger.info(f"   Client ID: {client_id[:20] if client_id else 'N/A'}...")
     logger.info(f"   API Key: {api_key[:20] if api_key else 'N/A'}...")
     
-    # Базовая валидация
+    # Validation
     if not marketplace or marketplace not in ["ozon", "wb", "yandex"]:
         return {
             'success': False,
-            'message': '❌ Неверный маркетплейс'
+            'message': '❌ Invalid marketplace'
         }
     
-    # Проверка что ключи заполнены
     if marketplace == 'ozon':
         if not client_id or not api_key:
             return {
                 'success': False,
-                'message': '❌ Заполните Client ID и API Key для Ozon'
+                'message': '❌ Fill Client ID and API Key for Ozon'
             }
     elif marketplace == 'wb':
         if not api_key:
             return {
                 'success': False,
-                'message': '❌ Заполните API Token для Wildberries'
+                'message': '❌ Fill API Token for Wildberries'
             }
     elif marketplace == 'yandex':
         if not client_id or not api_key:
             return {
                 'success': False,
-                'message': '❌ Заполните Campaign ID и Token для Yandex'
+                'message': '❌ Fill Campaign ID and Token for Yandex'
             }
     
-    # Mock успешный ответ (для разработки)
-    logger.info(f"✅ Mock test passed for {marketplace}")
-    
-    return {
-        'success': True,
-        'message': f'✅ Подключение успешно! (Mock режим)\n\nДанные корректны для {marketplace}.',
-        'products_count': 0,
-        'mock': True
-    }
+    try:
+        # REAL API CALL
+        connector = get_connector(marketplace, client_id, api_key)
+        products = await connector.get_products()
+        
+        logger.info(f"✅ REAL API test passed! Found {len(products)} products")
+        
+        return {
+            'success': True,
+            'message': f'✅ Connection successful! Found {len(products)} products from {marketplace.upper()}.',
+            'products_count': len(products)
+        }
+        
+    except MarketplaceError as e:
+        logger.error(f"❌ API test failed: {e.message}")
+        return {
+            'success': False,
+            'message': f'❌ {e.marketplace} API Error [{e.status_code}]: {e.message}'
+        }
+    except Exception as e:
+        logger.error(f"❌ Unexpected error: {str(e)}")
+        return {
+            'success': False,
+            'message': f'❌ Unexpected error: {str(e)}'
+        }
 
 @app.post("/api/seller/api-keys")
 async def add_api_key(
