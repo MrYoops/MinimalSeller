@@ -153,3 +153,66 @@ class OzonConnector(BaseConnector):
         except MarketplaceError as e:
             logger.error(f"[Ozon] Failed to fetch products: {e.message}")
             raise
+
+class WildberriesConnector(BaseConnector):
+    """Wildberries marketplace connector - REAL API"""
+    
+    def __init__(self, client_id: str, api_key: str):
+        super().__init__(client_id, api_key)
+        self.marketplace_name = "Wildberries"
+        self.api_token = api_key
+        self.content_api_url = "https://content-api.wildberries.ru"
+        self.marketplace_api_url = "https://marketplace-api.wildberries.ru"
+    
+    def _get_headers(self) -> Dict[str, str]:
+        return {
+            "Authorization": self.api_token,
+            "Content-Type": "application/json"
+        }
+    
+    async def get_products(self) -> List[Dict[str, Any]]:
+        """Get products from Wildberries - REAL API CALL"""
+        logger.info("[WB] Fetching products from Content API (v2/get/cards/list)")
+        
+        url = f"{self.content_api_url}/content/v2/get/cards/list"
+        headers = self._get_headers()
+        
+        payload = {
+            "settings": {
+                "cursor": {
+                    "limit": 100
+                },
+                "filter": {
+                    "withPhoto": -1
+                }
+            }
+        }
+        
+        all_products = []
+        
+        try:
+            response_data = await self._make_request("POST", url, headers, json_data=payload)
+            
+            cards = response_data.get('cards', [])
+            logger.info(f"[WB] Received {len(cards)} products")
+            
+            for card in cards:
+                sizes = card.get('sizes', [])
+                for size in sizes:
+                    all_products.append({
+                        "id": str(card.get('nmID', '')),
+                        "sku": size.get('skus', [''])[0],
+                        "name": card.get('title', 'Unnamed product'),
+                        "price": 0,
+                        "stock": 0,
+                        "marketplace": "wb",
+                        "barcode": size.get('skus', [''])[0],
+                        "size": size.get('techSize', '')
+                    })
+            
+            logger.info(f"[WB] Successfully transformed {len(all_products)} products")
+            return all_products
+            
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to fetch products: {e.message}")
+            raise
