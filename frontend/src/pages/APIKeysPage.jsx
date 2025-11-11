@@ -757,7 +757,7 @@ function APIKeysPage() {
                 <button
                   type="button"
                   onClick={saveEditKey}
-                  disabled={!connectionStatus || !connectionStatus.success}
+                  disabled={!formTouched}
                   className="btn-primary flex-1 disabled:opacity-50"
                 >
                   СОХРАНИТЬ
