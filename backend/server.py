@@ -420,9 +420,7 @@ async def test_api_key(
     
     return {
         'success': True,
-        'message': f'✅ Подключение успешно! (Mock режим)
-
-Данные корректны для {marketplace}.',
+        'message': f'✅ Подключение успешно! (Mock режим)\n\nДанные корректны для {marketplace}.',
         'products_count': 0,
         'mock': True
     }
