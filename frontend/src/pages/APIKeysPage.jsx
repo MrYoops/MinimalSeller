@@ -34,7 +34,6 @@ function APIKeysPage() {
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState(null)
   const [syncing, setSyncing] = useState(false)
-  const [formTouched, setFormTouched] = useState(false)
 
   useEffect(() => {
     loadApiKeys()
@@ -105,7 +104,6 @@ function APIKeysPage() {
       setModalStep(1)
       setSelectedMarketplace('')
       setConnectionStatus(null)
-      setFormTouched(false)
       
       // Сбрасываем форму
       setNewKey({
@@ -149,7 +147,6 @@ function APIKeysPage() {
       auto_get_orders: true
     })
     setConnectionStatus(null)
-    setFormTouched(false)
     setShowEditModal(true)
   }
 
@@ -164,7 +161,6 @@ function APIKeysPage() {
       // В реальности PUT /api/seller/api-keys/{id}
       alert('✅ Настройки сохранены!')
       setShowEditModal(false)
-      setFormTouched(false)
       loadApiKeys()
     } catch (error) {
       alert('Ошибка сохранения')
@@ -353,7 +349,6 @@ function APIKeysPage() {
                   setModalStep(1)
                   setSelectedMarketplace('')
                   setConnectionStatus(null)
-                  setFormTouched(false)
                 }}
                 className="text-mm-text-secondary hover:text-mm-red transition-colors"
               >
@@ -417,7 +412,6 @@ function APIKeysPage() {
                         value={newKey.client_id}
                         onChange={(e) => {
                           setNewKey({...newKey, client_id: e.target.value})
-                          setFormTouched(true)
                         }}
                         className="input-neon w-full"
                         placeholder="123456"
@@ -432,7 +426,6 @@ function APIKeysPage() {
                           value={newKey.api_key}
                           onChange={(e) => {
                             setNewKey({...newKey, api_key: e.target.value})
-                            setFormTouched(true)
                           }}
                           className="input-neon w-full pr-12"
                           placeholder="xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx"
@@ -459,7 +452,6 @@ function APIKeysPage() {
                         value={newKey.wb_token}
                         onChange={(e) => {
                           setNewKey({...newKey, wb_token: e.target.value})
-                          setFormTouched(true)
                         }}
                         className="input-neon w-full pr-12"
                         rows="4"
@@ -487,7 +479,6 @@ function APIKeysPage() {
                         value={newKey.yandex_campaign_id}
                         onChange={(e) => {
                           setNewKey({...newKey, yandex_campaign_id: e.target.value})
-                          setFormTouched(true)
                         }}
                         className="input-neon w-full"
                         placeholder="12345678"
@@ -502,7 +493,6 @@ function APIKeysPage() {
                           value={newKey.yandex_token}
                           onChange={(e) => {
                             setNewKey({...newKey, yandex_token: e.target.value})
-                            setFormTouched(true)
                           }}
                           className="input-neon w-full pr-12"
                           placeholder="y0_xxxxxxxxxxxxxxxxxxxxx"
@@ -530,7 +520,6 @@ function APIKeysPage() {
                         checked={newKey.auto_sync_stock}
                         onChange={(e) => {
                           setNewKey({...newKey, auto_sync_stock: e.target.checked})
-                          setFormTouched(true)
                         }}
                         className="w-4 h-4"
                       />
@@ -542,7 +531,6 @@ function APIKeysPage() {
                         checked={newKey.auto_update_prices}
                         onChange={(e) => {
                           setNewKey({...newKey, auto_update_prices: e.target.checked})
-                          setFormTouched(true)
                         }}
                         className="w-4 h-4"
                       />
@@ -554,7 +542,6 @@ function APIKeysPage() {
                         checked={newKey.auto_get_orders}
                         onChange={(e) => {
                           setNewKey({...newKey, auto_get_orders: e.target.checked})
-                          setFormTouched(true)
                         }}
                         className="w-4 h-4"
                       />
@@ -630,7 +617,6 @@ function APIKeysPage() {
                 onClick={() => {
                   setShowEditModal(false)
                   setConnectionStatus(null)
-                  setFormTouched(false)
                 }}
                 className="text-mm-text-secondary hover:text-mm-red"
               >
@@ -654,7 +640,6 @@ function APIKeysPage() {
                   value={editKey.name}
                   onChange={(e) => {
                     setEditKey({...editKey, name: e.target.value})
-                    setFormTouched(true)
                   }}
                   className="input-neon w-full"
                   placeholder="Например: WB Основной аккаунт"
@@ -672,7 +657,6 @@ function APIKeysPage() {
                       checked={editKey.auto_sync_stock}
                       onChange={(e) => {
                         setEditKey({...editKey, auto_sync_stock: e.target.checked})
-                        setFormTouched(true)
                       }}
                       className="w-5 h-5 mt-1"
                     />
@@ -690,7 +674,6 @@ function APIKeysPage() {
                       checked={editKey.auto_update_prices}
                       onChange={(e) => {
                         setEditKey({...editKey, auto_update_prices: e.target.checked})
-                        setFormTouched(true)
                       }}
                       className="w-5 h-5 mt-1"
                     />
@@ -708,7 +691,6 @@ function APIKeysPage() {
                       checked={editKey.auto_get_orders}
                       onChange={(e) => {
                         setEditKey({...editKey, auto_get_orders: e.target.checked})
-                        setFormTouched(true)
                       }}
                       className="w-5 h-5 mt-1"
                     />
