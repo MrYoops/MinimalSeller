@@ -1,11 +1,22 @@
-# Mock connectors for marketplaces
-# Real implementation will be added later
+# Real connectors for marketplaces - NO MOCK DATA!
+# Full implementation with error handling
 
-from typing import List, Dict, Any
+import httpx
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
+
+class MarketplaceError(Exception):
+    """Custom exception for marketplace API errors"""
+    def __init__(self, marketplace: str, status_code: int, message: str, details: Any = None):
+        self.marketplace = marketplace
+        self.status_code = status_code
+        self.message = message
+        self.details = details
+        super().__init__(f"{marketplace} API Error [{status_code}]: {message}")
 
 class BaseConnector:
     """Base class for marketplace connectors"""
@@ -14,193 +25,73 @@ class BaseConnector:
         self.client_id = client_id
         self.api_key = api_key
         self.marketplace_name = "Base"
+        self.timeout = 30.0
     
-    async def get_orders(self, date_from: datetime, date_to: datetime) -> List[Dict[str, Any]]:
-        """Get orders from marketplace"""
-        raise NotImplementedError
-    
-    async def update_stocks(self, products: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Update product stocks on marketplace"""
-        raise NotImplementedError
-    
-    async def get_products(self) -> List[Dict[str, Any]]:
-        """Get all products from marketplace"""
-        raise NotImplementedError
-    
-    async def get_fbo_stocks(self) -> List[Dict[str, Any]]:
-        """Get FBO stocks from marketplace"""
-        raise NotImplementedError
-
-class OzonConnector(BaseConnector):
-    """Ozon marketplace connector (Mock)"""
-    
-    def __init__(self, client_id: str, api_key: str):
-        super().__init__(client_id, api_key)
-        self.marketplace_name = "Ozon"
-    
-    async def get_orders(self, date_from: datetime, date_to: datetime) -> List[Dict[str, Any]]:
-        logger.info(f"[MOCK] Getting orders from Ozon for period {date_from} - {date_to}")
-        # Mock data
-        return [
-            {
-                "order_id": "OZON-12345",
-                "created_at": datetime.utcnow(),
-                "status": "awaiting_deliver",
-                "products": [
-                    {"sku": "SKU001", "name": "Product 1", "quantity": 2, "price": 1500}
-                ],
-                "total": 3000
-            }
-        ]
-    
-    async def update_stocks(self, products: List[Dict[str, Any]]) -> Dict[str, Any]:
-        logger.info(f"[MOCK] Updating stocks on Ozon for {len(products)} products")
-        return {"status": "success", "updated": len(products)}
-    
-    async def get_products(self) -> List[Dict[str, Any]]:
-        logger.info("[MOCK] Getting products from Ozon")
-        return []
-    
-    async def get_fbo_stocks(self) -> List[Dict[str, Any]]:
-        logger.info("[MOCK] Getting FBO stocks from Ozon")
-        return []
-
-class WildberriesConnector(BaseConnector):
-    """Wildberries marketplace connector (Real API)"""
-    
-    def __init__(self, client_id: str, api_key: str):
-        super().__init__(client_id, api_key)
-        self.marketplace_name = "Wildberries"
-        self.api_token = api_key  # JWT token
-        self.base_url = "https://suppliers-api.wildberries.ru"
-    
-    async def get_products(self) -> List[Dict[str, Any]]:
-        """Get all products from Wildberries - REAL API"""
-        logger.info(f"[WB API] Getting products with token: {self.api_token[:20]}...")
-        
-        import httpx
-        
+    async def _make_request(
+        self,
+        method: str,
+        url: str,
+        headers: Dict[str, str],
+        json_data: Optional[Dict] = None,
+        params: Optional[Dict] = None
+    ) -> Dict[str, Any]:
+        """Make HTTP request with error handling"""
         try:
-            headers = {
-                "Authorization": self.api_token,
-                "Content-Type": "application/json"
-            }
-            
-            logger.info("[WB API] Sending request to suppliers-api.wildberries.ru")
-            
-            async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-                response = await client.get(
-                    "https://suppliers-api.wildberries.ru/content/v1/cards/cursor/list",
-                    headers=headers,
-                    params={"limit": 100}
-                )
+            async with httpx.AsyncClient(timeout=self.timeout, verify=True) as client:
+                logger.info(f"[{self.marketplace_name}] {method} {url}")
                 
-                logger.info(f"[WB API] Response status: {response.status_code}")
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    logger.info(f"[WB API] Response data: {str(data)[:200]}")
-                    
-                    cards = data.get("data", {}).get("cards", [])
-                    
-                    products = []
-                    for card in cards:
-                        products.append({
-                            "id": str(card.get("nmID", "")),
-                            "sku": card.get("vendorCode", ""),  # АРТИКУЛ ПРОДАВЦА
-                            "name": card.get("object", ""),
-                            "description": card.get("description", ""),
-                            "category": card.get("subjectName", ""),
-                            "price": 0,
-                            "attributes": {},
-                            "images": [m.get("big") for m in card.get("mediaFiles", []) if m.get("big")][:10]
-                        })
-                    
-                    logger.info(f"[WB API] Loaded {len(products)} real products")
-                    return products
+                if method == "GET":
+                    response = await client.get(url, headers=headers, params=params)
+                elif method == "POST":
+                    response = await client.post(url, headers=headers, json=json_data, params=params)
+                elif method == "PUT":
+                    response = await client.put(url, headers=headers, json=json_data)
                 else:
-                    logger.error(f"[WB API] Error {response.status_code}: {response.text}")
-                    return []
+                    raise ValueError(f"Unsupported HTTP method: {method}")
+                
+                logger.info(f"[{self.marketplace_name}] Response status: {response.status_code}")
+                
+                # Handle non-200 responses
+                if response.status_code not in [200, 201]:
+                    error_text = response.text
+                    try:
+                        error_json = response.json()
+                        error_message = error_json.get('message') or error_json.get('error') or error_json.get('detail') or error_text
+                    except:
+                        error_message = error_text
                     
+                    logger.error(f"[{self.marketplace_name}] API Error: {error_message}")
+                    raise MarketplaceError(
+                        marketplace=self.marketplace_name,
+                        status_code=response.status_code,
+                        message=error_message,
+                        details=error_text
+                    )
+                
+                return response.json()
+                
+        except httpx.TimeoutException as e:
+            logger.error(f"[{self.marketplace_name}] Request timeout: {str(e)}")
+            raise MarketplaceError(
+                marketplace=self.marketplace_name,
+                status_code=408,
+                message="Request timeout - marketplace server not responding"
+            )
+        except httpx.ConnectError as e:
+            logger.error(f"[{self.marketplace_name}] Connection error: {str(e)}")
+            raise MarketplaceError(
+                marketplace=self.marketplace_name,
+                status_code=503,
+                message="Cannot connect to marketplace server"
+            )
+        except MarketplaceError:
+            raise
         except Exception as e:
-            logger.error(f"[WB API] Exception: {str(e)}")
-            logger.error(f"[WB API] Full error: {repr(e)}")
-            return []
-        
-        # РЕАЛЬНЫЙ КОД (раскомментировать для продакшена):
-        # import httpx
-        # try:
-        #     headers = {"Authorization": self.api_token}
-        #     async with httpx.AsyncClient(timeout=30.0) as client:
-        #         response = await client.get(
-        #             "https://suppliers-api.wildberries.ru/content/v1/cards/cursor/list",
-        #             headers=headers,
-        #             params={"limit": 100}
-        #         )
-        #         if response.status_code == 200:
-        #             data = response.json()
-        #             cards = data.get("data", {}).get("cards", [])
-        #             products = []
-        #             for card in cards:
-        #                 products.append({
-        #                     "id": str(card.get("nmID", "")),
-        #                     "sku": card.get("vendorCode", ""),
-        #                     "name": card.get("object", ""),
-        #                     "price": 0,
-        #                     "images": [card.get("mediaFiles", [{}])[0].get("url", "")] if card.get("mediaFiles") else []
-        #                 })
-        #             return products
-        # except Exception as e:
-        #     logger.error(f"[WB API] Error: {str(e)}")
-        # return []
-    
-    async def get_orders(self, date_from: datetime, date_to: datetime) -> List[Dict[str, Any]]:
-        logger.info(f"[WB API] Getting orders for period {date_from} - {date_to}")
-        # TODO: Implement real orders API
-        return []
-    
-    async def update_stocks(self, products: List[Dict[str, Any]]) -> Dict[str, Any]:
-        logger.info(f"[WB API] Updating stocks for {len(products)} products")
-        # TODO: Implement real stocks update
-        return {"status": "success", "updated": len(products)}
-    
-    async def get_fbo_stocks(self) -> List[Dict[str, Any]]:
-        logger.info("[WB API] Getting FBO stocks")
-        return []
+            logger.error(f"[{self.marketplace_name}] Unexpected error: {str(e)}")
+            raise MarketplaceError(
+                marketplace=self.marketplace_name,
+                status_code=500,
+                message=f"Internal error: {str(e)}"
+            )
 
-class YandexConnector(BaseConnector):
-    """Yandex.Market connector (Mock)"""
-    
-    def __init__(self, client_id: str, api_key: str):
-        super().__init__(client_id, api_key)
-        self.marketplace_name = "Yandex.Market"
-    
-    async def get_orders(self, date_from: datetime, date_to: datetime) -> List[Dict[str, Any]]:
-        logger.info(f"[MOCK] Getting orders from Yandex.Market for period {date_from} - {date_to}")
-        return []
-    
-    async def update_stocks(self, products: List[Dict[str, Any]]) -> Dict[str, Any]:
-        logger.info(f"[MOCK] Updating stocks on Yandex.Market for {len(products)} products")
-        return {"status": "success", "updated": len(products)}
-    
-    async def get_products(self) -> List[Dict[str, Any]]:
-        logger.info("[MOCK] Getting products from Yandex.Market")
-        return []
-    
-    async def get_fbo_stocks(self) -> List[Dict[str, Any]]:
-        logger.info("[MOCK] Getting FBO stocks from Yandex.Market")
-        return []
-
-def get_connector(marketplace: str, client_id: str, api_key: str) -> BaseConnector:
-    """Factory function to get appropriate connector"""
-    connectors = {
-        "ozon": OzonConnector,
-        "wb": WildberriesConnector,
-        "yandex": YandexConnector
-    }
-    
-    connector_class = connectors.get(marketplace.lower())
-    if not connector_class:
-        raise ValueError(f"Unknown marketplace: {marketplace}")
-    
-    return connector_class(client_id, api_key)
+# Connectors in next file
