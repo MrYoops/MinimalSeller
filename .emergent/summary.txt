@@ -1,0 +1,73 @@
+<analysis>
+The user wants to build a comprehensive admin panel called MinimalMod for managing e-commerce operations across multiple marketplaces (Ozon, Wildberries, Yandex.Market) and a primary website. The project is specified in multiple detailed BLOCKS, covering user management, product catalog, orders, inventory, finance, analytics, marketing, and communication.
+
+The AI engineer adopted an incremental, block-by-block development approach, starting with a FastAPI backend and a React frontend. The initial focus was on setting up the core architecture, including JWT authentication and a role-based access control (RBAC) system for admin and seller roles. The UI/UX is strictly defined by a pmm.gg inspired design system: a dark, minimalist, cyberpunk aesthetic with neon accents.
+
+A recurring and significant challenge throughout the development was the instability of the preview environment. The user frequently reported серый экран (grey screen), HTTP 502 errors, and Network Error, indicating frontend crashes or connectivity issues. The engineer's debugging process involved checking service statuses, logs, backend endpoints with , and repeatedly simplifying the React application to isolate problematic components. This cycle of implementing a feature, the preview failing, and then debugging the frontend became the dominant workflow.
+
+The most recent work focused on fixing a Network error during login. The engineer identified an incorrect backend URL in the frontend's environment configuration for the preview and attempted to fix it by using a relative path  in . The core task was to stabilize the application to continue implementing the detailed feature requests.
+</analysis>
+
+<product_requirements>
+The goal is to build MinimalMod, a full-stack admin panel for e-commerce sellers to manage their operations across a primary site and multiple marketplaces (Ozon, Wildberries, Yandex.Market).
+
+**Core Modules:**
+1.  **Foundation (Block 0):** Implement a secure backend with FastAPI and MongoDB. Establish a JWT-based authentication system with two roles:  (full access) and  (access to own data only). The frontend, built with React, must adhere to a strict  design system (dark theme, neon accents, specific typography).
+2.  **Product Management (Block 1):** A centralized product catalog. Users should be able to create/edit a master product card with specific fields and images for the main site and for each marketplace. Implement features for bulk import/export and product mapping.
+3.  **Order & Inventory Management (Blocks 2 & 3):** Aggregate orders from all sources into a single interface. Integrate with CDEK for shipping. Manage inventory for both the seller's own warehouse (FBS) and marketplace warehouses (FBO), including real-time stock synchronization.
+4.  **Finance & Analytics (Blocks 4 & 5):** Parse financial reports from marketplaces to provide detailed P&L statements. Implement dashboards for ABC analysis, sales velocity, and other KPIs to provide actionable insights.
+5.  **Marketing & Communication (Blocks 7 & 8):** Allow sellers to create promotional codes and participate in sales campaigns, moderated by the admin. Provide a system for sellers to answer customer questions and respond to reviews on product pages.
+6.  **Admin Panel (Block 6):** An admin-only section to manage sellers, set commissions, moderate content, and view platform-wide analytics.
+</product_requirements>
+
+<key_technical_concepts>
+- **Frameworks:** FastAPI (Python) for the backend, React (JavaScript/JSX) for the frontend.
+- **Database:** MongoDB for flexible data storage.
+- **Authentication:** JSON Web Tokens (JWT) for securing API endpoints.
+- **Access Control:** Role-Based Access Control (RBAC) distinguishing between  and  roles.
+- **Styling:** Tailwind CSS, adhering to a specific  design system.
+- **API:** RESTful API principles for frontend-backend communication.
+- **Deployment Environment:** A containerized environment using Supervisor to manage processes.
+</key_technical_concepts>
+
+<code_architecture>
+The application is a standard monorepo with separate  and  directories. The backend is a monolithic FastAPI application, and the frontend is a single-page application built with React and Vite.
+
+
+
+-   ****
+    -   **Importance:** This is the core of the backend, containing the main FastAPI application instance. It defines all API endpoints, handles database connections, CORS middleware, and JWT authentication logic. It has grown quite large, containing routes for authentication, users, products, orders, inventory, finances, marketing, and admin functions.
+    -   **Changes:** The file has been extensively modified to add new API endpoints for every feature block requested by the user. Recent changes involved adding logic for real-time API key validation against marketplace APIs, though this was later reverted to a mock implementation due to container network restrictions.
+
+-   ** & **
+    -   **Importance:** These are the main interfaces for the two user roles. They contain the primary navigation (tabs) and render the content for different sections (Products, Orders, Integrations, etc.). They manage the state for the active tab and fetch relevant data.
+    -   **Changes:** These files have been repeatedly modified to add new tabs and functionality as requested. They have become very large and complex, which likely contributed to the frequent frontend crashes. The AI has attempted to simplify them multiple times to debug preview issues.
+
+-   ****
+    -   **Importance:** Manages global authentication state, including the user object and JWT token. It provides , , and  functions to the entire application. It also handles API requests by attaching the auth token.
+    -   **Changes:** This file was the focus of the most recent debugging effort. The  was hardcoded and then modified to use an environment variable. The latest change was to set  to an empty string () in the  file for the preview environment, forcing the application to use relative paths like , which is the correct setup for the proxy. This was a critical fix to resolve the Network Error.
+</code_architecture>
+
+<pending_tasks>
+- Fully implement all interactive elements. Many buttons and UI controls are placeholders and not yet connected to backend API endpoints.
+- Complete the product creation/editing form logic, including image uploads, dynamic attributes based on category, and the API calls to publish/update products on marketplaces.
+- Implement the real API integrations for Ozon, Wildberries, and Yandex.Market. The current implementation is mocked because the container environment cannot make external HTTP requests. This is a major blocker for core functionality.
+- Flesh out the UI for recently added sections like Finance, Analytics, CMS, Promotions, and Returns.
+</pending_tasks>
+
+<current_work>
+Immediately before this summary request, the AI engineer was debugging a critical Network Error that prevented users from logging into the application in the preview environment. The user reported that entering correct credentials resulted in an error.
+
+The root cause was identified as an incorrect backend URL configuration on the frontend. The  was attempting to connect to , which is inaccessible from the user's browser in the preview environment.
+
+The final action taken was to correct this by modifying  to ensure it uses a relative path for API calls. The  was configured to default to an empty string (), so API calls would be directed to  instead of an absolute URL. This allows the environment's reverse proxy to correctly route the request to the backend service.
+
+**File Edited:** 
+
+/api/auth/login
+The engineer restarted the frontend service after this change to apply the fix.
+</current_work>
+
+<optional_next_step>
+Verify with the user that the Network error during login is resolved and they can now access the application in the preview environment.
+</optional_next_step>
