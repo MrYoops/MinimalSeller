@@ -353,6 +353,7 @@ function APIKeysPage() {
                   setModalStep(1)
                   setSelectedMarketplace('')
                   setConnectionStatus(null)
+                  setFormTouched(false)
                 }}
                 className="text-mm-text-secondary hover:text-mm-red transition-colors"
               >
