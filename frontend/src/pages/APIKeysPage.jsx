@@ -625,6 +625,7 @@ function APIKeysPage() {
                 onClick={() => {
                   setShowEditModal(false)
                   setConnectionStatus(null)
+                  setFormTouched(false)
                 }}
                 className="text-mm-text-secondary hover:text-mm-red"
               >
