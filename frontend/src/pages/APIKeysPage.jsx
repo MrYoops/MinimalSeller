@@ -524,7 +524,10 @@ function APIKeysPage() {
                       <input
                         type="checkbox"
                         checked={newKey.auto_sync_stock}
-                        onChange={(e) => setNewKey({...newKey, auto_sync_stock: e.target.checked})}
+                        onChange={(e) => {
+                          setNewKey({...newKey, auto_sync_stock: e.target.checked})
+                          setFormTouched(true)
+                        }}
                         className="w-4 h-4"
                       />
                       <span className="text-mm-text-secondary">Включить автоматическую синхронизацию остатков</span>
@@ -533,7 +536,10 @@ function APIKeysPage() {
                       <input
                         type="checkbox"
                         checked={newKey.auto_update_prices}
-                        onChange={(e) => setNewKey({...newKey, auto_update_prices: e.target.checked})}
+                        onChange={(e) => {
+                          setNewKey({...newKey, auto_update_prices: e.target.checked})
+                          setFormTouched(true)
+                        }}
                         className="w-4 h-4"
                       />
                       <span className="text-mm-text-secondary">Включить автоматическое обновление цен</span>
@@ -542,7 +548,10 @@ function APIKeysPage() {
                       <input
                         type="checkbox"
                         checked={newKey.auto_get_orders}
-                        onChange={(e) => setNewKey({...newKey, auto_get_orders: e.target.checked})}
+                        onChange={(e) => {
+                          setNewKey({...newKey, auto_get_orders: e.target.checked})
+                          setFormTouched(true)
+                        }}
                         className="w-4 h-4"
                       />
                       <span className="text-mm-text-secondary">Включить получение заказов с маркетплейса</span>
