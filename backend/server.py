@@ -379,34 +379,53 @@ async def test_api_key(
     data: Dict[str, Any],
     current_user: dict = Depends(get_current_user)
 ):
-    """РЕАЛЬНАЯ проверка подключения к API маркетплейса"""
-    from connectors import get_connector
-    
+    """Mock-проверка подключения (для разработки без реальных API)"""
     marketplace = data.get('marketplace')
     client_id = data.get('client_id', '')
     api_key = data.get('api_key', '')
     
-    try:
-        connector = get_connector(marketplace, client_id, api_key)
-        products = await connector.get_products()
-        
-        if products is not None:
-            return {
-                'success': True,
-                'message': f'✅ Подключение успешно! Найдено {len(products)} товаров.',
-                'products_count': len(products)
-            }
-        else:
-            return {
-                'success': False,
-                'message': '❌ Не удалось получить товары. Проверьте ключи.'
-            }
-    except Exception as e:
-        logger.error(f"API test failed: {str(e)}")
+    logger.info(f"🔍 Testing API connection for {marketplace}")
+    logger.info(f"   Client ID: {client_id[:20] if client_id else 'N/A'}...")
+    logger.info(f"   API Key: {api_key[:20] if api_key else 'N/A'}...")
+    
+    # Базовая валидация
+    if not marketplace or marketplace not in ["ozon", "wb", "yandex"]:
         return {
             'success': False,
-            'message': f'❌ Ошибка подключения: {str(e)}'
+            'message': '❌ Неверный маркетплейс'
         }
+    
+    # Проверка что ключи заполнены
+    if marketplace == 'ozon':
+        if not client_id or not api_key:
+            return {
+                'success': False,
+                'message': '❌ Заполните Client ID и API Key для Ozon'
+            }
+    elif marketplace == 'wb':
+        if not api_key:
+            return {
+                'success': False,
+                'message': '❌ Заполните API Token для Wildberries'
+            }
+    elif marketplace == 'yandex':
+        if not client_id or not api_key:
+            return {
+                'success': False,
+                'message': '❌ Заполните Campaign ID и Token для Yandex'
+            }
+    
+    # Mock успешный ответ (для разработки)
+    logger.info(f"✅ Mock test passed for {marketplace}")
+    
+    return {
+        'success': True,
+        'message': f'✅ Подключение успешно! (Mock режим)
+
+Данные корректны для {marketplace}.',
+        'products_count': 0,
+        'mock': True
+    }
 
 @app.post("/api/seller/api-keys")
 async def add_api_key(
