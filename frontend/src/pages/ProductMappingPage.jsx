@@ -110,6 +110,31 @@ function ProductMappingPage() {
     }
   }
 
+
+  const importSingleProduct = async (mpProduct) => {
+    try {
+      console.log('📦 Importing single product:', mpProduct.sku, mpProduct.name)
+      
+      const response = await api.post('/api/products/import-from-marketplace', {
+        product: mpProduct
+      })
+      
+      if (response.data.action === 'created') {
+        alert(`✅ Товар импортирован!\n\n${mpProduct.name}\nSKU: ${mpProduct.sku}\n\nТовар добавлен во вкладку PRODUCTS.`)
+      } else {
+        alert(`ℹ️ Товар уже существует!\n\n${mpProduct.name}\nSKU: ${mpProduct.sku}`)
+      }
+      
+      // Reload data
+      await loadLocalProducts()
+      await loadMarketplaceProducts()
+      
+    } catch (error) {
+      console.error('❌ Import error:', error)
+      alert('❌ Ошибка импорта: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+
   const getFiltered = () => {
     if (filter === 'mapped') return mpProducts.filter(mp => mappings[mp.id])
     if (filter === 'unmapped') return mpProducts.filter(mp => !mappings[mp.id])
