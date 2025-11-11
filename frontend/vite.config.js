@@ -7,7 +7,7 @@ export default defineConfig({
     port: 3000,
     host: '0.0.0.0',
     allowedHosts: [
-      'minimal-admin.preview.emergentagent.com',
+      'admin-center-9.preview.emergentagent.com',
       '.emergentagent.com',
       'localhost',
       '127.0.0.1'
