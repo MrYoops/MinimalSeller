@@ -67,12 +67,16 @@ function APIKeysPage() {
                  newKey.yandex_token
       }
       
+      console.log('🔍 Testing connection:', testData)
       const response = await api.post('/api/seller/api-keys/test', testData)
+      console.log('✅ Test response:', response.data)
       setConnectionStatus(response.data)
     } catch (error) {
+      console.error('❌ Test error:', error)
+      const errorMsg = error.response?.data?.detail || error.message || 'Ошибка подключения к серверу'
       setConnectionStatus({
         success: false,
-        message: '❌ Ошибка при тестировании подключения'
+        message: `❌ Ошибка: ${errorMsg}`
       })
     }
     
