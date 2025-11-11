@@ -398,6 +398,8 @@ async def add_api_key(
     key_data: APIKeyCreate,
     current_user: dict = Depends(require_role(UserRole.SELLER))
 ):
+    import uuid
+    
     # Validate marketplace
     if key_data.marketplace not in ["ozon", "wb", "yandex"]:
         raise HTTPException(
@@ -405,20 +407,40 @@ async def add_api_key(
             detail="Invalid marketplace. Use: ozon, wb, or yandex"
         )
     
+    # Generate UUID for key ID
+    key_id = str(uuid.uuid4())
+    
     new_key = {
-        "_id": ObjectId(),
+        "id": key_id,
         "marketplace": key_data.marketplace,
         "client_id": key_data.client_id,
         "api_key": key_data.api_key,  # In production, encrypt this
-        "created_at": datetime.utcnow()
+        "created_at": datetime.utcnow().isoformat()
     }
     
-    await db.seller_profiles.update_one(
+    # Update seller profile
+    result = await db.seller_profiles.update_one(
         {"user_id": current_user["_id"]},
         {"$push": {"api_keys": new_key}}
     )
     
-    return {"message": "API key added successfully", "key_id": str(new_key["_id"])}
+    if result.modified_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to add API key"
+        )
+    
+    return {
+        "message": "API key added successfully",
+        "key_id": key_id,
+        "key": {
+            "id": key_id,
+            "marketplace": new_key["marketplace"],
+            "client_id": new_key["client_id"],
+            "api_key_masked": "***" + new_key["api_key"][-4:] if len(new_key["api_key"]) > 4 else "***",
+            "created_at": new_key["created_at"]
+        }
+    }
 
 @app.delete("/api/seller/api-keys/{key_id}")
 async def delete_api_key(
