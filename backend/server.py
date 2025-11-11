@@ -433,17 +433,29 @@ async def add_api_key(
         "created_at": datetime.utcnow().isoformat()
     }
     
-    # Update seller profile
+    # Проверяем существование профиля продавца, создаём если нет
+    profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    if not profile:
+        await db.seller_profiles.insert_one({
+            "user_id": current_user["_id"],
+            "api_keys": []
+        })
+        logger.info(f"Created new seller profile for user {current_user['_id']}")
+    
+    # Update seller profile - добавляем ключ
     result = await db.seller_profiles.update_one(
         {"user_id": current_user["_id"]},
         {"$push": {"api_keys": new_key}}
     )
     
-    if result.modified_count == 0:
+    if result.modified_count == 0 and result.matched_count == 0:
+        logger.error(f"Failed to add API key for user {current_user['_id']}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to add API key"
         )
+    
+    logger.info(f"✅ API key added successfully: {key_id} for user {current_user['_id']}")
     
     return {
         "message": "API key added successfully",
