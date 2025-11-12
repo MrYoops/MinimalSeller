@@ -1706,6 +1706,12 @@ async def import_product_from_marketplace(
         if char_name and char_value:
             attributes[char_name] = char_value
     
+    # Prepare tags
+    tags = []
+    tag_from_request = data.get('tag', '').strip()
+    if tag_from_request:
+        tags.append(tag_from_request)
+    
     new_product = {
         "_id": product_id,
         "sku": sku,
@@ -1714,6 +1720,7 @@ async def import_product_from_marketplace(
         "price": marketplace_product.get('price', 0),
         "images": marketplace_product.get('photos', [])[:5],  # Max 5 photos
         "category_id": None,  # User can set later
+        "tags": tags,  # Tags from import
         "status": "draft",
         "seller_id": current_user["_id"],
         "created_at": datetime.utcnow().isoformat(),
