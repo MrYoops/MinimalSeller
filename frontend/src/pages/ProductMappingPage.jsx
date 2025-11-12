@@ -21,6 +21,7 @@ function ProductMappingPage() {
     loadLocalProducts()
     loadCategories()
     loadIntegrations()
+    loadExistingTags()
   }, [])
 
   const loadIntegrations = async () => {
