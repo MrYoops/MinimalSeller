@@ -406,19 +406,6 @@ function ProductMappingPage() {
                         <span className="text-xs text-mm-yellow">НЕ СВЯЗАН</span>
                       )}
                     </td>
-                    <td className="py-4 px-4 text-right">
-                      {!local && (
-                        <button
-                          onClick={() => importSingleProduct(mp)}
-                          className="px-3 py-1 border border-mm-green text-mm-green hover:bg-mm-green/10 text-xs uppercase font-mono transition-colors"
-                        >
-                          ЗАГРУЗИТЬ
-                        </button>
-                      )}
-                      {local && (
-                        <span className="text-xs text-mm-green">✓ Загружен</span>
-                      )}
-                    </td>
                   </tr>
                 )
               })}
