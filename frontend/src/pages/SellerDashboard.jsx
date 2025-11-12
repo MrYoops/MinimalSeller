@@ -163,12 +163,6 @@ function SellerDashboard() {
                         </td>
                         <td className="py-4 px-4 text-right">
                           <button
-                            onClick={() => window.location.href = `/products/${product.id}/edit`}
-                            className="btn-primary text-xs mr-2"
-                          >
-                            EDIT
-                          </button>
-                          <button
                             onClick={async () => {
                               if (confirm(`Удалить товар "${product.name}"?`)) {
                                 try {
@@ -180,9 +174,17 @@ function SellerDashboard() {
                                 }
                               }
                             }}
-                            className="px-3 py-1 border border-mm-red text-mm-red hover:bg-mm-red/10 text-xs uppercase font-mono"
+                            className="px-3 py-2 border border-mm-red text-mm-red hover:bg-mm-red/10 transition-colors mr-2"
+                            title="Удалить товар"
                           >
-                            DELETE
+                            <FiTrash2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => window.location.href = `/products/${product.id}/edit`}
+                            className="px-3 py-2 border border-mm-cyan text-mm-cyan hover:bg-mm-cyan/10 transition-colors"
+                            title="Редактировать товар"
+                          >
+                            <FiEdit size={16} />
                           </button>
                         </td>
                       </tr>
