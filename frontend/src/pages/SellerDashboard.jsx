@@ -138,7 +138,11 @@ function SellerDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {products.map((product) => (
+                    {products.map((product) => {
+                      const marketplaces = product.marketplace_data ? Object.keys(product.marketplace_data) : []
+                      const hasWB = marketplaces.includes('wb')
+                      
+                      return (
                       <tr key={product.id} className="border-b border-mm-border hover:bg-mm-gray">
                         <td className="py-4 px-4">
                           {product.images && product.images[0] ? (
@@ -151,11 +155,28 @@ function SellerDashboard() {
                         </td>
                         <td className="py-4 px-4 font-mono text-sm text-mm-cyan">{product.sku}</td>
                         <td className="py-4 px-4">
-                          <div>{product.name}</div>
-                          {product.attributes && Object.keys(product.attributes).length > 0 && (
-                            <div className="text-xs text-mm-text-tertiary mt-1">
-                              {Object.keys(product.attributes).length} характеристик
+                          <div className="font-semibold">{product.name}</div>
+                          {product.description && (
+                            <div className="text-xs text-mm-text-secondary mt-1 max-w-xs truncate">
+                              {product.description.substring(0, 80)}...
                             </div>
+                          )}
+                        </td>
+                        <td className="py-4 px-4 text-sm text-mm-text-secondary">
+                          {product.marketplace_data?.wb?.category || 'N/A'}
+                        </td>
+                        <td className="py-4 px-4 text-sm">
+                          {product.attributes && Object.keys(product.attributes).length > 0 ? (
+                            <div className="text-mm-green">
+                              {Object.keys(product.attributes).length} шт
+                              <div className="text-xs text-mm-text-tertiary mt-1">
+                                {Object.entries(product.attributes).slice(0, 2).map(([key, val]) => (
+                                  <div key={key}>{key}: {val}</div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-mm-text-tertiary">-</span>
                           )}
                         </td>
                         <td className="py-4 px-4 font-mono">₽{product.price}</td>
@@ -163,6 +184,9 @@ function SellerDashboard() {
                           <span className={product.status === 'active' ? 'status-active' : 'status-pending'}>
                             {product.status}
                           </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          {hasWB && <span className="text-xs px-2 py-1 bg-mm-purple/20 text-mm-purple border border-mm-purple">WB</span>}
                         </td>
                         <td className="py-4 px-4 text-right">
                           <button
@@ -191,7 +215,7 @@ function SellerDashboard() {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </div>
