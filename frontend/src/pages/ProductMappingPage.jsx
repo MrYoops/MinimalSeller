@@ -201,10 +201,12 @@ function ProductMappingPage() {
       
       alert(`✅ Импорт завершён!\n\nНовых товаров: ${imported}\nУже существует: ${existing}\n\nТовары добавлены во вкладку PRODUCTS с автоматическим сопоставлением.`)
       setSelectedForImport([])
+      setImportSettings({ category_id: '', tag: '' })  // Очищаем настройки
       
       // Reload data to show updated mappings
       await loadLocalProducts()
       await loadMarketplaceProducts()
+      await loadExistingTags()  // Обновляем список тегов
       
     } catch (error) {
       console.error('❌ Import error:', error)
