@@ -457,8 +457,30 @@ function ProductMappingPage() {
                   onChange={(e) => setImportSettings({...importSettings, tag: e.target.value})} 
                   className="input-neon w-full"
                   placeholder="например: новинка, акция"
+                  list="existing-tags"
                 />
-                <p className="comment text-xs mt-1">// Добавляется к тегам товара</p>
+                <datalist id="existing-tags">
+                  {existingTags.map(tag => (
+                    <option key={tag} value={tag} />
+                  ))}
+                </datalist>
+                {existingTags.length > 0 && (
+                  <div className="mt-2">
+                    <p className="comment text-xs mb-1">// Существующие теги:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {existingTags.slice(0, 10).map(tag => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => setImportSettings({...importSettings, tag: tag})}
+                          className="px-2 py-1 text-xs border border-mm-cyan text-mm-cyan hover:bg-mm-cyan/10 transition-colors"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-4">
