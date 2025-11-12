@@ -61,7 +61,27 @@ function ProductMappingPage() {
     setLoading(true)
     try {
       const response = await api.get(`/api/marketplaces/${integration.marketplace}/products`)
-      setMpProducts(response.data || [])
+      const mpProductsData = response.data || []
+      setMpProducts(mpProductsData)
+      
+      // Автоматическое определение сопоставлений по артикулу
+      const autoMappings = {}
+      let autoMatched = 0
+      
+      mpProductsData.forEach(mp => {
+        const local = localProducts.find(lp => lp.sku === mp.sku)
+        if (local) {
+          autoMappings[mp.id] = local.id
+          autoMatched++
+        }
+      })
+      
+      setMappings(autoMappings)
+      
+      if (autoMatched > 0) {
+        console.log(`✅ Автоматически сопоставлено ${autoMatched} товаров по артикулу`)
+      }
+      
     } catch (error) {
       alert('Ошибка загрузки товаров: ' + (error.response?.data?.detail || error.message))
     }
