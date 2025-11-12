@@ -354,13 +354,6 @@ function ProductMappingPage() {
           >
             💾 СОХРАНИТЬ СОПОСТАВЛЕНИЯ
           </button>
-          <button
-            onClick={importSelected}
-            disabled={selectedForImport.length === 0}
-            className="btn-primary disabled:opacity-50"
-          >
-            📥 ИМПОРТ В БАЗУ ({selectedForImport.length})
-          </button>
         </div>
       </div>
 
