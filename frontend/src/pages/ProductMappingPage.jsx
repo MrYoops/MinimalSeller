@@ -293,11 +293,11 @@ function ProductMappingPage() {
           </div>
           <div className="flex items-end">
             <button 
-              onClick={loadAndImportProducts} 
+              onClick={loadMarketplaceProducts} 
               disabled={!selectedIntegration || loading}
               className="btn-primary w-full disabled:opacity-50"
             >
-              {loading ? '⏳ ИМПОРТИРУЮ...' : '📥 ИМПОРТ В БАЗУ'}
+              {loading ? '⏳ ЗАГРУЖАЮ...' : '🔍 ЗАГРУЗИТЬ ТОВАРЫ С МП'}
             </button>
           </div>
         </div>
