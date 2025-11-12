@@ -129,8 +129,11 @@ function SellerDashboard() {
                       <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Photo</th>
                       <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">SKU</th>
                       <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Name</th>
+                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Category</th>
+                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Characteristics</th>
                       <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Price</th>
                       <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Status</th>
+                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Source</th>
                       <th className="text-right py-4 px-4 text-mm-text-secondary uppercase text-sm">Actions</th>
                     </tr>
                   </thead>
