@@ -277,19 +277,38 @@ function ProductMappingPage() {
         </div>
       </div>
 
-      <div className="flex space-x-3">
-        <button onClick={() => setFilter('all')} className={`px-4 py-2 border-2 ${filter === 'all' ? 'border-mm-cyan text-mm-cyan' : 'border-mm-border text-mm-text-secondary'}`}>
-          ВСЕ ({mpProducts.length})
-        </button>
-        <button onClick={() => setFilter('mapped')} className={`px-4 py-2 border-2 ${filter === 'mapped' ? 'border-mm-green text-mm-green' : 'border-mm-border text-mm-text-secondary'}`}>
-          СОПОСТАВЛЕННЫЕ
-        </button>
-        <button onClick={() => setFilter('unmapped')} className={`px-4 py-2 border-2 ${filter === 'unmapped' ? 'border-mm-yellow text-mm-yellow' : 'border-mm-border text-mm-text-secondary'}`}>
-          БЕЗ СВЯЗИ
-        </button>
-        <button onClick={() => setFilter('duplicates')} className={`px-4 py-2 border-2 ${filter === 'duplicates' ? 'border-mm-red text-mm-red' : 'border-mm-border text-mm-text-secondary'}`}>
-          ДУБЛИКАТЫ
-        </button>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex space-x-3">
+          <button onClick={() => setFilter('all')} className={`px-4 py-2 border-2 ${filter === 'all' ? 'border-mm-cyan text-mm-cyan' : 'border-mm-border text-mm-text-secondary'}`}>
+            ВСЕ ({mpProducts.length})
+          </button>
+          <button onClick={() => setFilter('mapped')} className={`px-4 py-2 border-2 ${filter === 'mapped' ? 'border-mm-green text-mm-green' : 'border-mm-border text-mm-text-secondary'}`}>
+            СОПОСТАВЛЕННЫЕ ({getFiltered().filter(mp => mappings[mp.id]).length})
+          </button>
+          <button onClick={() => setFilter('unmapped')} className={`px-4 py-2 border-2 ${filter === 'unmapped' ? 'border-mm-yellow text-mm-yellow' : 'border-mm-border text-mm-text-secondary'}`}>
+            БЕЗ СВЯЗИ ({getFiltered().filter(mp => !mappings[mp.id]).length})
+          </button>
+          <button onClick={() => setFilter('duplicates')} className={`px-4 py-2 border-2 ${filter === 'duplicates' ? 'border-mm-red text-mm-red' : 'border-mm-border text-mm-text-secondary'}`}>
+            ДУБЛИКАТЫ
+          </button>
+        </div>
+        
+        <div className="flex space-x-3">
+          <button
+            onClick={saveMappings}
+            disabled={Object.keys(mappings).length === 0}
+            className="btn-secondary disabled:opacity-50"
+          >
+            💾 СОХРАНИТЬ СОПОСТАВЛЕНИЯ
+          </button>
+          <button
+            onClick={importSelected}
+            disabled={selectedForImport.length === 0}
+            className="btn-primary disabled:opacity-50"
+          >
+            📥 ИМПОРТ В БАЗУ ({selectedForImport.length})
+          </button>
+        </div>
       </div>
 
       {loading ? (
