@@ -1,55 +1,19 @@
-import React, { useState } from 'react'
-import axios from 'axios'
+import React, { useState, useEffect } from 'react'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import SimpleIntegrations from './SimpleIntegrations'
 
-function SimpleApp() {
+function LoginScreen() {
+  const { login } = useAuth()
   const [email, setEmail] = useState('seller@test.com')
   const [password, setPassword] = useState('password123')
   const [message, setMessage] = useState('')
-  const [user, setUser] = useState(null)
-
-  const API_URL = ''
-
-  const api = axios.create({
-    baseURL: API_URL,
-    headers: { 'Content-Type': 'application/json' }
-  })
-
-  api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token')
-    if (token) config.headers.Authorization = `Bearer ${token}`
-    return config
-  })
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    try {
-      const response = await api.post('/api/auth/login', { email, password })
-      localStorage.setItem('token', response.data.access_token)
-      setUser(response.data.user)
-      setMessage('✅ Вход выполнен!')
-    } catch (error) {
-      setMessage('❌ Ошибка входа: ' + (error.response?.data?.detail || error.message))
+    const result = await login(email, password)
+    if (!result.success) {
+      setMessage('❌ ' + (result.error || 'Ошибка входа'))
     }
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    setUser(null)
-    setMessage('Вы вышли из системы')
-  }
-
-  if (user) {
-    return (
-      <div style={{ background: '#121212', color: '#00FFFF', minHeight: '100vh', padding: '50px', fontFamily: 'monospace' }}>
-        <h1>✅ MINIMALMOD - PREVIEW РАБОТАЕТ!</h1>
-        <p>Привет, {user.full_name}!</p>
-        <p>Email: {user.email}</p>
-        <p>Role: {user.role}</p>
-        <button onClick={handleLogout} style={{ padding: '10px 20px', marginTop: '20px', cursor: 'pointer' }}>
-          Выйти
-        </button>
-      </div>
-    )
   }
 
   return (
@@ -78,8 +42,34 @@ function SimpleApp() {
           ВОЙТИ
         </button>
       </form>
-      {message && <p style={{ marginTop: '20px', color: message.includes('✅') ? '#00FF7F' : '#FF4500' }}>{message}</p>}
+      {message && <p style={{ marginTop: '20px', color: '#FF4500' }}>{message}</p>}
     </div>
+  )
+}
+
+function AppContent() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div style={{ background: '#121212', color: '#00FFFF', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace' }}>
+        <p>LOADING...</p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <LoginScreen />
+  }
+
+  return <SimpleIntegrations />
+}
+
+function SimpleApp() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 
