@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import LoginPage from './pages/LoginPage'
-import SellerDashboard from './pages/SellerDashboard'
+import SellerDashboardLite from './pages/SellerDashboardLite'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -28,7 +28,7 @@ function AppRoutes() {
       <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
       <Route path="/" element={
         <ProtectedRoute>
-          <SellerDashboard />
+          <SellerDashboardLite />
         </ProtectedRoute>
       } />
       <Route path="*" element={<Navigate to="/" />} />
