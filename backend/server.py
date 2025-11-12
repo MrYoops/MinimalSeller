@@ -1754,3 +1754,41 @@ async def import_product_from_marketplace(
             "characteristics_count": len(attributes)
         }
     }
+
+@app.put("/api/products/{product_id}/marketplace-mapping")
+async def update_marketplace_mapping(
+    product_id: str,
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Update marketplace mapping for existing product"""
+    marketplace = data.get('marketplace')
+    marketplace_id = data.get('marketplace_id')
+    barcode = data.get('barcode', '')
+    
+    logger.info(f"🔗 Updating marketplace mapping: Product={product_id}, Marketplace={marketplace}, MP_ID={marketplace_id}")
+    
+    # Find product
+    product = await db.products.find_one({"_id": product_id, "seller_id": current_user["_id"]})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Update marketplace_data
+    marketplace_data = product.get("marketplace_data", {})
+    marketplace_data[marketplace] = {
+        "id": marketplace_id,
+        "barcode": barcode,
+        "mapped_at": datetime.utcnow().isoformat()
+    }
+    
+    await db.products.update_one(
+        {"_id": product_id},
+        {"$set": {
+            "marketplace_data": marketplace_data,
+            "updated_at": datetime.utcnow().isoformat()
+        }}
+    )
+    
+    logger.info(f"✅ Marketplace mapping saved for product {product_id}")
+    
+    return {"message": "Mapping saved successfully"}
