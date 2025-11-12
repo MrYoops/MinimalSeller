@@ -251,8 +251,37 @@ function ProductMappingPage() {
                         className="w-4 h-4"
                       />
                     </td>
-                    <td className="py-4 px-4 font-mono text-sm text-mm-cyan">{mp.sku}</td>
-                    <td className="py-4 px-4 text-sm">{mp.name}</td>
+                    <td className="py-4 px-4">
+                      {mp.photos && mp.photos[0] ? (
+                        <img 
+                          src={mp.photos[0]} 
+                          alt={mp.name}
+                          className="w-16 h-16 object-cover border border-mm-border"
+                          onError={(e) => e.target.style.display = 'none'}
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-mm-darker border border-mm-border flex items-center justify-center text-mm-text-tertiary text-xs">
+                          NO IMG
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="font-mono text-sm text-mm-cyan">{mp.sku}</div>
+                      {mp.barcode && <div className="text-xs text-mm-text-secondary mt-1">Баркод: {mp.barcode}</div>}
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="text-sm font-semibold">{mp.name}</div>
+                      {mp.description && (
+                        <div className="text-xs text-mm-text-secondary mt-1 line-clamp-2">
+                          {mp.description.substring(0, 100)}...
+                        </div>
+                      )}
+                      {mp.characteristics && mp.characteristics.length > 0 && (
+                        <div className="text-xs text-mm-text-tertiary mt-1">
+                          {mp.characteristics.length} характеристик
+                        </div>
+                      )}
+                    </td>
                     <td className="py-4 px-4">
                       {local ? (
                         <span className="font-mono text-sm text-mm-green">{local.sku}</span>
