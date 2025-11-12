@@ -152,6 +152,8 @@ function ProductMappingPage() {
       return
     }
     
+    setShowImportModal(false)  // Закрываем модалку сразу
+    
     try {
       let imported = 0
       let existing = 0
@@ -186,6 +188,7 @@ function ProductMappingPage() {
       await loadMarketplaceProducts()
       
     } catch (error) {
+      console.error('❌ Import error:', error)
       alert('❌ Ошибка импорта: ' + (error.response?.data?.detail || error.message))
     }
   }
