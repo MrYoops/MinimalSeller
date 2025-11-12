@@ -15,6 +15,7 @@ function ProductMappingPage() {
   const [selectedForImport, setSelectedForImport] = useState([])
   const [importSettings, setImportSettings] = useState({ category_id: '', tag: '' })
   const [categories, setCategories] = useState([])
+  const [existingTags, setExistingTags] = useState([])
 
   useEffect(() => {
     loadLocalProducts()
