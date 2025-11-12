@@ -184,7 +184,8 @@ function ProductMappingPage() {
           console.log('📦 Importing:', mpProduct.sku, mpProduct.name)
           
           const response = await api.post('/api/products/import-from-marketplace', {
-            product: mpProduct
+            product: mpProduct,
+            tag: importSettings.tag  // Отправляем тег
           })
           
           if (response.data.action === 'created') {
