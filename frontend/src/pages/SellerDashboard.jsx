@@ -138,8 +138,8 @@ function SellerDashboard() {
                     {products.map((product) => (
                       <tr key={product.id} className="border-b border-mm-border hover:bg-mm-gray">
                         <td className="py-4 px-4">
-                          {product.minimalmod?.images?.[0] ? (
-                            <img src={product.minimalmod.images[0]} alt="" className="w-16 h-16 object-cover border border-mm-border" />
+                          {product.images && product.images[0] ? (
+                            <img src={product.images[0]} alt={product.name} className="w-16 h-16 object-cover border border-mm-border" />
                           ) : (
                             <div className="w-16 h-16 bg-mm-gray border border-mm-border flex items-center justify-center">
                               <span className="text-xs">NO IMG</span>
@@ -147,7 +147,14 @@ function SellerDashboard() {
                           )}
                         </td>
                         <td className="py-4 px-4 font-mono text-sm text-mm-cyan">{product.sku}</td>
-                        <td className="py-4 px-4">{product.minimalmod?.name || product.name || 'N/A'}</td>
+                        <td className="py-4 px-4">
+                          <div>{product.name}</div>
+                          {product.attributes && Object.keys(product.attributes).length > 0 && (
+                            <div className="text-xs text-mm-text-tertiary mt-1">
+                              {Object.keys(product.attributes).length} характеристик
+                            </div>
+                          )}
+                        </td>
                         <td className="py-4 px-4 font-mono">₽{product.price}</td>
                         <td className="py-4 px-4">
                           <span className={product.status === 'active' ? 'status-active' : 'status-pending'}>
