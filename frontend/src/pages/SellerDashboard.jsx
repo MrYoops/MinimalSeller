@@ -157,9 +157,25 @@ function SellerDashboard() {
                         <td className="py-4 px-4 text-right">
                           <button
                             onClick={() => window.location.href = `/products/${product.id}/edit`}
-                            className="btn-primary text-xs"
+                            className="btn-primary text-xs mr-2"
                           >
                             EDIT
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (confirm(`Удалить товар "${product.name}"?`)) {
+                                try {
+                                  await api.delete(`/api/products/${product.id}`)
+                                  alert('✅ Товар удалён!')
+                                  loadProducts()
+                                } catch (error) {
+                                  alert('❌ Ошибка удаления: ' + (error.response?.data?.detail || error.message))
+                                }
+                              }
+                            }}
+                            className="px-3 py-1 border border-mm-red text-mm-red hover:bg-mm-red/10 text-xs uppercase font-mono"
+                          >
+                            DELETE
                           </button>
                         </td>
                       </tr>
