@@ -104,6 +104,48 @@ function ProductMappingPage() {
     alert(`Сопоставлено ${count} товаров!`)
   }
 
+  const saveMappings = async () => {
+    try {
+      const mappingsArray = Object.entries(mappings).map(([mpId, localId]) => ({
+        marketplace_product_id: mpId,
+        local_product_id: localId
+      }))
+      
+      if (mappingsArray.length === 0) {
+        alert('Нет сопоставлений для сохранения!')
+        return
+      }
+      
+      console.log('💾 Сохранение сопоставлений:', mappingsArray)
+      
+      // Save mappings to products (update marketplace_data)
+      let saved = 0
+      for (const mapping of mappingsArray) {
+        const mpProduct = mpProducts.find(p => p.id === mapping.marketplace_product_id)
+        const localProduct = localProducts.find(p => p.id === mapping.local_product_id)
+        
+        if (mpProduct && localProduct) {
+          try {
+            await api.put(`/api/products/${localProduct.id}/marketplace-mapping`, {
+              marketplace: mpProduct.marketplace,
+              marketplace_id: mpProduct.id,
+              barcode: mpProduct.barcode || ''
+            })
+            saved++
+          } catch (error) {
+            console.error('Failed to save mapping:', error)
+          }
+        }
+      }
+      
+      alert(`✅ Сохранено ${saved} сопоставлений!`)
+      await loadLocalProducts()
+      
+    } catch (error) {
+      alert('❌ Ошибка сохранения: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+
   const importSelected = async () => {
     try {
       let imported = 0
