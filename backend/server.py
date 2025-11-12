@@ -1652,7 +1652,7 @@ async def import_product_from_marketplace(
     data: Dict[str, Any],
     current_user: dict = Depends(get_current_user)
 ):
-    """Import product from marketplace and auto-map by SKU"""
+    """Import product from marketplace with full data and auto-mapping"""
     import uuid
     
     marketplace_product = data.get('product')
@@ -1660,24 +1660,51 @@ async def import_product_from_marketplace(
         raise HTTPException(status_code=400, detail="Product data required")
     
     sku = marketplace_product.get('sku', '')
-    if not sku:
-        raise HTTPException(status_code=400, detail="SKU required")
+    marketplace = marketplace_product.get('marketplace', 'unknown')
     
-    logger.info(f"📦 Importing product from marketplace: SKU={sku}")
+    if not sku:
+        raise HTTPException(status_code=400, detail="SKU (артикул продавца) required")
+    
+    logger.info(f"📦 Importing product from {marketplace}: SKU={sku}, Name={marketplace_product.get('name', 'N/A')}")
     
     # Check if product with this SKU already exists
-    existing_product = await db.products.find_one({"sku": sku})
+    existing_product = await db.products.find_one({"sku": sku, "seller_id": current_user["_id"]})
     
     if existing_product:
         logger.info(f"✅ Product already exists: {existing_product.get('name')}")
+        
+        # Update marketplace_data for existing product
+        marketplace_data = existing_product.get("marketplace_data", {})
+        marketplace_data[marketplace] = {
+            "id": marketplace_product.get('id'),
+            "barcode": marketplace_product.get('barcode', ''),
+            "characteristics": marketplace_product.get('characteristics', []),
+            "category": marketplace_product.get('category', ''),
+            "brand": marketplace_product.get('brand', ''),
+            "mapped_at": datetime.utcnow().isoformat()
+        }
+        
+        await db.products.update_one(
+            {"_id": existing_product["_id"]},
+            {"$set": {"marketplace_data": marketplace_data, "updated_at": datetime.utcnow().isoformat()}}
+        )
+        
         return {
-            "message": "Product already exists",
+            "message": "Product already exists, mapping updated",
             "product_id": str(existing_product.get("_id")),
-            "action": "existing"
+            "action": "mapped"
         }
     
     # Create new product from marketplace data
     product_id = str(uuid.uuid4())
+    
+    # Prepare attributes from characteristics
+    attributes = {}
+    for char in marketplace_product.get('characteristics', []):
+        char_name = char.get('name', '')
+        char_value = char.get('value', '')
+        if char_name and char_value:
+            attributes[char_name] = char_value
     
     new_product = {
         "_id": product_id,
@@ -1692,14 +1719,19 @@ async def import_product_from_marketplace(
         "created_at": datetime.utcnow().isoformat(),
         "updated_at": datetime.utcnow().isoformat(),
         
-        # Marketplace specific data
+        # Attributes from characteristics
+        "attributes": attributes,
+        
+        # Marketplace specific data with auto-mapping
         "marketplace_data": {
-            marketplace_product.get('marketplace', 'unknown'): {
+            marketplace: {
                 "id": marketplace_product.get('id'),
                 "barcode": marketplace_product.get('barcode', ''),
                 "characteristics": marketplace_product.get('characteristics', []),
                 "category": marketplace_product.get('category', ''),
-                "brand": marketplace_product.get('brand', '')
+                "brand": marketplace_product.get('brand', ''),
+                "size": marketplace_product.get('size', ''),
+                "mapped_at": datetime.utcnow().isoformat()
             }
         }
     }
@@ -1707,7 +1739,8 @@ async def import_product_from_marketplace(
     # Insert product
     await db.products.insert_one(new_product)
     
-    logger.info(f"✅ Product imported: {new_product['name']} (SKU: {sku})")
+    logger.info(f"✅ Product imported and auto-mapped: {new_product['name']} (SKU: {sku})")
+    logger.info(f"   Photos: {len(new_product['images'])}, Characteristics: {len(new_product.get('characteristics', []))}")
     
     return {
         "message": "Product imported successfully",
@@ -1716,6 +1749,8 @@ async def import_product_from_marketplace(
         "product": {
             "id": product_id,
             "sku": sku,
-            "name": new_product['name']
+            "name": new_product['name'],
+            "photos_count": len(new_product['images']),
+            "characteristics_count": len(attributes)
         }
     }
