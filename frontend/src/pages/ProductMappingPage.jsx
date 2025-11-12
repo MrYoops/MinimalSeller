@@ -51,6 +51,22 @@ function ProductMappingPage() {
     }
   }
 
+  const loadExistingTags = async () => {
+    try {
+      const response = await api.get('/api/products')
+      const allTags = new Set()
+      
+      response.data.forEach(product => {
+        const tags = product.tags || []
+        tags.forEach(tag => allTags.add(tag))
+      })
+      
+      setExistingTags(Array.from(allTags).sort())
+    } catch (error) {
+      console.error('Failed to load tags:', error)
+    }
+  }
+
   const loadMarketplaceProducts = async () => {
     if (!selectedIntegration) {
       alert('Выберите интеграцию!')
