@@ -67,7 +67,7 @@ function ProductMappingPage() {
     }
   }
 
-  const loadMarketplaceProducts = async () => {
+  const loadAndImportProducts = async () => {
     if (!selectedIntegration) {
       alert('Выберите интеграцию!')
       return
@@ -78,11 +78,40 @@ function ProductMappingPage() {
     
     setLoading(true)
     try {
+      // 1. Загружаем товары с маркетплейса
       const response = await api.get(`/api/marketplaces/${integration.marketplace}/products`)
       const mpProductsData = response.data || []
       setMpProducts(mpProductsData)
       
-      // Автоматическое определение сопоставлений по артикулу
+      console.log(`📦 Загружено ${mpProductsData.length} товаров с ${integration.marketplace}`)
+      
+      // 2. СРАЗУ импортируем ВСЕ товары в базу
+      let imported = 0
+      let existing = 0
+      
+      for (const mpProduct of mpProductsData) {
+        try {
+          const importResponse = await api.post('/api/products/import-from-marketplace', {
+            product: mpProduct
+          })
+          
+          if (importResponse.data.action === 'created') {
+            imported++
+          } else {
+            existing++
+          }
+        } catch (error) {
+          console.error('❌ Ошибка импорта:', mpProduct.sku, error)
+        }
+      }
+      
+      alert(`✅ Импорт завершён!\n\nНовых товаров: ${imported}\nУже существует: ${existing}\n\nВсе товары добавлены во вкладку PRODUCTS с полной информацией.`)
+      
+      // 3. Перезагружаем данные для автоматического сопоставления
+      await loadLocalProducts()
+      await loadExistingTags()
+      
+      // 4. Автоматическое определение сопоставлений
       const autoMappings = {}
       let autoMatched = 0
       
@@ -101,7 +130,7 @@ function ProductMappingPage() {
       }
       
     } catch (error) {
-      alert('Ошибка загрузки товаров: ' + (error.response?.data?.detail || error.message))
+      alert('❌ Ошибка: ' + (error.response?.data?.detail || error.message))
     }
     setLoading(false)
   }
