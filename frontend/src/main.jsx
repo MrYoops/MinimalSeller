@@ -1,10 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import AppWithAuth from './AppWithAuth'
-import './index.css'
+import SimpleApp from './SimpleApp'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AppWithAuth />
+    <SimpleApp />
   </React.StrictMode>,
 )
