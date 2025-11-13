@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 import httpx
 import logging
 
-from auth import get_current_user
+from dependencies import get_current_user
 from database import get_database
 
 router = APIRouter(prefix="/api/marketplace", tags=["marketplace-warehouses"])
