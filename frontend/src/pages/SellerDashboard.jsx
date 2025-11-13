@@ -10,6 +10,9 @@ import FinanceDashboard from './FinanceDashboard'
 import PayoutsPage from './PayoutsPage'
 import ProductMappingPage from './ProductMappingPage'
 import WarehousesPage from './WarehousesPage'
+import WarehousesListPage from './WarehousesListPage'
+import ProductsPage from './ProductsPage'
+import StockPage from './StockPage'
 
 function SellerDashboard() {
   const { user, logout, api } = useAuth()
@@ -69,6 +72,22 @@ function SellerDashboard() {
               <BsBoxSeam className="inline mr-2" />СКЛАД
             </button>
             <button
+              onClick={() => setActiveTab('my-products')}
+              className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
+                activeTab === 'my-products' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+            >
+              <FiPackage className="inline mr-2" />ТОВАРЫ
+            </button>
+            <button
+              onClick={() => setActiveTab('stock')}
+              className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
+                activeTab === 'stock' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+            >
+              <FiBox className="inline mr-2" />ОСТАТКИ
+            </button>
+            <button
               onClick={() => setActiveTab('products')}
               className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'products' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
@@ -115,7 +134,11 @@ function SellerDashboard() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         {activeTab === 'api-keys' && <APIKeysPage />}
         
-        {activeTab === 'warehouses' && <WarehousesPage />}
+        {activeTab === 'warehouses' && <WarehousesListPage />}
+        
+        {activeTab === 'my-products' && <ProductsPage />}
+        
+        {activeTab === 'stock' && <StockPage />}
         
         {activeTab === 'products' && (
           <div className="space-y-6">
