@@ -1799,3 +1799,180 @@ async def update_marketplace_mapping(
     logger.info(f"✅ Marketplace mapping saved for product {product_id}")
     
     return {"message": "Mapping saved successfully"}
+
+# ========== WAREHOUSE MANAGEMENT ==========
+
+class WarehouseCreate(BaseModel):
+    name: str
+    type: str  # main, marketplace, transit
+    address: Optional[str] = ""
+    comment: Optional[str] = ""
+
+class WarehouseUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    comment: Optional[str] = None
+
+class Warehouse(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    type: str
+    address: str
+    comment: str
+    created_at: datetime
+    updated_at: datetime
+
+@app.post("/api/warehouses", status_code=201)
+async def create_warehouse(
+    warehouse_data: WarehouseCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create new warehouse with business logic validation"""
+    import uuid
+    
+    logger.info(f"🏪 Creating warehouse: {warehouse_data.name}, type: {warehouse_data.type}")
+    
+    # Check if main warehouse already exists
+    main_warehouse = await db.warehouses.find_one({
+        "user_id": current_user["_id"],
+        "type": "main"
+    })
+    
+    # Business logic: Only one main warehouse allowed
+    if main_warehouse and warehouse_data.type == "main":
+        raise HTTPException(
+            status_code=400,
+            detail="Основной склад может быть только один."
+        )
+    
+    # Business logic: Main warehouse must be created first
+    if not main_warehouse and warehouse_data.type != "main":
+        raise HTTPException(
+            status_code=400,
+            detail="Сначала необходимо создать Основной склад."
+        )
+    
+    # Validate type
+    if warehouse_data.type not in ["main", "marketplace", "transit"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Неверный тип склада. Допустимые: main, marketplace, transit"
+        )
+    
+    # Create warehouse
+    warehouse_id = str(uuid.uuid4())
+    new_warehouse = {
+        "_id": warehouse_id,
+        "user_id": current_user["_id"],
+        "name": warehouse_data.name,
+        "type": warehouse_data.type,
+        "address": warehouse_data.address or "",
+        "comment": warehouse_data.comment or "",
+        "created_at": datetime.utcnow().isoformat(),
+        "updated_at": datetime.utcnow().isoformat()
+    }
+    
+    await db.warehouses.insert_one(new_warehouse)
+    
+    logger.info(f"✅ Warehouse created: {new_warehouse['name']} (ID: {warehouse_id})")
+    
+    return {
+        "id": warehouse_id,
+        "user_id": str(current_user["_id"]),
+        "name": new_warehouse["name"],
+        "type": new_warehouse["type"],
+        "address": new_warehouse["address"],
+        "comment": new_warehouse["comment"],
+        "created_at": new_warehouse["created_at"],
+        "updated_at": new_warehouse["updated_at"]
+    }
+
+@app.get("/api/warehouses", response_model=List[Warehouse])
+async def get_warehouses(current_user: dict = Depends(get_current_user)):
+    """Get all warehouses for current user"""
+    warehouses = await db.warehouses.find({"user_id": current_user["_id"]}).to_list(length=100)
+    
+    result = []
+    for wh in warehouses:
+        result.append(Warehouse(
+            id=str(wh["_id"]),
+            user_id=str(wh["user_id"]),
+            name=wh["name"],
+            type=wh["type"],
+            address=wh.get("address", ""),
+            comment=wh.get("comment", ""),
+            created_at=datetime.fromisoformat(wh["created_at"]) if isinstance(wh["created_at"], str) else wh["created_at"],
+            updated_at=datetime.fromisoformat(wh["updated_at"]) if isinstance(wh["updated_at"], str) else wh["updated_at"]
+        ))
+    
+    return result
+
+@app.put("/api/warehouses/{warehouse_id}")
+async def update_warehouse(
+    warehouse_id: str,
+    warehouse_data: WarehouseUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update warehouse (cannot change type)"""
+    logger.info(f"✏️ Updating warehouse: {warehouse_id}")
+    
+    # Find warehouse
+    warehouse = await db.warehouses.find_one({
+        "_id": warehouse_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Склад не найден")
+    
+    # Prepare update data (only allowed fields)
+    update_data = {"updated_at": datetime.utcnow().isoformat()}
+    
+    if warehouse_data.name is not None:
+        update_data["name"] = warehouse_data.name
+    if warehouse_data.address is not None:
+        update_data["address"] = warehouse_data.address
+    if warehouse_data.comment is not None:
+        update_data["comment"] = warehouse_data.comment
+    
+    # Update warehouse
+    await db.warehouses.update_one(
+        {"_id": warehouse_id},
+        {"$set": update_data}
+    )
+    
+    logger.info(f"✅ Warehouse updated: {warehouse_id}")
+    
+    return {"message": "Склад успешно обновлён", "warehouse_id": warehouse_id}
+
+@app.delete("/api/warehouses/{warehouse_id}")
+async def delete_warehouse(
+    warehouse_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete warehouse (cannot delete main warehouse)"""
+    logger.info(f"🗑️ Attempting to delete warehouse: {warehouse_id}")
+    
+    # Find warehouse
+    warehouse = await db.warehouses.find_one({
+        "_id": warehouse_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Склад не найден")
+    
+    # Business logic: Cannot delete main warehouse
+    if warehouse["type"] == "main":
+        raise HTTPException(
+            status_code=400,
+            detail="Основной склад не может быть удален."
+        )
+    
+    # Delete warehouse
+    await db.warehouses.delete_one({"_id": warehouse_id})
+    
+    logger.info(f"✅ Warehouse deleted: {warehouse_id}")
+    
+    return {"success": True, "message": "Склад успешно удален."}
