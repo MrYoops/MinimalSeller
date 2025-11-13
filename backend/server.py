@@ -2095,6 +2095,54 @@ async def get_warehouses(current_user: dict = Depends(get_current_user)):
     
     return result
 
+
+@app.get("/api/warehouses/{warehouse_id}")
+async def get_warehouse(
+    warehouse_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a specific warehouse by ID"""
+    logger.info(f"📦 Getting warehouse: {warehouse_id}")
+    
+    warehouse = await db.warehouses.find_one({
+        "_id": warehouse_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+    
+    return {
+        "id": str(warehouse["_id"]),
+        "user_id": str(warehouse["user_id"]),
+        "name": warehouse["name"],
+        "type": warehouse.get("type", "main"),
+        "address": warehouse.get("address", ""),
+        "comment": warehouse.get("comment", ""),
+        "description": warehouse.get("description", ""),
+        "is_fbo": warehouse.get("is_fbo", False),
+        "send_stock": warehouse.get("send_stock", True),
+        "load_orders": warehouse.get("load_orders", True),
+        "use_for_orders": warehouse.get("use_for_orders", True),
+        "priority": warehouse.get("priority", 0),
+        "default_cell": warehouse.get("default_cell", ""),
+        "longitude": warehouse.get("longitude"),
+        "latitude": warehouse.get("latitude"),
+        "brand": warehouse.get("brand", ""),
+        "working_hours": warehouse.get("working_hours", ""),
+        "assembly_hours": warehouse.get("assembly_hours", 0),
+        "storage_days": warehouse.get("storage_days", 0),
+        "online_payment": warehouse.get("online_payment", False),
+        "cash_payment": warehouse.get("cash_payment", False),
+        "card_payment": warehouse.get("card_payment", False),
+        "show_on_goods": warehouse.get("show_on_goods", False),
+        "marketplace_name": warehouse.get("marketplace_name"),
+        "marketplace_warehouse_id": warehouse.get("marketplace_warehouse_id"),
+        "sync_with_main_warehouse_id": warehouse.get("sync_with_main_warehouse_id"),
+        "created_at": warehouse.get("created_at"),
+        "updated_at": warehouse.get("updated_at")
+    }
+
 @app.put("/api/warehouses/{warehouse_id}")
 async def update_warehouse(
     warehouse_id: str,
