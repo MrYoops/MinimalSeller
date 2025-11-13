@@ -118,13 +118,11 @@ function SellerDashboard() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         {activeTab === 'api-keys' && <APIKeysPage />}
         
-        {activeTab === 'warehouses' && <WarehousesListPage />}
+        {activeTab === 'warehouses' && <WarehousesSection />}
         
-        {activeTab === 'my-products' && <ProductsPage />}
+        {activeTab === 'products' && <ProductsPage />}
         
-        {activeTab === 'stock' && <StockPage />}
-        
-        {activeTab === 'products' && (
+        {activeTab === 'old-products' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl mb-2 text-mm-cyan">PRODUCTS</h2>
