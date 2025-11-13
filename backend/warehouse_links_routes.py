@@ -105,7 +105,7 @@ async def delete_warehouse_link(
             raise HTTPException(status_code=404, detail="Warehouse not found")
         
         # Delete link
-        result = await db.warehouse_links.delete_one({
+        result = await dependencies.db.warehouse_links.delete_one({
             "id": link_id,
             "warehouse_id": warehouse_id
         })
