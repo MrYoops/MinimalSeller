@@ -88,14 +88,6 @@ function SellerDashboard() {
               <FiShoppingCart className="inline mr-2" />ORDERS
             </button>
             <button
-              onClick={() => setActiveTab('inventory')}
-              className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'inventory' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-            >
-              <FiBox className="inline mr-2" />INVENTORY
-            </button>
-            <button
               onClick={() => setActiveTab('finance')}
               className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'finance' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
