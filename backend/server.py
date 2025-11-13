@@ -1693,12 +1693,13 @@ try:
 except Exception as e:
     logger.error(f"Failed to include admin_routes: {e}")
 
-try:
-    from marketplace_warehouse_routes import router as marketplace_warehouse_router
-    app.include_router(marketplace_warehouse_router)
-    logger.info("Marketplace warehouse routes included")
-except Exception as e:
-    logger.error(f"Failed to include marketplace_warehouse_routes: {e}")
+# Skip marketplace_warehouse_routes for now (requires proper get_current_user setup)
+# try:
+#     from marketplace_warehouse_routes import router as marketplace_warehouse_router
+#     app.include_router(marketplace_warehouse_router)
+#     logger.info("Marketplace warehouse routes included")
+# except Exception as e:
+#     logger.error(f"Failed to include marketplace_warehouse_routes: {e}")
 
 # Skip inventory_routes for now due to model issues
 # try:
