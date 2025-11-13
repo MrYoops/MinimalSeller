@@ -43,7 +43,7 @@ function AppRoutes() {
         <ProtectedRoute><ProductEditPage /></ProtectedRoute>
       } />
       <Route path="/warehouses/:id" element={
-        <ProtectedRoute><WarehouseDetail /></ProtectedRoute>
+        <ProtectedRoute><WarehouseDetailNew /></ProtectedRoute>
       } />
       <Route path="/warehouses-old/:id" element={
         <ProtectedRoute><WarehouseDetailPage /></ProtectedRoute>
