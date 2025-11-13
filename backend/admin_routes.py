@@ -1,10 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime, timedelta
 from bson import ObjectId
 from passlib.context import CryptContext
 
-from models import UserResponse
 from database import get_database
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
