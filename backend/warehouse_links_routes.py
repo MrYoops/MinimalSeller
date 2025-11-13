@@ -78,7 +78,7 @@ async def create_warehouse_link(
             "user_id": current_user["_id"]
         }
         
-        await db.warehouse_links.insert_one(link)
+        await dependencies.db.warehouse_links.insert_one(link)
         
         return {"message": "Link created successfully", "link": link}
     except HTTPException:
