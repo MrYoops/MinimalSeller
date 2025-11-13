@@ -364,3 +364,29 @@ def get_connector(marketplace: str, client_id: str, api_key: str) -> BaseConnect
         raise ValueError(f"Unknown marketplace: {marketplace}")
     
     return connector_class(client_id, api_key)
+
+    async def get_warehouses(self) -> List[Dict[str, Any]]:
+        """Get warehouses from Ozon"""
+        logger.info("[Ozon] Fetching warehouses")
+        
+        url = f"{self.base_url}/v1/warehouse/list"
+        headers = self._get_headers()
+        
+        try:
+            response_data = await self._make_request("POST", url, headers, json_data={})
+            
+            warehouses = response_data.get('result', [])
+            logger.info(f"[Ozon] Received {len(warehouses)} warehouses")
+            
+            return [
+                {
+                    "id": str(wh.get('warehouse_id', '')),
+                    "name": wh.get('name', 'Unnamed warehouse'),
+                    "is_enabled": wh.get('is_enabled', False)
+                }
+                for wh in warehouses
+            ]
+            
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Failed to fetch warehouses: {e.message}")
+            raise
