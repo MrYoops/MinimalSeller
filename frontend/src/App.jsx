@@ -4,6 +4,10 @@ import LoginPage from './pages/LoginPage'
 import AdminDashboard from './pages/AdminDashboard'
 import SellerDashboard from './pages/SellerDashboard'
 import ProductEditPage from './pages/ProductEditPage'
+import WarehouseDetailPage from './pages/WarehouseDetailPage'
+import ProductsPageNew from './pages/ProductsPageNew'
+import StockBalancesPage from './pages/StockBalancesPage'
+import WarehouseDetail from './pages/WarehouseDetail'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 
@@ -36,6 +40,18 @@ function AppRoutes() {
       } />
       <Route path="/products/:id/edit" element={
         <ProtectedRoute><ProductEditPage /></ProtectedRoute>
+      } />
+      <Route path="/warehouses/:id" element={
+        <ProtectedRoute><WarehouseDetail /></ProtectedRoute>
+      } />
+      <Route path="/warehouses-old/:id" element={
+        <ProtectedRoute><WarehouseDetailPage /></ProtectedRoute>
+      } />
+      <Route path="/products-new" element={
+        <ProtectedRoute><ProductsPageNew /></ProtectedRoute>
+      } />
+      <Route path="/stock-balances" element={
+        <ProtectedRoute><StockBalancesPage /></ProtectedRoute>
       } />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
