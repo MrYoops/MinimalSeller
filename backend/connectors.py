@@ -390,3 +390,29 @@ def get_connector(marketplace: str, client_id: str, api_key: str) -> BaseConnect
         except MarketplaceError as e:
             logger.error(f"[Ozon] Failed to fetch warehouses: {e.message}")
             raise
+
+    async def get_warehouses(self) -> List[Dict[str, Any]]:
+        """Get warehouses from Wildberries"""
+        logger.info("[WB] Fetching warehouses")
+        
+        url = f"{self.marketplace_api_url}/api/v3/offices"
+        headers = self._get_headers()
+        
+        try:
+            response_data = await self._make_request("GET", url, headers)
+            
+            warehouses = response_data if isinstance(response_data, list) else []
+            logger.info(f"[WB] Received {len(warehouses)} warehouses")
+            
+            return [
+                {
+                    "id": str(wh.get('id', '')),
+                    "name": wh.get('name', 'Unnamed warehouse'),
+                    "office_id": wh.get('officeId', 0)
+                }
+                for wh in warehouses
+            ]
+            
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to fetch warehouses: {e.message}")
+            raise
