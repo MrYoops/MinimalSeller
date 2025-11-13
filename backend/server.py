@@ -2238,6 +2238,115 @@ async def link_warehouse(
     
     logger.info(f"✅ Warehouse link updated")
     
+
+
+# ============================================================================
+# WAREHOUSE LINKS ENDPOINTS
+# ============================================================================
+
+@app.get("/api/warehouses/{warehouse_id}/links")
+async def get_warehouse_links(
+    warehouse_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all links for a warehouse"""
+    logger.info(f"📋 Getting links for warehouse: {warehouse_id}")
+    
+    # Verify warehouse belongs to user
+    warehouse = await db.warehouses.find_one({
+        "_id": warehouse_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+    
+    # Get links
+    links = await db.warehouse_links.find({
+        "warehouse_id": warehouse_id
+    }).to_list(length=100)
+    
+    logger.info(f"✅ Found {len(links)} links")
+    return links
+
+
+@app.post("/api/warehouses/{warehouse_id}/links")
+async def create_warehouse_link(
+    warehouse_id: str,
+    link_data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new warehouse link"""
+    import uuid
+    
+    logger.info(f"🔗 Creating link for warehouse: {warehouse_id}")
+    
+    # Verify warehouse belongs to user
+    warehouse = await db.warehouses.find_one({
+        "_id": warehouse_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+    
+    # Check if link already exists
+    existing = await db.warehouse_links.find_one({
+        "warehouse_id": warehouse_id,
+        "marketplace_warehouse_id": link_data.get("marketplace_warehouse_id")
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Link already exists")
+    
+    # Create link
+    link = {
+        "id": str(uuid.uuid4()),
+        "warehouse_id": warehouse_id,
+        "integration_id": link_data.get("integration_id"),
+        "marketplace_name": link_data.get("marketplace_name"),
+        "marketplace_warehouse_id": link_data.get("marketplace_warehouse_id"),
+        "marketplace_warehouse_name": link_data.get("marketplace_warehouse_name"),
+        "created_at": datetime.utcnow().isoformat(),
+        "user_id": current_user["_id"]
+    }
+    
+    await db.warehouse_links.insert_one(link)
+    
+    logger.info(f"✅ Link created: {link['id']}")
+    return {"message": "Link created successfully", "link": link}
+
+
+@app.delete("/api/warehouses/{warehouse_id}/links/{link_id}")
+async def delete_warehouse_link(
+    warehouse_id: str,
+    link_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a warehouse link"""
+    logger.info(f"🗑️ Deleting link: {link_id}")
+    
+    # Verify warehouse belongs to user
+    warehouse = await db.warehouses.find_one({
+        "_id": warehouse_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+    
+    # Delete link
+    result = await db.warehouse_links.delete_one({
+        "id": link_id,
+        "warehouse_id": warehouse_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Link not found")
+    
+    logger.info(f"✅ Link deleted: {link_id}")
+    return {"message": "Link deleted successfully"}
+
     return {"message": "Связь установлена", "warehouse_id": warehouse_id}
 
 
