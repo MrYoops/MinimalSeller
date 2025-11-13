@@ -1678,12 +1678,13 @@ try:
 except Exception as e:
     logger.error(f"Failed to include finance_routes: {e}")
 
-try:
-    from analytics_routes import router as analytics_router
-    app.include_router(analytics_router)
-    logger.info("Analytics routes included")
-except Exception as e:
-    logger.error(f"Failed to include analytics_routes: {e}")
+# Skip analytics_routes for now (requires openai)
+# try:
+#     from analytics_routes import router as analytics_router
+#     app.include_router(analytics_router)
+#     logger.info("Analytics routes included")
+# except Exception as e:
+#     logger.error(f"Failed to include analytics_routes: {e}")
 
 try:
     from admin_routes import router as admin_router
