@@ -58,7 +58,7 @@ async def create_warehouse_link(
             raise HTTPException(status_code=404, detail="Warehouse not found")
         
         # Check if link already exists
-        existing = await db.warehouse_links.find_one({
+        existing = await dependencies.db.warehouse_links.find_one({
             "warehouse_id": warehouse_id,
             "marketplace_warehouse_id": link_data.marketplace_warehouse_id
         })
