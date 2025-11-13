@@ -89,7 +89,7 @@
 2. **No Valid Keys**: GET /marketplaces/{marketplace}/products returns 400 when no valid key exists - THIS IS EXPECTED
 
 #### 🔍 Technical Details
-- **Backend URL**: https://admin-center-9.preview.emergentagent.com/api
+- **Backend URL**: https://minimalmod-dashboard.preview.emergentagent.com/api
 - **MongoDB**: Connected and working (localhost:27017)
 - **Database**: minimalmod
 - **Authentication**: JWT with HS256 algorithm
@@ -260,8 +260,8 @@ All tabs tested and working:
 2. **React Router Warnings**: Future flag warnings for React Router v7 - not affecting functionality
 
 ##### 🔍 Technical Details
-- **Frontend URL**: https://admin-center-9.preview.emergentagent.com
-- **Backend URL**: https://admin-center-9.preview.emergentagent.com/api
+- **Frontend URL**: https://minimalmod-dashboard.preview.emergentagent.com
+- **Backend URL**: https://minimalmod-dashboard.preview.emergentagent.com/api
 - **Framework**: React 18.2.0 with Vite
 - **Routing**: React Router v6
 - **Styling**: Tailwind CSS with custom MinimalMod theme
