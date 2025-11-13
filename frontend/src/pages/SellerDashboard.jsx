@@ -152,85 +152,73 @@ function SellerDashboard() {
                       const hasYandex = marketplaces.includes('yandex')
                       
                       return (
-                      <tr key={product.id} className="border-b border-mm-border hover:bg-mm-gray">
-                        <td className="py-4 px-4">
+                      <tr key={product.id} className="border-b border-mm-border hover:bg-mm-gray/50 transition-colors">
+                        <td className="py-3 px-3">
                           {product.images && product.images[0] ? (
-                            <img src={product.images[0]} alt={product.name} className="w-16 h-16 object-cover border border-mm-border rounded" />
+                            <img src={product.images[0]} alt={product.name} className="w-12 h-12 object-cover border border-mm-border rounded" />
                           ) : (
-                            <div className="w-16 h-16 bg-mm-gray border border-mm-border rounded flex items-center justify-center">
-                              <span className="text-xs text-mm-text-tertiary">NO IMG</span>
+                            <div className="w-12 h-12 bg-mm-gray border border-mm-border rounded flex items-center justify-center">
+                              <span className="text-xs text-mm-text-tertiary">NO</span>
                             </div>
                           )}
                         </td>
-                        <td className="py-4 px-4 font-mono text-sm text-mm-cyan">{product.sku}</td>
-                        <td className="py-4 px-4">
-                          <div className="font-semibold">{product.name}</div>
+                        <td className="py-3 px-3 font-mono text-xs text-mm-cyan truncate">{product.sku}</td>
+                        <td className="py-3 px-3">
+                          <div className="font-medium text-sm truncate">{product.name}</div>
                           {product.description && (
-                            <div className="text-xs text-mm-text-secondary mt-1 max-w-xs truncate">
-                              {product.description.substring(0, 80)}...
+                            <div className="text-xs text-mm-text-tertiary mt-1 truncate">
+                              {product.description.substring(0, 50)}...
                             </div>
                           )}
                         </td>
-                        <td className="py-4 px-4 text-sm text-mm-text-secondary">
+                        <td className="py-3 px-3 text-xs text-mm-text-secondary truncate">
                           {product.marketplace_data?.wb?.category || 
                            product.marketplace_data?.ozon?.category || 
                            product.category || 'N/A'}
                         </td>
-                        <td className="py-4 px-4 text-sm">
-                          {product.attributes && Object.keys(product.attributes).length > 0 ? (
-                            <div className="text-mm-green">
-                              {Object.keys(product.attributes).length} шт
-                              <div className="text-xs text-mm-text-tertiary mt-1">
-                                {Object.entries(product.attributes).slice(0, 2).map(([key, val]) => (
-                                  <div key={key}>{key}: {val}</div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-mm-text-tertiary">—</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-4 font-mono text-mm-cyan">₽{product.price}</td>
-                        <td className="py-4 px-4">
-                          <span className={`px-3 py-1 text-xs font-mono uppercase rounded ${
-                            product.status === 'active' ? 'bg-mm-green/20 text-mm-green border border-mm-green' : 
-                            'bg-mm-yellow/20 text-mm-yellow border border-mm-yellow'
+                        <td className="py-3 px-3 font-mono text-sm text-mm-cyan">₽{product.price}</td>
+                        <td className="py-3 px-3">
+                          <span className={`px-2 py-1 text-xs font-mono uppercase rounded inline-block ${
+                            product.status === 'active' ? 'bg-mm-green/20 text-mm-green' : 
+                            'bg-mm-yellow/20 text-mm-yellow'
                           }`}>
-                            {product.status}
+                            {product.status === 'active' ? 'ACT' : 'PND'}
                           </span>
                         </td>
-                        <td className="py-4 px-4">
-                          <div className="flex gap-1">
-                            {hasWB && <span className="text-xs px-2 py-1 bg-mm-purple/20 text-mm-purple border border-mm-purple rounded">WB</span>}
-                            {hasOzon && <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 border border-blue-400 rounded">OZON</span>}
-                            {hasYandex && <span className="text-xs px-2 py-1 bg-red-500/20 text-red-400 border border-red-400 rounded">YM</span>}
+                        <td className="py-3 px-3">
+                          <div className="flex gap-1 flex-wrap">
+                            {hasWB && <span className="text-xs px-1.5 py-0.5 bg-mm-purple/20 text-mm-purple rounded font-mono">WB</span>}
+                            {hasOzon && <span className="text-xs px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded font-mono">OZ</span>}
+                            {hasYandex && <span className="text-xs px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded font-mono">YM</span>}
                           </div>
                         </td>
-                        <td className="py-4 px-4 text-right">
-                          <button
-                            onClick={async () => {
-                              if (confirm(`Удалить товар "${product.name}"?`)) {
-                                try {
-                                  await api.delete(`/api/products/${product.id}`)
-                                  alert('✅ Товар удалён!')
-                                  loadProducts()
-                                } catch (error) {
-                                  alert('❌ Ошибка удаления: ' + (error.response?.data?.detail || error.message))
+                        <td className="py-3 px-3 text-right">
+                          <div className="flex gap-1 justify-end">
+                            <button
+                              onClick={async () => {
+                                if (confirm(`Удалить товар "${product.name}"?`)) {
+                                  try {
+                                    await api.delete(`/api/products/${product.id}`)
+                                    alert('✅ Товар удалён!')
+                                    loadProducts()
+                                  } catch (error) {
+                                    alert('❌ Ошибка: ' + (error.response?.data?.detail || error.message))
+                                  }
                                 }
-                              }
-                            }}
-                            className="px-3 py-2 border border-mm-red text-mm-red hover:bg-mm-red/10 transition-colors mr-2"
-                            title="Удалить товар"
-                          >
-                            <FiTrash2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => window.location.href = `/products/${product.id}/edit`}
-                            className="px-3 py-2 border border-mm-cyan text-mm-cyan hover:bg-mm-cyan/10 transition-colors"
-                            title="Редактировать товар"
-                          >
-                            <FiEdit size={16} />
-                          </button>
+                              }}
+                              className="p-2 text-mm-red hover:bg-mm-red/10 rounded transition-colors"
+                              title="Удалить"
+                            >
+                              <FiTrash2 size={14} />
+                            </button>
+                            <button
+                              onClick={() => window.location.href = `/products/${product.id}/edit`}
+                              className="p-2 text-mm-cyan hover:bg-mm-cyan/10 rounded transition-colors"
+                              title="Редактировать"
+                            >
+                              <FiEdit size={14} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )})}
