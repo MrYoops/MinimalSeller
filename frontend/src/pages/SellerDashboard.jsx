@@ -241,7 +241,6 @@ function SellerDashboard() {
         )}
 
         {activeTab === 'orders' && <OrdersPage />}
-        {activeTab === 'inventory' && <InventoryPage />}
         {activeTab === 'finance' && <FinanceDashboard />}
         {activeTab === 'balance' && <PayoutsPage />}
       </main>
