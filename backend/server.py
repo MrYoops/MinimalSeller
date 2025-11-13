@@ -1659,22 +1659,53 @@ async def create_fbo_shipment(
 # Import and include product routes
 try:
     from product_routes import router as product_router
-    from inventory_routes import router as inventory_router
-    from order_routes import router as order_router
-    from finance_routes import router as finance_router
-    from analytics_routes import router as analytics_router
-    from admin_routes import router as admin_router
-    from marketplace_warehouse_routes import router as marketplace_warehouse_router
     app.include_router(product_router)
-    app.include_router(inventory_router)
-    app.include_router(order_router)
-    app.include_router(finance_router)
-    app.include_router(analytics_router)
-    app.include_router(admin_router)
-    app.include_router(marketplace_warehouse_router)
-    logger.info("All routes included successfully (Product, Inventory, Order, Finance, Analytics, Admin, Marketplace Warehouses)")
+    logger.info("Product routes included")
 except Exception as e:
-    logger.error(f"Failed to include routes: {e}")
+    logger.error(f"Failed to include product_routes: {e}")
+
+try:
+    from order_routes import router as order_router
+    app.include_router(order_router)
+    logger.info("Order routes included")
+except Exception as e:
+    logger.error(f"Failed to include order_routes: {e}")
+
+try:
+    from finance_routes import router as finance_router
+    app.include_router(finance_router)
+    logger.info("Finance routes included")
+except Exception as e:
+    logger.error(f"Failed to include finance_routes: {e}")
+
+try:
+    from analytics_routes import router as analytics_router
+    app.include_router(analytics_router)
+    logger.info("Analytics routes included")
+except Exception as e:
+    logger.error(f"Failed to include analytics_routes: {e}")
+
+try:
+    from admin_routes import router as admin_router
+    app.include_router(admin_router)
+    logger.info("Admin routes included")
+except Exception as e:
+    logger.error(f"Failed to include admin_routes: {e}")
+
+try:
+    from marketplace_warehouse_routes import router as marketplace_warehouse_router
+    app.include_router(marketplace_warehouse_router)
+    logger.info("Marketplace warehouse routes included")
+except Exception as e:
+    logger.error(f"Failed to include marketplace_warehouse_routes: {e}")
+
+# Skip inventory_routes for now due to model issues
+# try:
+#     from inventory_routes import router as inventory_router
+#     app.include_router(inventory_router)
+#     logger.info("Inventory routes included")
+# except Exception as e:
+#     logger.error(f"Failed to include inventory_routes: {e}")
 
 if __name__ == "__main__":
     import uvicorn
