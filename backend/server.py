@@ -1976,3 +1976,79 @@ async def delete_warehouse(
     logger.info(f"✅ Warehouse deleted: {warehouse_id}")
     
     return {"success": True, "message": "Склад успешно удален."}
+
+@app.get("/api/integrations/{integration_id}/warehouses")
+async def get_integration_warehouses(
+    integration_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get warehouses from marketplace API"""
+    from connectors import get_connector, MarketplaceError
+    
+    logger.info(f"📦 Loading warehouses from integration: {integration_id}")
+    
+    # Get API key
+    profile = await db.seller_profiles.find_one({'user_id': current_user['_id']})
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    api_keys = profile.get('api_keys', [])
+    api_key = next((k for k in api_keys if k.get('id') == integration_id), None)
+    
+    if not api_key:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    
+    try:
+        connector = get_connector(
+            api_key['marketplace'],
+            api_key.get('client_id', ''),
+            api_key['api_key']
+        )
+        
+        warehouses = await connector.get_warehouses()
+        
+        logger.info(f"✅ Loaded {len(warehouses)} warehouses from {api_key['marketplace']}")
+        
+        return {
+            "marketplace": api_key['marketplace'],
+            "warehouses": warehouses
+        }
+        
+    except MarketplaceError as e:
+        logger.error(f"❌ Failed to load warehouses: {e.message}")
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+
+@app.put("/api/warehouses/{warehouse_id}/link")
+async def link_warehouse(
+    warehouse_id: str,
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Link marketplace warehouse to main warehouse"""
+    main_warehouse_id = data.get('main_warehouse_id')
+    
+    logger.info(f"🔗 Linking warehouse {warehouse_id} to main warehouse {main_warehouse_id}")
+    
+    # Find warehouse
+    warehouse = await db.warehouses.find_one({
+        "_id": warehouse_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+    
+    # Update link
+    update_data = {
+        "sync_with_main_warehouse_id": main_warehouse_id,
+        "updated_at": datetime.utcnow().isoformat()
+    }
+    
+    await db.warehouses.update_one(
+        {"_id": warehouse_id},
+        {"$set": update_data}
+    )
+    
+    logger.info(f"✅ Warehouse link updated")
+    
+    return {"message": "Связь установлена", "warehouse_id": warehouse_id}
