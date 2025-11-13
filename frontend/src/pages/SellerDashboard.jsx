@@ -112,7 +112,135 @@ function SellerDashboard() {
         
         {activeTab === 'warehouses' && <WarehousesSection />}
         
-        {activeTab === 'products' && <ProductsPage />}
+        {activeTab === 'products' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl mb-2 text-mm-cyan uppercase">ТОВАРЫ</h2>
+              <button onClick={() => window.location.href = '/products/new/edit'} className="btn-primary">
+                + ДОБАВИТЬ ТОВАР
+              </button>
+            </div>
+            
+            {loading ? (
+              <div className="text-center py-12"><p className="text-mm-cyan animate-pulse">// LOADING...</p></div>
+            ) : products.length === 0 ? (
+              <div className="card-neon text-center py-12">
+                <FiPackage className="mx-auto text-mm-text-tertiary mb-4" size={48} />
+                <p className="text-mm-text-secondary">Товаров пока нет</p>
+                <p className="text-mm-text-tertiary text-sm mt-2">Перейдите в раздел ИНТЕГРАЦИИ → СОПОСТАВЛЕНИЕ ТОВАРОВ для загрузки</p>
+              </div>
+            ) : (
+              <div className="card-neon overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-mm-border">
+                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Фото</th>
+                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">SKU</th>
+                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Название</th>
+                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Категория</th>
+                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Характеристики</th>
+                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Цена</th>
+                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Статус</th>
+                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Источник</th>
+                      <th className="text-right py-4 px-4 text-mm-text-secondary uppercase text-sm">Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map((product) => {
+                      const marketplaces = product.marketplace_data ? Object.keys(product.marketplace_data) : []
+                      const hasWB = marketplaces.includes('wb')
+                      const hasOzon = marketplaces.includes('ozon')
+                      const hasYandex = marketplaces.includes('yandex')
+                      
+                      return (
+                      <tr key={product.id} className="border-b border-mm-border hover:bg-mm-gray">
+                        <td className="py-4 px-4">
+                          {product.images && product.images[0] ? (
+                            <img src={product.images[0]} alt={product.name} className="w-16 h-16 object-cover border border-mm-border rounded" />
+                          ) : (
+                            <div className="w-16 h-16 bg-mm-gray border border-mm-border rounded flex items-center justify-center">
+                              <span className="text-xs text-mm-text-tertiary">NO IMG</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-4 px-4 font-mono text-sm text-mm-cyan">{product.sku}</td>
+                        <td className="py-4 px-4">
+                          <div className="font-semibold">{product.name}</div>
+                          {product.description && (
+                            <div className="text-xs text-mm-text-secondary mt-1 max-w-xs truncate">
+                              {product.description.substring(0, 80)}...
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-4 px-4 text-sm text-mm-text-secondary">
+                          {product.marketplace_data?.wb?.category || 
+                           product.marketplace_data?.ozon?.category || 
+                           product.category || 'N/A'}
+                        </td>
+                        <td className="py-4 px-4 text-sm">
+                          {product.attributes && Object.keys(product.attributes).length > 0 ? (
+                            <div className="text-mm-green">
+                              {Object.keys(product.attributes).length} шт
+                              <div className="text-xs text-mm-text-tertiary mt-1">
+                                {Object.entries(product.attributes).slice(0, 2).map(([key, val]) => (
+                                  <div key={key}>{key}: {val}</div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-mm-text-tertiary">—</span>
+                          )}
+                        </td>
+                        <td className="py-4 px-4 font-mono text-mm-cyan">₽{product.price}</td>
+                        <td className="py-4 px-4">
+                          <span className={`px-3 py-1 text-xs font-mono uppercase rounded ${
+                            product.status === 'active' ? 'bg-mm-green/20 text-mm-green border border-mm-green' : 
+                            'bg-mm-yellow/20 text-mm-yellow border border-mm-yellow'
+                          }`}>
+                            {product.status}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex gap-1">
+                            {hasWB && <span className="text-xs px-2 py-1 bg-mm-purple/20 text-mm-purple border border-mm-purple rounded">WB</span>}
+                            {hasOzon && <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 border border-blue-400 rounded">OZON</span>}
+                            {hasYandex && <span className="text-xs px-2 py-1 bg-red-500/20 text-red-400 border border-red-400 rounded">YM</span>}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <button
+                            onClick={async () => {
+                              if (confirm(`Удалить товар "${product.name}"?`)) {
+                                try {
+                                  await api.delete(`/api/products/${product.id}`)
+                                  alert('✅ Товар удалён!')
+                                  loadProducts()
+                                } catch (error) {
+                                  alert('❌ Ошибка удаления: ' + (error.response?.data?.detail || error.message))
+                                }
+                              }
+                            }}
+                            className="px-3 py-2 border border-mm-red text-mm-red hover:bg-mm-red/10 transition-colors mr-2"
+                            title="Удалить товар"
+                          >
+                            <FiTrash2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => window.location.href = `/products/${product.id}/edit`}
+                            className="px-3 py-2 border border-mm-cyan text-mm-cyan hover:bg-mm-cyan/10 transition-colors"
+                            title="Редактировать товар"
+                          >
+                            <FiEdit size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    )})}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
         
         {activeTab === 'old-products' && (
           <div className="space-y-6">
