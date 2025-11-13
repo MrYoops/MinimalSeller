@@ -10,7 +10,7 @@ import FinanceDashboard from './FinanceDashboard'
 import PayoutsPage from './PayoutsPage'
 import ProductMappingPage from './ProductMappingPage'
 import WarehousesPage from './WarehousesPage'
-import WarehousesListPage from './WarehousesListPage'
+import WarehousesSection from './WarehousesSection'
 import ProductsPage from './ProductsPage'
 import StockPage from './StockPage'
 
