@@ -1807,6 +1807,8 @@ class WarehouseCreate(BaseModel):
     type: str  # main, marketplace, transit
     address: Optional[str] = ""
     comment: Optional[str] = ""
+    marketplace_name: Optional[str] = None
+    marketplace_warehouse_id: Optional[str] = None
 
 class WarehouseUpdate(BaseModel):
     name: Optional[str] = None
@@ -1820,6 +1822,9 @@ class Warehouse(BaseModel):
     type: str
     address: str
     comment: str
+    marketplace_name: Optional[str] = None
+    marketplace_warehouse_id: Optional[str] = None
+    sync_with_main_warehouse_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
