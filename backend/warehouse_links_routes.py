@@ -44,7 +44,7 @@ async def get_warehouse_links(
 async def create_warehouse_link(
     warehouse_id: str,
     link_data: WarehouseLinkCreate,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(dependencies.get_current_user)
 ):
     """Создать связь склада с маркетплейсом"""
     try:
@@ -91,7 +91,7 @@ async def create_warehouse_link(
 async def delete_warehouse_link(
     warehouse_id: str,
     link_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(dependencies.get_current_user)
 ):
     """Удалить связь склада с маркетплейсом"""
     try:
