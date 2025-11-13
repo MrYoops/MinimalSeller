@@ -61,6 +61,14 @@ function SellerDashboard() {
               <FiKey className="inline mr-2" />ИНТЕГРАЦИИ
             </button>
             <button
+              onClick={() => setActiveTab('warehouses')}
+              className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
+                activeTab === 'warehouses' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+            >
+              <BsBoxSeam className="inline mr-2" />СКЛАД
+            </button>
+            <button
               onClick={() => setActiveTab('products')}
               className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'products' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
