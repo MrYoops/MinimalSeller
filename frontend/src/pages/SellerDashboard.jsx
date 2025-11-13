@@ -72,28 +72,12 @@ function SellerDashboard() {
               <BsBoxSeam className="inline mr-2" />СКЛАД
             </button>
             <button
-              onClick={() => setActiveTab('my-products')}
-              className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'my-products' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-            >
-              <FiPackage className="inline mr-2" />ТОВАРЫ
-            </button>
-            <button
-              onClick={() => setActiveTab('stock')}
-              className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'stock' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-            >
-              <FiBox className="inline mr-2" />ОСТАТКИ
-            </button>
-            <button
               onClick={() => setActiveTab('products')}
               className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'products' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
               }`}
             >
-              <FiPackage className="inline mr-2" />PRODUCTS
+              <FiPackage className="inline mr-2" />ТОВАРЫ
             </button>
             <button
               onClick={() => setActiveTab('orders')}
