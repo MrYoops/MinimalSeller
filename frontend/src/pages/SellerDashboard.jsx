@@ -130,19 +130,18 @@ function SellerDashboard() {
                 <p className="text-mm-text-tertiary text-sm mt-2">Перейдите в раздел ИНТЕГРАЦИИ → СОПОСТАВЛЕНИЕ ТОВАРОВ для загрузки</p>
               </div>
             ) : (
-              <div className="card-neon overflow-hidden">
-                <table className="w-full">
+              <div className="card-neon overflow-x-auto">
+                <table className="w-full table-fixed">
                   <thead>
-                    <tr className="border-b border-mm-border">
-                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Фото</th>
-                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">SKU</th>
-                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Название</th>
-                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Категория</th>
-                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Характеристики</th>
-                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Цена</th>
-                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Статус</th>
-                      <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm">Источник</th>
-                      <th className="text-right py-4 px-4 text-mm-text-secondary uppercase text-sm">Действия</th>
+                    <tr className="border-b border-mm-border bg-mm-black/50">
+                      <th className="text-left py-3 px-3 text-mm-text-secondary uppercase text-xs font-mono w-20">Фото</th>
+                      <th className="text-left py-3 px-3 text-mm-text-secondary uppercase text-xs font-mono w-32">SKU</th>
+                      <th className="text-left py-3 px-3 text-mm-text-secondary uppercase text-xs font-mono">Название</th>
+                      <th className="text-left py-3 px-3 text-mm-text-secondary uppercase text-xs font-mono w-32">Категория</th>
+                      <th className="text-left py-3 px-3 text-mm-text-secondary uppercase text-xs font-mono w-24">Цена</th>
+                      <th className="text-left py-3 px-3 text-mm-text-secondary uppercase text-xs font-mono w-24">Статус</th>
+                      <th className="text-left py-3 px-3 text-mm-text-secondary uppercase text-xs font-mono w-28">Источник</th>
+                      <th className="text-right py-3 px-3 text-mm-text-secondary uppercase text-xs font-mono w-24">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
