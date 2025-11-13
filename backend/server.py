@@ -1874,6 +1874,9 @@ async def create_warehouse(
         "type": warehouse_data.type,
         "address": warehouse_data.address or "",
         "comment": warehouse_data.comment or "",
+        "marketplace_name": warehouse_data.marketplace_name,
+        "marketplace_warehouse_id": warehouse_data.marketplace_warehouse_id,
+        "sync_with_main_warehouse_id": None,
         "created_at": datetime.utcnow().isoformat(),
         "updated_at": datetime.utcnow().isoformat()
     }
