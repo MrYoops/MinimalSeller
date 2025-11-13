@@ -23,7 +23,7 @@ async def get_warehouse_links(
 ):
     """Получить все связи склада с маркетплейсами"""
     try:
-        warehouse = await db.warehouses.find_one({
+        warehouse = await dependencies.db.warehouses.find_one({
             "id": warehouse_id,
             "user_id": current_user["_id"]
         })
@@ -49,7 +49,7 @@ async def create_warehouse_link(
     """Создать связь склада с маркетплейсом"""
     try:
         # Verify warehouse exists and belongs to user
-        warehouse = await db.warehouses.find_one({
+        warehouse = await dependencies.db.warehouses.find_one({
             "id": warehouse_id,
             "user_id": current_user["_id"]
         })
@@ -96,7 +96,7 @@ async def delete_warehouse_link(
     """Удалить связь склада с маркетплейсом"""
     try:
         # Verify warehouse exists and belongs to user
-        warehouse = await db.warehouses.find_one({
+        warehouse = await dependencies.db.warehouses.find_one({
             "id": warehouse_id,
             "user_id": current_user["_id"]
         })
