@@ -19,7 +19,7 @@ class WarehouseLinkCreate(BaseModel):
 @router.get("/{warehouse_id}/links")
 async def get_warehouse_links(
     warehouse_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(dependencies.get_current_user)
 ):
     """Получить все связи склада с маркетплейсами"""
     try:
