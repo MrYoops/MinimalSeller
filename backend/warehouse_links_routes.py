@@ -31,7 +31,7 @@ async def get_warehouse_links(
         if not warehouse:
             raise HTTPException(status_code=404, detail="Warehouse not found")
         
-        links = await db.warehouse_links.find({
+        links = await dependencies.db.warehouse_links.find({
             "warehouse_id": warehouse_id
         }).to_list(length=100)
         
