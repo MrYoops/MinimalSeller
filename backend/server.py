@@ -236,8 +236,30 @@ async def register(user_data: UserCreate):
 
 @app.post("/api/auth/login", response_model=Token)
 async def login(credentials: UserLogin):
+    logger.info(f"Login attempt for email: {credentials.email}")
     user = await db.users.find_one({"email": credentials.email})
-    if not user or not verify_password(credentials.password, user["password_hash"]):
+    
+    if not user:
+        logger.warning(f"User not found: {credentials.email}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password"
+        )
+    
+    logger.info(f"User found: {user.get('email')}, checking password...")
+    # Try both field names for compatibility
+    password_hash = user.get("password_hash") or user.get("hashed_password")
+    if not password_hash:
+        logger.error(f"No password hash found for user: {credentials.email}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password"
+        )
+    password_valid = verify_password(credentials.password, password_hash)
+    logger.info(f"Password valid: {password_valid}")
+    
+    if not password_valid:
+        logger.warning(f"Invalid password for user: {credentials.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
@@ -1636,11 +1658,21 @@ async def create_fbo_shipment(
 
 # Import and include product routes
 try:
-    from products_routes import router as products_router
-    from ai_routes import router as ai_router
-    app.include_router(products_router)
-    app.include_router(ai_router)
-    logger.info("Product and AI routes included")
+    from product_routes import router as product_router
+    from inventory_routes import router as inventory_router
+    from order_routes import router as order_router
+    from finance_routes import router as finance_router
+    from analytics_routes import router as analytics_router
+    from admin_routes import router as admin_router
+    from marketplace_warehouse_routes import router as marketplace_warehouse_router
+    app.include_router(product_router)
+    app.include_router(inventory_router)
+    app.include_router(order_router)
+    app.include_router(finance_router)
+    app.include_router(analytics_router)
+    app.include_router(admin_router)
+    app.include_router(marketplace_warehouse_router)
+    logger.info("All routes included successfully (Product, Inventory, Order, Finance, Analytics, Admin, Marketplace Warehouses)")
 except Exception as e:
     logger.error(f"Failed to include routes: {e}")
 
@@ -1805,27 +1837,133 @@ async def update_marketplace_mapping(
 class WarehouseCreate(BaseModel):
     name: str
     type: str  # main, marketplace, transit
-    address: Optional[str] = ""
-    comment: Optional[str] = ""
+    # Basic settings
+    is_fbo: Optional[bool] = False
+    send_stock: Optional[bool] = True
+    load_orders: Optional[bool] = True
+    use_for_orders: Optional[bool] = True
+    priority: Optional[int] = 0
+    default_cell: Optional[str] = ""
+    # Marketplace connection
     marketplace_name: Optional[str] = None
     marketplace_warehouse_id: Optional[str] = None
+    # Additional settings
+    description: Optional[str] = ""
+    longitude: Optional[float] = None
+    latitude: Optional[float] = None
+    address: Optional[str] = ""
+    brand: Optional[str] = ""
+    working_hours: Optional[str] = ""
+    assembly_hours: Optional[int] = 0
+    storage_days: Optional[int] = 0
+    online_payment: Optional[bool] = False
+    cash_payment: Optional[bool] = False
+    card_payment: Optional[bool] = False
+    show_on_goods: Optional[bool] = False
 
 class WarehouseUpdate(BaseModel):
     name: Optional[str] = None
+    # Basic settings
+    is_fbo: Optional[bool] = None
+    send_stock: Optional[bool] = None
+    load_orders: Optional[bool] = None
+    use_for_orders: Optional[bool] = None
+    priority: Optional[int] = None
+    default_cell: Optional[str] = None
+    # Marketplace connection
+    marketplace_name: Optional[str] = None
+    marketplace_warehouse_id: Optional[str] = None
+    # Additional settings
+    description: Optional[str] = None
+    longitude: Optional[float] = None
+    latitude: Optional[float] = None
     address: Optional[str] = None
-    comment: Optional[str] = None
+    brand: Optional[str] = None
+    working_hours: Optional[str] = None
+    assembly_hours: Optional[int] = None
+    storage_days: Optional[int] = None
+    online_payment: Optional[bool] = None
+    cash_payment: Optional[bool] = None
+    card_payment: Optional[bool] = None
+    show_on_goods: Optional[bool] = None
 
 class Warehouse(BaseModel):
     id: str
     user_id: str
     name: str
     type: str
-    address: str
-    comment: str
+    # Basic settings
+    is_fbo: bool = False
+    send_stock: bool = True
+    load_orders: bool = True
+    use_for_orders: bool = True
+    priority: int = 0
+    default_cell: str = ""
+    # Marketplace connection
     marketplace_name: Optional[str] = None
     marketplace_warehouse_id: Optional[str] = None
     sync_with_main_warehouse_id: Optional[str] = None
+    # Additional settings
+    description: str = ""
+    longitude: Optional[float] = None
+    latitude: Optional[float] = None
+    address: str = ""
+    brand: str = ""
+    working_hours: str = ""
+    assembly_hours: int = 0
+    storage_days: int = 0
+    online_payment: bool = False
+    cash_payment: bool = False
+    card_payment: bool = False
+    show_on_goods: bool = False
     created_at: datetime
+    updated_at: datetime
+
+# ============ PRODUCTS MODELS ============
+
+class ProductCreate(BaseModel):
+    name: str
+    sku: str  # Артикул
+    category: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    price: Optional[float] = None
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    price: Optional[str] = None
+
+class Product(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    sku: str
+    category: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    price: Optional[float] = None
+    created_at: datetime
+    updated_at: datetime
+
+# ============ STOCK MODELS ============
+
+class StockCreate(BaseModel):
+    product_id: str
+    warehouse_id: str
+    quantity: int
+
+class StockUpdate(BaseModel):
+    quantity: int
+
+class Stock(BaseModel):
+    id: str
+    user_id: str
+    product_id: str
+    warehouse_id: str
+    quantity: int
     updated_at: datetime
 
 @app.post("/api/warehouses", status_code=201)
@@ -2060,3 +2198,254 @@ async def link_warehouse(
     logger.info(f"✅ Warehouse link updated")
     
     return {"message": "Связь установлена", "warehouse_id": warehouse_id}
+
+
+# ============================================
+# PRODUCTS ENDPOINTS
+# ============================================
+
+@app.post("/api/products", status_code=201)
+async def create_product(
+    product_data: ProductCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create new product"""
+    import uuid
+    
+    logger.info(f"📦 Creating product: {product_data.name} (SKU: {product_data.sku})")
+    
+    # Check if SKU already exists
+    existing = await db.products.find_one({
+        "user_id": current_user["_id"],
+        "sku": product_data.sku
+    })
+    
+    if existing:
+        logger.warning(f"❌ Product with SKU {product_data.sku} already exists")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Товар с артикулом {product_data.sku} уже существует"
+        )
+    
+    product_id = str(uuid.uuid4())
+    new_product = {
+        "_id": product_id,
+        "user_id": current_user["_id"],
+        "name": product_data.name,
+        "sku": product_data.sku,
+        "category": product_data.category or "",
+        "description": product_data.description or "",
+        "image_url": product_data.image_url or "",
+        "price": product_data.price or 0.0,
+        "created_at": datetime.utcnow().isoformat(),
+        "updated_at": datetime.utcnow().isoformat()
+    }
+    
+    await db.products.insert_one(new_product)
+    
+    logger.info(f"✅ Product created: {new_product['name']} (SKU: {new_product['sku']})")
+    
+    return {
+        "id": product_id,
+        "user_id": str(current_user["_id"]),
+        "name": new_product["name"],
+        "sku": new_product["sku"],
+        "category": new_product["category"],
+        "description": new_product["description"],
+        "image_url": new_product["image_url"],
+        "price": new_product["price"],
+        "created_at": new_product["created_at"],
+        "updated_at": new_product["updated_at"]
+    }
+
+@app.get("/api/products", response_model=List[Product])
+async def get_products(current_user: dict = Depends(get_current_user)):
+    """Get all products for current user"""
+    logger.info(f"📦 Fetching products for user {current_user['_id']}")
+    
+    products = await db.products.find({"user_id": current_user["_id"]}).to_list(length=1000)
+    
+    result = []
+    for p in products:
+        result.append(Product(
+            id=str(p["_id"]),
+            user_id=str(p["user_id"]),
+            name=p["name"],
+            sku=p["sku"],
+            category=p.get("category"),
+            description=p.get("description"),
+            image_url=p.get("image_url"),
+            price=p.get("price"),
+            created_at=datetime.fromisoformat(p["created_at"]),
+            updated_at=datetime.fromisoformat(p["updated_at"])
+        ))
+    
+    logger.info(f"✅ Found {len(result)} products")
+    return result
+
+@app.put("/api/products/{product_id}")
+async def update_product(
+    product_id: str,
+    product_data: ProductUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update product"""
+    logger.info(f"📦 Updating product: {product_id}")
+    
+    product = await db.products.find_one({
+        "_id": product_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    update_data = {"updated_at": datetime.utcnow().isoformat()}
+    
+    if product_data.name is not None:
+        update_data["name"] = product_data.name
+    if product_data.category is not None:
+        update_data["category"] = product_data.category
+    if product_data.description is not None:
+        update_data["description"] = product_data.description
+    if product_data.image_url is not None:
+        update_data["image_url"] = product_data.image_url
+    if product_data.price is not None:
+        update_data["price"] = product_data.price
+    
+    await db.products.update_one(
+        {"_id": product_id},
+        {"$set": update_data}
+    )
+    
+    logger.info(f"✅ Product updated: {product_id}")
+    
+    return {"message": "Товар успешно обновлён", "product_id": product_id}
+
+@app.delete("/api/products/{product_id}")
+async def delete_product(
+    product_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete product"""
+    logger.info(f"📦 Deleting product: {product_id}")
+    
+    product = await db.products.find_one({
+        "_id": product_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Check if product has stock
+    stock_count = await db.stock.count_documents({"product_id": product_id})
+    
+    if stock_count > 0:
+        logger.warning(f"❌ Cannot delete product {product_id}: has stock records")
+        raise HTTPException(
+            status_code=400,
+            detail="Нельзя удалить товар, у которого есть остатки на складах. Сначала обнулите остатки."
+        )
+    
+    await db.products.delete_one({"_id": product_id})
+    
+    logger.info(f"✅ Product deleted: {product_id}")
+    
+    return {"success": True, "message": "Товар успешно удален"}
+
+# ============================================
+# STOCK ENDPOINTS
+# ============================================
+
+@app.post("/api/stock", status_code=201)
+async def create_or_update_stock(
+    stock_data: StockCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create or update stock for product in warehouse"""
+    logger.info(f"📊 Setting stock: product {stock_data.product_id}, warehouse {stock_data.warehouse_id}, qty {stock_data.quantity}")
+    
+    # Check if product exists
+    product = await db.products.find_one({
+        "_id": stock_data.product_id,
+        "user_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Check if warehouse exists
+    warehouse = await db.warehouses.find_one({
+        "_id": stock_data.warehouse_id,
+        "user_id": current_user["_id"]
+    })
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Склад не найден")
+    
+    # Check if stock record already exists
+    existing_stock = await db.stock.find_one({
+        "user_id": current_user["_id"],
+        "product_id": stock_data.product_id,
+        "warehouse_id": stock_data.warehouse_id
+    })
+    
+    if existing_stock:
+        # Update existing record
+        await db.stock.update_one(
+            {"_id": existing_stock["_id"]},
+            {"$set": {
+                "quantity": stock_data.quantity,
+                "updated_at": datetime.utcnow().isoformat()
+            }}
+        )
+        logger.info(f"✅ Stock updated: {existing_stock['_id']}")
+        return {"message": "Остатки обновлены", "stock_id": str(existing_stock["_id"])}
+    else:
+        # Create new record
+        import uuid
+        stock_id = str(uuid.uuid4())
+        new_stock = {
+            "_id": stock_id,
+            "user_id": current_user["_id"],
+            "product_id": stock_data.product_id,
+            "warehouse_id": stock_data.warehouse_id,
+            "quantity": stock_data.quantity,
+            "updated_at": datetime.utcnow().isoformat()
+        }
+        await db.stock.insert_one(new_stock)
+        logger.info(f"✅ Stock created: {stock_id}")
+        return {"message": "Остатки созданы", "stock_id": stock_id}
+
+@app.get("/api/stock")
+async def get_stock(current_user: dict = Depends(get_current_user)):
+    """Get all stock records with product and warehouse details"""
+    logger.info(f"📊 Fetching stock for user {current_user['_id']}")
+    
+    stock_records = await db.stock.find({"user_id": current_user["_id"]}).to_list(length=10000)
+    
+    result = []
+    for record in stock_records:
+        # Get product info
+        product = await db.products.find_one({"_id": record["product_id"]})
+        # Get warehouse info
+        warehouse = await db.warehouses.find_one({"_id": record["warehouse_id"]})
+        
+        result.append({
+            "id": str(record["_id"]),
+            "product": {
+                "id": str(product["_id"]),
+                "name": product["name"],
+                "sku": product["sku"],
+                "image_url": product.get("image_url")
+            } if product else None,
+            "warehouse": {
+                "id": str(warehouse["_id"]),
+                "name": warehouse["name"],
+                "type": warehouse["type"]
+            } if warehouse else None,
+            "quantity": record["quantity"],
+            "updated_at": record["updated_at"]
+        })
+    
+    logger.info(f"✅ Found {len(result)} stock records")
+    return result
