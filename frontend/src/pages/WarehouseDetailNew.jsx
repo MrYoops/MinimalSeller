@@ -306,7 +306,7 @@ const WarehouseDetailNew = () => {
                     <option value="">-- Выбрать --</option>
                     {integrations.map(integration => (
                       <option key={integration.id} value={integration.id}>
-                        {integration.marketplace.toUpperCase()} - {integration.name || integration.api_key.substring(0, 10)}
+                        {integration.marketplace?.toUpperCase() || 'N/A'} - {integration.name || (integration.api_key ? integration.api_key.substring(0, 10) : 'No Key')}
                       </option>
                     ))}
                   </select>
