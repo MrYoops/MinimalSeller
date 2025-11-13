@@ -1664,12 +1664,13 @@ try:
 except Exception as e:
     logger.error(f"Failed to include product_routes: {e}")
 
-try:
-    from warehouse_links_routes import router as warehouse_links_router
-    app.include_router(warehouse_links_router)
-    logger.info("Warehouse links routes included")
-except Exception as e:
-    logger.error(f"Failed to include warehouse_links_routes: {e}")
+# Skip warehouse_links_routes for now (requires proper dependency setup)
+# try:
+#     from warehouse_links_routes import router as warehouse_links_router
+#     app.include_router(warehouse_links_router)
+#     logger.info("Warehouse links routes included")
+# except Exception as e:
+#     logger.error(f"Failed to include warehouse_links_routes: {e}")
 
 try:
     from order_routes import router as order_router
