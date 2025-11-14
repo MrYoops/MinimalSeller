@@ -376,11 +376,11 @@ class WildberriesConnector(BaseConnector):
             raise
     
     async def get_warehouses(self) -> List[Dict[str, Any]]:
-        """Get seller's FBS warehouses from Wildberries"""
-        logger.info("[WB] Fetching seller FBS warehouses")
+        """Get seller's FBS warehouses from Wildberries (Seller Warehouses API)"""
+        logger.info("[WB] Fetching seller's own FBS warehouses")
         
-        # Correct endpoint for getting Wildberries warehouses (including FBS)
-        url = f"{self.marketplace_api_url}/api/v1/warehouses"
+        # Seller Warehouses API endpoint (returns seller's warehouses, not WB fulfillment centers)
+        url = f"https://supplies-api.wildberries.ru/api/v1/warehouses"
         headers = self._get_headers()
         
         logger.info(f"[WB] Request URL: {url}")
@@ -391,23 +391,25 @@ class WildberriesConnector(BaseConnector):
             logger.info(f"[WB] Raw response: {response_data}")
             
             warehouses = response_data if isinstance(response_data, list) else []
-            logger.info(f"[WB] Received {len(warehouses)} warehouses")
+            logger.info(f"[WB] Received {len(warehouses)} seller warehouses")
             
             formatted_warehouses = []
             for wh in warehouses:
-                # WB returns warehouse data with various fields
-                wh_id = wh.get('ID') or wh.get('officeId') or wh.get('id')
-                wh_name = wh.get('name') or wh.get('officeName') or 'Unnamed warehouse'
+                # Parse seller warehouse data
+                wh_id = wh.get('id') or wh.get('officeId') or wh.get('ID')
+                wh_name = wh.get('name') or wh.get('warehouseName') or 'Unnamed warehouse'
                 
                 formatted_warehouses.append({
                     "id": str(wh_id),
                     "name": wh_name,
                     "office_id": wh.get('officeId', wh.get('officeID', 0)),
+                    "cargo_type": wh.get('cargoType', 0),
+                    "geo_name": wh.get('geoName', ''),
                     "type": "FBS",
                     "is_fbs": True
                 })
             
-            logger.info(f"[WB] Formatted {len(formatted_warehouses)} FBS warehouses")
+            logger.info(f"[WB] Formatted {len(formatted_warehouses)} seller FBS warehouses")
             return formatted_warehouses
             
         except MarketplaceError as e:
