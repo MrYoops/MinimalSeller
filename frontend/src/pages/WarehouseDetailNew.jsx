@@ -308,79 +308,82 @@ const WarehouseDetailNew = () => {
               СВЯЗИ СО СКЛАДАМИ МАРКЕТПЛЕЙСОВ
             </label>
             
-            {/* Add new link */}
+            {/* Add new link - NEW 3-FIELD STRUCTURE */}
             <div className="bg-gray-800 p-4 rounded-lg mb-4 space-y-3">
+              <p className="text-xs text-mm-cyan mb-3">
+                🔗 Загрузка FBS складов с маркетплейса
+              </p>
+              
+              {/* Step 1: Select Marketplace */}
               <div>
-                <label className="block text-xs mb-1">Выберите интеграцию</label>
+                <label className="block text-xs mb-1 font-mono">1️⃣ ВЫБЕРИТЕ МАРКЕТПЛЕЙС</label>
                 <select
-                  value={selectedIntegration}
-                  onChange={(e) => handleIntegrationChange(e.target.value)}
+                  value={selectedMarketplace}
+                  onChange={(e) => handleMarketplaceChange(e.target.value)}
                   className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-mm-cyan text-sm"
                 >
-                  <option value="">-- Выбрать --</option>
-                  {integrations.map(integration => (
-                    <option key={integration.id} value={integration.id}>
-                      {integration.marketplace?.toUpperCase() || 'N/A'} - {integration.name || (integration.api_key ? integration.api_key.substring(0, 10) : 'No Key')}
-                    </option>
-                  ))}
+                  <option value="">-- Выбрать маркетплейс --</option>
+                  <option value="ozon">OZON</option>
+                  <option value="wb">WILDBERRIES</option>
+                  <option value="yandex">YANDEX.MARKET</option>
                 </select>
               </div>
               
-              {/* Manual input for Yandex and WB */}
-              {showManualInput ? (
-                <div className="space-y-3 border-l-2 border-mm-cyan pl-3">
-                  <p className="text-xs text-mm-cyan">
-                    💡 {integrations.find(i => i.id === selectedIntegration)?.marketplace === 'yandex' 
-                      ? 'Для Yandex.Market необходимо ввести ID склада вручную (из личного кабинета)'
-                      : 'Для Wildberries необходимо ввести ID склада вручную (officeId из личного кабинета)'}
-                  </p>
-                  <div>
-                    <label className="block text-xs mb-1">ID склада (из личного кабинета Yandex)</label>
-                    <input
-                      type="text"
-                      value={manualWarehouseId}
-                      onChange={(e) => setManualWarehouseId(e.target.value)}
-                      placeholder="Например: 12345"
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-mm-cyan text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs mb-1">Название склада</label>
-                    <input
-                      type="text"
-                      value={manualWarehouseName}
-                      onChange={(e) => setManualWarehouseName(e.target.value)}
-                      placeholder="Например: Москва FBS"
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-mm-cyan text-sm"
-                    />
-                  </div>
-                </div>
-              ) : (
-                /* Auto-load for other marketplaces */
+              {/* Step 2: Select Integration */}
+              {selectedMarketplace && (
                 <div>
-                  <label className="block text-xs mb-1">
-                    Выберите склад
-                    {loadingMpWarehouses && <span className="ml-2 text-mm-cyan">загрузка...</span>}
+                  <label className="block text-xs mb-1 font-mono">2️⃣ ВЫБЕРИТЕ ИНТЕГРАЦИЮ</label>
+                  <select
+                    value={selectedIntegration}
+                    onChange={(e) => handleIntegrationChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-mm-cyan text-sm"
+                  >
+                    <option value="">-- Выбрать интеграцию --</option>
+                    {filteredIntegrations.map(integration => (
+                      <option key={integration.id} value={integration.id}>
+                        {integration.name || (integration.api_key ? `API: ${integration.api_key.substring(0, 15)}...` : 'No Key')}
+                      </option>
+                    ))}
+                  </select>
+                  {filteredIntegrations.length === 0 && (
+                    <p className="text-xs text-red-400 mt-1">
+                      ⚠️ Нет интеграций для {selectedMarketplace.toUpperCase()}. Добавьте в разделе ИНТЕГРАЦИИ.
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              {/* Step 3: Select Warehouse (Auto-loaded from MP) */}
+              {selectedIntegration && (
+                <div>
+                  <label className="block text-xs mb-1 font-mono">
+                    3️⃣ ВЫБЕРИТЕ СКЛАД FBS
+                    {loadingMpWarehouses && <span className="ml-2 text-mm-cyan animate-pulse">загрузка...</span>}
                   </label>
                   <select
                     value={selectedMpWarehouse}
                     onChange={(e) => setSelectedMpWarehouse(e.target.value)}
-                    disabled={!selectedIntegration || loadingMpWarehouses}
+                    disabled={loadingMpWarehouses}
                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-mm-cyan text-sm disabled:opacity-50"
                   >
-                    <option value="">-- Выбрать --</option>
+                    <option value="">-- Выбрать склад --</option>
                     {mpWarehouses.map(wh => (
                       <option key={wh.id} value={wh.id}>
                         {wh.name} (ID: {wh.id})
                       </option>
                     ))}
                   </select>
+                  {mpWarehouses.length === 0 && !loadingMpWarehouses && (
+                    <p className="text-xs text-yellow-400 mt-1">
+                      ⚠️ Склады не найдены. Создайте FBS склад в личном кабинете {selectedMarketplace.toUpperCase()}.
+                    </p>
+                  )}
                 </div>
               )}
               
               <button
                 onClick={handleAddLink}
-                disabled={!selectedIntegration || (!selectedMpWarehouse && !showManualInput) || (showManualInput && (!manualWarehouseId || !manualWarehouseName))}
+                disabled={!selectedMarketplace || !selectedIntegration || !selectedMpWarehouse}
                 className="w-full px-4 py-2 bg-mm-purple hover:bg-purple-600 rounded transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 <FiPlus />
