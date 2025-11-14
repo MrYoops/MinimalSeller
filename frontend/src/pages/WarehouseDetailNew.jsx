@@ -143,8 +143,8 @@ const WarehouseDetailNew = () => {
   const handleAddLink = async () => {
     const integration = integrations.find(i => i.id === selectedIntegration);
     
-    // For Yandex with manual input
-    if (showManualInput && integration?.marketplace === 'yandex') {
+    // For Yandex and WB with manual input
+    if (showManualInput && (integration?.marketplace === 'yandex' || integration?.marketplace === 'wb')) {
       if (!manualWarehouseId || !manualWarehouseName) {
         alert('Введите ID и название склада');
         return;
