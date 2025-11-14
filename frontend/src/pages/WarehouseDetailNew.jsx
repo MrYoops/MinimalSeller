@@ -45,7 +45,6 @@ const WarehouseDetailNew = () => {
 
   useEffect(() => {
     fetchWarehouse();
-    fetchIntegrations();
     fetchWarehouseLinks();
   }, [id]);
 
