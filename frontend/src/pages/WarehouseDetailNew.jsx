@@ -350,22 +350,45 @@ const WarehouseDetailNew = () => {
                 {warehouseLinks.map((link, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between bg-gray-800 px-4 py-3 rounded"
+                    className="bg-gray-800 px-4 py-3 rounded space-y-2"
                   >
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">
-                        {link.marketplace_name?.toUpperCase()} - {link.marketplace_warehouse_name}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        ID: {link.marketplace_warehouse_id}
-                      </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">
+                          {link.marketplace_name?.toUpperCase()} - {link.marketplace_warehouse_name}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          ID: {link.marketplace_warehouse_id}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteLink(link.id)}
+                        className="px-3 py-2 text-red-400 hover:bg-red-400/10 rounded transition"
+                      >
+                        <FiTrash2 />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleDeleteLink(link.id)}
-                      className="px-3 py-2 text-red-400 hover:bg-red-400/10 rounded transition"
-                    >
-                      <FiTrash2 />
-                    </button>
+                    
+                    {/* Send Stock Toggle */}
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={link.send_stock !== false}
+                        onChange={async (e) => {
+                          try {
+                            await api.put(`/api/warehouses/${id}/links/${link.id}`, {
+                              send_stock: e.target.checked
+                            });
+                            fetchWarehouseLinks(); // Reload links
+                          } catch (error) {
+                            console.error('Error updating link:', error);
+                            alert('Ошибка обновления: ' + (error.response?.data?.detail || error.message));
+                          }
+                        }}
+                        className="w-4 h-4 rounded"
+                      />
+                      <span className="text-xs text-gray-300">Передавать остатки на эту интеграцию</span>
+                    </label>
                   </div>
                 ))}
               </div>
