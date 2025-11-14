@@ -1060,16 +1060,14 @@ class BackendTester:
         self.test_login()
         self.test_get_me()
         
-        # NEW TESTS: Wildberries API with REAL token (CRITICAL)
+        # NEW TESTS: Ozon API with REAL credentials (CRITICAL)
         print("\n" + "="*60)
-        print("WILDBERRIES API INTEGRATION TESTS (REAL TOKEN)")
+        print("OZON API INTEGRATION TESTS (REAL CREDENTIALS)")
         print("="*60)
-        print_warning("CRITICAL: Testing WB warehouse endpoint fix")
-        print_warning("Endpoint changed from /api/v3/supplier/warehouses to /api/v3/warehouses")
-        self.test_wb_add_integration()
-        self.test_wb_connection()
-        self.test_wb_seller_warehouses()
-        self.test_wb_endpoint_verification()
+        print_warning("CRITICAL: Testing Ozon API payload fix")
+        print_warning("Payload changed to include offer_id and product_id arrays")
+        self.test_ozon_api_connection_real()
+        self.test_ozon_warehouses()
         
         # Print summary
         print("\n" + "="*60)
