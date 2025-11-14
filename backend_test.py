@@ -617,6 +617,165 @@ class BackendTester:
             self.failed += 1
             return False
     
+    def test_ozon_api_connection_real(self) -> bool:
+        """Test 10: Test Ozon API Connection with REAL credentials"""
+        print("\n" + "="*60)
+        print("TEST 10: Test Ozon API Connection (REAL CREDENTIALS)")
+        print("="*60)
+        print_info("Testing with REAL Ozon API credentials")
+        
+        if not self.token:
+            print_error("No token available. Login first.")
+            self.failed += 1
+            return False
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json"
+            }
+            
+            # REAL Ozon credentials from review request
+            payload = {
+                "marketplace": "ozon",
+                "client_id": "3152566",
+                "api_key": "d0d8758a-d6a9-47f2-b9e0-ae926ae37b00"
+            }
+            
+            print_info(f"Testing Ozon API with Client ID: {payload['client_id']}")
+            
+            response = requests.post(
+                f"{self.base_url}/seller/api-keys/test",
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+            
+            print_info(f"Response status: {response.status_code}")
+            
+            if response.status_code == 404:
+                print_error("❌ CRITICAL: Endpoint returned 404!")
+                print_error("This means the API endpoint in connectors.py is WRONG")
+                print_error("Expected endpoint: /v3/product/info/list")
+                self.failed += 1
+                return False
+            
+            if response.status_code == 200:
+                data = response.json()
+                print_info(f"Response: {data}")
+                
+                if data.get("success") == True:
+                    print_success(f"✅ Ozon API connection successful!")
+                    print_info(f"Products found: {data.get('products_count', 0)}")
+                    self.passed += 1
+                    return True
+                else:
+                    print_error(f"❌ Ozon API connection failed: {data.get('message')}")
+                    print_info("Check if credentials are valid or API endpoint is correct")
+                    self.failed += 1
+                    return False
+            else:
+                print_error(f"Request failed with status {response.status_code}: {response.text}")
+                self.failed += 1
+                return False
+                
+        except Exception as e:
+            print_error(f"Exception during Ozon API test: {str(e)}")
+            self.failed += 1
+            return False
+    
+    def test_ozon_warehouses(self) -> bool:
+        """Test 11: Get Ozon Warehouses (seller's FBS warehouses)"""
+        print("\n" + "="*60)
+        print("TEST 11: Get Ozon Warehouses (Seller's FBS Warehouses)")
+        print("="*60)
+        print_info("First adding Ozon API key, then fetching warehouses")
+        
+        if not self.token:
+            print_error("No token available. Login first.")
+            self.failed += 1
+            return False
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json"
+            }
+            
+            # Step 1: Add Ozon API key
+            print_info("Step 1: Adding Ozon API key...")
+            add_key_payload = {
+                "marketplace": "ozon",
+                "client_id": "3152566",
+                "api_key": "d0d8758a-d6a9-47f2-b9e0-ae926ae37b00"
+            }
+            
+            add_response = requests.post(
+                f"{self.base_url}/seller/api-keys",
+                headers=headers,
+                json=add_key_payload,
+                timeout=10
+            )
+            
+            if add_response.status_code != 200:
+                print_warning(f"Could not add API key (may already exist): {add_response.text}")
+            else:
+                ozon_key_id = add_response.json().get('key_id')
+                print_success(f"Ozon API key added: {ozon_key_id}")
+            
+            # Step 2: Get warehouses
+            print_info("Step 2: Fetching Ozon warehouses...")
+            
+            warehouse_response = requests.get(
+                f"{self.base_url}/marketplaces/ozon/all-warehouses",
+                headers=headers,
+                timeout=30
+            )
+            
+            print_info(f"Warehouse response status: {warehouse_response.status_code}")
+            
+            if warehouse_response.status_code == 200:
+                data = warehouse_response.json()
+                print_info(f"Response: {json.dumps(data, indent=2)}")
+                
+                warehouses = data.get('warehouses', [])
+                
+                if isinstance(warehouses, list):
+                    print_success(f"✅ Successfully retrieved Ozon warehouses!")
+                    print_info(f"Total warehouses: {len(warehouses)}")
+                    
+                    # Check if these are seller's FBS warehouses (not FBO)
+                    fbs_count = sum(1 for wh in warehouses if wh.get('is_fbs') == True)
+                    fbo_count = sum(1 for wh in warehouses if wh.get('type', '').upper() == 'FBO' and not wh.get('is_fbs'))
+                    
+                    print_info(f"FBS warehouses (seller's own): {fbs_count}")
+                    print_info(f"FBO warehouses (marketplace): {fbo_count}")
+                    
+                    # Display warehouse details
+                    for wh in warehouses[:5]:  # Show first 5
+                        print_info(f"  - {wh.get('name')} (ID: {wh.get('id')}, Type: {wh.get('type')}, FBS: {wh.get('is_fbs')})")
+                    
+                    if fbo_count > 0 and fbs_count == 0:
+                        print_warning("⚠️  WARNING: Only FBO warehouses returned, but should return seller's FBS warehouses!")
+                        print_warning("The endpoint should use /v1/warehouse/list to get seller's warehouses")
+                    
+                    self.passed += 1
+                    return True
+                else:
+                    print_error(f"Unexpected response format: {data}")
+                    self.failed += 1
+                    return False
+            else:
+                print_error(f"Failed to get warehouses: {warehouse_response.status_code}")
+                print_error(f"Response: {warehouse_response.text}")
+                self.failed += 1
+                return False
+                
+        except Exception as e:
+            print_error(f"Exception during warehouse test: {str(e)}")
+            self.failed += 1
+            return False
+    
     def run_all_tests(self):
         """Run all backend tests"""
         print("\n" + "="*60)
@@ -636,6 +795,13 @@ class BackendTester:
         self.test_api_key_connection()
         self.test_get_marketplace_products()
         self.test_delete_api_key()
+        
+        # NEW TESTS: Ozon API with REAL credentials
+        print("\n" + "="*60)
+        print("OZON API INTEGRATION TESTS (REAL CREDENTIALS)")
+        print("="*60)
+        self.test_ozon_api_connection_real()
+        self.test_ozon_warehouses()
         
         # Print summary
         print("\n" + "="*60)
