@@ -639,7 +639,7 @@ class BackendTester:
             payload = {
                 "marketplace": "ozon",
                 "client_id": "3152566",
-                "api_key": "d0d8758a-d6a9-47f2-b9e0-ae926ae37b00"
+                "api_key": "a3acc5e5-45d8-4667-9fab-9f6d0e3bfb3c"
             }
             
             print_info(f"Testing Ozon API with Client ID: {payload['client_id']}")
