@@ -190,9 +190,8 @@ class OzonConnector(BaseConnector):
         logger.info(f"[Ozon] Request URL: {url}")
         logger.info(f"[Ozon] Client-Id: {self.client_id[:10]}...")
         
-        payload = {
-            "filter_by_supply_type": "ALL"  # Get all warehouse types
-        }
+        # Empty payload to get all warehouses
+        payload = {}
         
         try:
             response_data = await self._make_request("POST", url, headers, json_data=payload)
