@@ -155,6 +155,8 @@ class OzonConnector(BaseConnector):
             "limit": 100
         }
         
+        logger.info(f"[Ozon] Payload being sent: {list_payload}")
+        
         all_products = []
         
         try:
