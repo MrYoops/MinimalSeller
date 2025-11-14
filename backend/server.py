@@ -2355,6 +2355,7 @@ async def create_warehouse_link(
         "marketplace_name": link_data.get("marketplace_name"),
         "marketplace_warehouse_id": link_data.get("marketplace_warehouse_id"),
         "marketplace_warehouse_name": link_data.get("marketplace_warehouse_name"),
+        "send_stock": link_data.get("send_stock", True),  # Default to True
         "created_at": datetime.utcnow().isoformat(),
         "user_id": current_user["_id"]
     }
