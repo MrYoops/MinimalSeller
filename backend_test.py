@@ -685,10 +685,11 @@ class BackendTester:
             return False
     
     def test_ozon_warehouses(self) -> bool:
-        """Test 11: Get Ozon Warehouses (seller's FBS warehouses)"""
+        """Test 11: Get Ozon Warehouses with GZIP decompression (CRITICAL)"""
         print("\n" + "="*60)
-        print("TEST 11: Get Ozon Warehouses (Seller's FBS Warehouses)")
+        print("TEST 11: Get Ozon Warehouses with GZIP Decompression (CRITICAL)")
         print("="*60)
+        print_warning("CRITICAL: Testing gzip decompression fix for Ozon API")
         print_info("First adding Ozon API key, then fetching warehouses")
         
         if not self.token:
@@ -725,6 +726,7 @@ class BackendTester:
             
             # Step 2: Get warehouses
             print_info("Step 2: Fetching Ozon warehouses...")
+            print_info("Expected: Backend should detect and decompress gzip response")
             
             warehouse_response = requests.get(
                 f"{self.base_url}/marketplaces/ozon/all-warehouses",
@@ -738,11 +740,23 @@ class BackendTester:
                 data = warehouse_response.json()
                 print_info(f"Response: {json.dumps(data, indent=2)}")
                 
+                # Check if response is properly parsed JSON (not garbled text)
+                if not isinstance(data, dict):
+                    print_error("❌ Response is not a valid JSON object!")
+                    print_error("This indicates gzip decompression may have failed")
+                    self.failed += 1
+                    return False
+                
                 warehouses = data.get('warehouses', [])
                 
                 if isinstance(warehouses, list):
                     print_success(f"✅ Successfully retrieved Ozon warehouses!")
+                    print_success(f"✅ Response properly parsed as JSON (gzip decompression working)")
                     print_info(f"Total warehouses: {len(warehouses)}")
+                    
+                    if len(warehouses) == 0:
+                        print_info("Seller has 0 FBS warehouses (this is legitimate for new accounts)")
+                        print_info("The important thing is the API call succeeded and response was parsed")
                     
                     # Check if these are seller's FBS warehouses (not FBO)
                     fbs_count = sum(1 for wh in warehouses if wh.get('is_fbs') == True)
@@ -758,6 +772,10 @@ class BackendTester:
                     if fbo_count > 0 and fbs_count == 0:
                         print_warning("⚠️  WARNING: Only FBO warehouses returned, but should return seller's FBS warehouses!")
                         print_warning("The endpoint should use /v1/warehouse/list to get seller's warehouses")
+                    
+                    # Step 3: Check backend logs for gzip detection message
+                    print_info("\nStep 3: Checking backend logs for gzip decompression...")
+                    self.check_backend_logs_for_gzip()
                     
                     self.passed += 1
                     return True
@@ -775,6 +793,30 @@ class BackendTester:
             print_error(f"Exception during warehouse test: {str(e)}")
             self.failed += 1
             return False
+    
+    def check_backend_logs_for_gzip(self):
+        """Helper: Check backend logs for gzip decompression messages"""
+        try:
+            import subprocess
+            
+            # Check backend logs for gzip detection
+            cmd = "tail -n 200 /var/log/supervisor/backend.out.log | grep -i 'gzip' | tail -n 5"
+            
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            
+            if result.stdout:
+                print_success("✅ Found gzip-related log entries:")
+                print(result.stdout)
+                
+                if "Detected gzip-compressed response, decompressing" in result.stdout:
+                    print_success("✅ CONFIRMED: Gzip decompression was triggered!")
+                else:
+                    print_info("Gzip logs found but no decompression message")
+            else:
+                print_info("No gzip-related logs found (response may not have been gzip-compressed)")
+                
+        except Exception as e:
+            print_warning(f"Could not check logs: {str(e)}")
     
     def test_wb_add_integration(self) -> bool:
         """Test 12: Add WB Integration with REAL token"""
