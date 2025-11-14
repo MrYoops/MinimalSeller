@@ -115,7 +115,7 @@ def test_get_categories():
     print_test("Получение списка категорий")
     
     response = requests.get(
-        f"{BACKEND_URL}/products/categories",
+        f"{BACKEND_URL}/catalog/categories",
         headers=get_headers()
     )
     
