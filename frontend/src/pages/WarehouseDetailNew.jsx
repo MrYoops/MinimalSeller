@@ -351,11 +351,13 @@ const WarehouseDetailNew = () => {
                 </select>
               </div>
               
-              {/* Manual input for Yandex */}
+              {/* Manual input for Yandex and WB */}
               {showManualInput ? (
                 <div className="space-y-3 border-l-2 border-mm-cyan pl-3">
                   <p className="text-xs text-mm-cyan">
-                    💡 Для Yandex.Market необходимо ввести ID склада вручную
+                    💡 {integrations.find(i => i.id === selectedIntegration)?.marketplace === 'yandex' 
+                      ? 'Для Yandex.Market необходимо ввести ID склада вручную (из личного кабинета)'
+                      : 'Для Wildberries необходимо ввести ID склада вручную (officeId из личного кабинета)'}
                   </p>
                   <div>
                     <label className="block text-xs mb-1">ID склада (из личного кабинета Yandex)</label>
