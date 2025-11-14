@@ -60,6 +60,7 @@ class BaseConnector:
                 if method == "GET":
                     response = await client.get(url, headers=headers, params=params)
                 elif method == "POST":
+                    logger.info(f"[{self.marketplace_name}] POST JSON data: {json_data}")
                     response = await client.post(url, headers=headers, json=json_data, params=params)
                 elif method == "PUT":
                     response = await client.put(url, headers=headers, json=json_data)
