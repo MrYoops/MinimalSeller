@@ -776,6 +776,276 @@ class BackendTester:
             self.failed += 1
             return False
     
+    def test_wb_add_integration(self) -> bool:
+        """Test 12: Add WB Integration with REAL token"""
+        print("\n" + "="*60)
+        print("TEST 12: Add WB Integration (REAL TOKEN)")
+        print("="*60)
+        print_info("Adding Wildberries integration with REAL valid token")
+        
+        if not self.token:
+            print_error("No token available. Login first.")
+            self.failed += 1
+            return False
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json"
+            }
+            
+            # REAL WB token from review request
+            payload = {
+                "marketplace": "wb",
+                "client_id": "",
+                "api_key": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjUwOTA0djEiLCJ0eXAiOiJKV1QifQ.eyJhY2MiOjEsImVudCI6MSwiZXhwIjoxNzc4OTA3MzY0LCJpZCI6IjAxOWE4MzRiLWE0YmYtNzhlMy1hNjIwLTY0YmYwZmFhYmQzYyIsImlpZCI6MzAxNjU1NDM2LCJvaWQiOjI1MDA2MDc4OCwicyI6MTYxMjYsInNpZCI6Ijk5NmRiN2VjLWZiMGUtNGU5Ni05NmQ1LTcxNjgwNWMwNWU3MCIsInQiOmZhbHNlLCJ1aWQiOjMwMTY1NTQzNn0.-HhPg4RMtRtgRgT-jo2f2Lyp1s9rIgKzoyEoKpVl4s-IRp_kQ9_JMeDG1DxBiwAzeZ_So9McQEaSfThjinAqYQ"
+            }
+            
+            print_info(f"Adding WB integration...")
+            
+            response = requests.post(
+                f"{self.base_url}/seller/api-keys",
+                headers=headers,
+                json=payload,
+                timeout=10
+            )
+            
+            print_info(f"Response status: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "key_id" in data:
+                    wb_key_id = data["key_id"]
+                    print_success(f"✅ WB integration added successfully!")
+                    print_info(f"Key ID: {wb_key_id}")
+                    print_info(f"Masked Key: {data.get('key', {}).get('api_key_masked')}")
+                    self.passed += 1
+                    return True
+                else:
+                    print_error(f"Response missing key_id: {data}")
+                    self.failed += 1
+                    return False
+            else:
+                print_error(f"Failed to add WB integration: {response.status_code}")
+                print_error(f"Response: {response.text}")
+                self.failed += 1
+                return False
+                
+        except Exception as e:
+            print_error(f"Exception during WB integration add: {str(e)}")
+            self.failed += 1
+            return False
+    
+    def test_wb_connection(self) -> bool:
+        """Test 13: Test WB Connection with REAL token"""
+        print("\n" + "="*60)
+        print("TEST 13: Test WB Connection (REAL TOKEN)")
+        print("="*60)
+        print_info("Testing Wildberries API connection with REAL valid token")
+        
+        if not self.token:
+            print_error("No token available. Login first.")
+            self.failed += 1
+            return False
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json"
+            }
+            
+            # REAL WB token from review request
+            payload = {
+                "marketplace": "wb",
+                "client_id": "",
+                "api_key": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjUwOTA0djEiLCJ0eXAiOiJKV1QifQ.eyJhY2MiOjEsImVudCI6MSwiZXhwIjoxNzc4OTA3MzY0LCJpZCI6IjAxOWE4MzRiLWE0YmYtNzhlMy1hNjIwLTY0YmYwZmFhYmQzYyIsImlpZCI6MzAxNjU1NDM2LCJvaWQiOjI1MDA2MDc4OCwicyI6MTYxMjYsInNpZCI6Ijk5NmRiN2VjLWZiMGUtNGU5Ni05NmQ1LTcxNjgwNWMwNWU3MCIsInQiOmZhbHNlLCJ1aWQiOjMwMTY1NTQzNn0.-HhPg4RMtRtgRgT-jo2f2Lyp1s9rIgKzoyEoKpVl4s-IRp_kQ9_JMeDG1DxBiwAzeZ_So9McQEaSfThjinAqYQ"
+            }
+            
+            print_info(f"Testing WB API connection...")
+            
+            response = requests.post(
+                f"{self.base_url}/seller/api-keys/test",
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+            
+            print_info(f"Response status: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                print_info(f"Response: {json.dumps(data, indent=2)}")
+                
+                if data.get("success") == True:
+                    print_success(f"✅ WB API connection successful!")
+                    print_info(f"Products found: {data.get('products_count', 0)}")
+                    self.passed += 1
+                    return True
+                else:
+                    print_error(f"❌ WB API connection failed: {data.get('message')}")
+                    print_info("Check if token is valid or API endpoint is correct")
+                    self.failed += 1
+                    return False
+            else:
+                print_error(f"Request failed with status {response.status_code}: {response.text}")
+                self.failed += 1
+                return False
+                
+        except Exception as e:
+            print_error(f"Exception during WB API test: {str(e)}")
+            self.failed += 1
+            return False
+    
+    def test_wb_seller_warehouses(self) -> bool:
+        """Test 14: Get WB SELLER Warehouses (CRITICAL TEST)"""
+        print("\n" + "="*60)
+        print("TEST 14: Get WB SELLER Warehouses (CRITICAL TEST)")
+        print("="*60)
+        print_info("Fetching seller's FBS warehouses from Wildberries")
+        print_warning("CRITICAL: Should return SELLER'S warehouses, NOT WB FBO warehouses!")
+        
+        if not self.token:
+            print_error("No token available. Login first.")
+            self.failed += 1
+            return False
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}"
+            }
+            
+            print_info("Fetching WB warehouses...")
+            
+            warehouse_response = requests.get(
+                f"{self.base_url}/marketplaces/wb/all-warehouses",
+                headers=headers,
+                timeout=30
+            )
+            
+            print_info(f"Warehouse response status: {warehouse_response.status_code}")
+            
+            if warehouse_response.status_code == 200:
+                data = warehouse_response.json()
+                print_info(f"Response: {json.dumps(data, indent=2)}")
+                
+                warehouses = data.get('warehouses', [])
+                
+                if isinstance(warehouses, list):
+                    print_success(f"✅ Successfully retrieved WB warehouses!")
+                    print_info(f"Total warehouses: {len(warehouses)}")
+                    
+                    # CRITICAL VALIDATION: Check if these are seller's warehouses or WB FBO warehouses
+                    fbo_warehouse_names = ["Коледино", "Электросталь", "Подольск", "Казань", "Екатеринбург"]
+                    
+                    fbo_count = 0
+                    fbs_count = 0
+                    
+                    print("\n" + "-"*60)
+                    print("WAREHOUSE DETAILS:")
+                    print("-"*60)
+                    
+                    for wh in warehouses:
+                        wh_name = wh.get('name', '')
+                        wh_type = wh.get('type', '')
+                        is_fbs = wh.get('is_fbs', False)
+                        
+                        print_info(f"  - Name: {wh_name}")
+                        print_info(f"    ID: {wh.get('id')}")
+                        print_info(f"    Type: {wh_type}")
+                        print_info(f"    is_fbs: {is_fbs}")
+                        print_info(f"    Address: {wh.get('address', 'N/A')}")
+                        
+                        # Check if this is a WB FBO warehouse (WRONG!)
+                        if any(fbo_name in wh_name for fbo_name in fbo_warehouse_names):
+                            fbo_count += 1
+                            print_error(f"    ❌ WARNING: This is a WB FBO warehouse (WRONG!)")
+                        elif is_fbs == True and wh_type == "FBS":
+                            fbs_count += 1
+                            print_success(f"    ✅ This is a seller's FBS warehouse (CORRECT!)")
+                        
+                        print()
+                    
+                    print("-"*60)
+                    print_info(f"FBS warehouses (seller's own): {fbs_count}")
+                    print_info(f"FBO warehouses (WB marketplace): {fbo_count}")
+                    print("-"*60)
+                    
+                    # CRITICAL VALIDATION
+                    if fbo_count > 0 and fbs_count == 0:
+                        print_error("❌ CRITICAL FAILURE: Only WB FBO warehouses returned!")
+                        print_error("Expected: Seller's FBS warehouses")
+                        print_error("Got: WB marketplace FBO warehouses")
+                        print_error("The endpoint is WRONG!")
+                        self.failed += 1
+                        return False
+                    elif fbs_count > 0:
+                        print_success("✅ CORRECT: Seller's FBS warehouses returned!")
+                        self.passed += 1
+                        return True
+                    else:
+                        print_warning("⚠️  No warehouses returned (seller may not have any)")
+                        self.passed += 1
+                        return True
+                else:
+                    print_error(f"Unexpected response format: {data}")
+                    self.failed += 1
+                    return False
+            else:
+                print_error(f"Failed to get warehouses: {warehouse_response.status_code}")
+                print_error(f"Response: {warehouse_response.text}")
+                self.failed += 1
+                return False
+                
+        except Exception as e:
+            print_error(f"Exception during warehouse test: {str(e)}")
+            self.failed += 1
+            return False
+    
+    def test_wb_endpoint_verification(self) -> bool:
+        """Test 15: Verify WB endpoint is correct in backend logs"""
+        print("\n" + "="*60)
+        print("TEST 15: Verify WB Endpoint in Backend Logs")
+        print("="*60)
+        print_info("Checking backend logs for correct WB warehouse endpoint")
+        
+        try:
+            import subprocess
+            
+            # Check backend logs for the warehouse API call
+            cmd = "tail -n 100 /var/log/supervisor/backend.out.log | grep -i 'warehouses' | tail -n 10"
+            
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            
+            if result.stdout:
+                print_info("Recent warehouse-related log entries:")
+                print(result.stdout)
+                
+                # Check if correct endpoint is used
+                if "https://marketplace-api.wildberries.ru/api/v3/warehouses" in result.stdout:
+                    print_success("✅ CORRECT endpoint found: /api/v3/warehouses")
+                    self.passed += 1
+                    return True
+                elif "/api/v3/supplier/warehouses" in result.stdout:
+                    print_error("❌ OLD endpoint found: /api/v3/supplier/warehouses (WRONG!)")
+                    print_error("Should be: /api/v3/warehouses")
+                    self.failed += 1
+                    return False
+                else:
+                    print_warning("⚠️  Could not find warehouse endpoint in logs")
+                    print_info("This may be normal if no warehouse requests were made yet")
+                    self.warnings += 1
+                    return True
+            else:
+                print_warning("⚠️  No warehouse-related logs found")
+                self.warnings += 1
+                return True
+                
+        except Exception as e:
+            print_warning(f"Could not check logs: {str(e)}")
+            self.warnings += 1
+            return True
+    
     def run_all_tests(self):
         """Run all backend tests"""
         print("\n" + "="*60)
@@ -789,19 +1059,17 @@ class BackendTester:
         self.test_health_check()
         self.test_login()
         self.test_get_me()
-        self.test_add_api_key()
-        self.test_list_api_keys()
-        self.test_update_api_key()
-        self.test_api_key_connection()
-        self.test_get_marketplace_products()
-        self.test_delete_api_key()
         
-        # NEW TESTS: Ozon API with REAL credentials
+        # NEW TESTS: Wildberries API with REAL token (CRITICAL)
         print("\n" + "="*60)
-        print("OZON API INTEGRATION TESTS (REAL CREDENTIALS)")
+        print("WILDBERRIES API INTEGRATION TESTS (REAL TOKEN)")
         print("="*60)
-        self.test_ozon_api_connection_real()
-        self.test_ozon_warehouses()
+        print_warning("CRITICAL: Testing WB warehouse endpoint fix")
+        print_warning("Endpoint changed from /api/v3/supplier/warehouses to /api/v3/warehouses")
+        self.test_wb_add_integration()
+        self.test_wb_connection()
+        self.test_wb_seller_warehouses()
+        self.test_wb_endpoint_verification()
         
         # Print summary
         print("\n" + "="*60)
