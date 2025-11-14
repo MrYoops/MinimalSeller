@@ -794,26 +794,63 @@ class BackendTester:
             self.failed += 1
             return False
     
-    def check_backend_logs_for_gzip(self):
-        """Helper: Check backend logs for gzip decompression messages"""
+    def check_backend_logs_for_compression(self):
+        """Helper: Check backend logs for Brotli/gzip decompression messages"""
         try:
             import subprocess
             
-            # Check backend logs for gzip detection
-            cmd = "tail -n 200 /var/log/supervisor/backend.out.log | grep -i 'gzip' | tail -n 5"
+            # Check backend logs for compression detection
+            print_info("Checking for Brotli compression logs...")
+            cmd_brotli = "tail -n 300 /var/log/supervisor/backend.out.log | grep -i 'brotli' | tail -n 10"
             
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            result_brotli = subprocess.run(cmd_brotli, shell=True, capture_output=True, text=True)
             
-            if result.stdout:
-                print_success("✅ Found gzip-related log entries:")
-                print(result.stdout)
+            if result_brotli.stdout:
+                print_success("✅ Found Brotli-related log entries:")
+                print(result_brotli.stdout)
                 
-                if "Detected gzip-compressed response, decompressing" in result.stdout:
-                    print_success("✅ CONFIRMED: Gzip decompression was triggered!")
-                else:
-                    print_info("Gzip logs found but no decompression message")
+                if "Detected Brotli-compressed response, decompressing" in result_brotli.stdout:
+                    print_success("✅ CONFIRMED: Brotli decompression was triggered!")
+                    if "Successfully decompressed Brotli" in result_brotli.stdout:
+                        print_success("✅ CONFIRMED: Brotli decompression succeeded!")
+                        return
             else:
-                print_info("No gzip-related logs found (response may not have been gzip-compressed)")
+                print_info("No Brotli-related logs found, checking for gzip...")
+            
+            # Check for gzip if no Brotli found
+            print_info("Checking for gzip compression logs...")
+            cmd_gzip = "tail -n 300 /var/log/supervisor/backend.out.log | grep -i 'gzip' | tail -n 10"
+            
+            result_gzip = subprocess.run(cmd_gzip, shell=True, capture_output=True, text=True)
+            
+            if result_gzip.stdout:
+                print_success("✅ Found gzip-related log entries:")
+                print(result_gzip.stdout)
+                
+                if "Detected gzip-compressed response, decompressing" in result_gzip.stdout:
+                    print_success("✅ CONFIRMED: Gzip decompression was triggered!")
+                    if "Successfully decompressed gzip" in result_gzip.stdout:
+                        print_success("✅ CONFIRMED: Gzip decompression succeeded!")
+                        return
+            else:
+                print_info("No gzip-related logs found")
+            
+            # Check for Content-Encoding header logs
+            print_info("Checking for Content-Encoding header logs...")
+            cmd_encoding = "tail -n 300 /var/log/supervisor/backend.out.log | grep -i 'content-encoding' | tail -n 5"
+            
+            result_encoding = subprocess.run(cmd_encoding, shell=True, capture_output=True, text=True)
+            
+            if result_encoding.stdout:
+                print_info("Content-Encoding header logs:")
+                print(result_encoding.stdout)
+                
+                if "'br'" in result_encoding.stdout or "br" in result_encoding.stdout:
+                    print_info("✅ Response was Brotli-compressed (Content-Encoding: br)")
+                elif "'gzip'" in result_encoding.stdout or "gzip" in result_encoding.stdout:
+                    print_info("✅ Response was gzip-compressed (Content-Encoding: gzip)")
+            else:
+                print_info("No Content-Encoding logs found (response may not have been compressed)")
                 
         except Exception as e:
             print_warning(f"Could not check logs: {str(e)}")
