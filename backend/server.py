@@ -478,6 +478,13 @@ async def add_api_key(
             detail="Invalid marketplace. Use: ozon, wb, or yandex"
         )
     
+    # Validate API key is not empty
+    if not key_data.api_key or key_data.api_key.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="API key is required and cannot be empty"
+        )
+    
     # Generate UUID for key ID
     key_id = str(uuid.uuid4())
     
