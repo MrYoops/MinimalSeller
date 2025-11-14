@@ -2277,6 +2277,75 @@ async def get_integration_warehouses(
         logger.error(f"❌ Failed to load warehouses: {e.message}")
         raise HTTPException(status_code=e.status_code, detail=e.message)
 
+@app.get("/api/marketplaces/{marketplace}/all-warehouses")
+async def get_all_marketplace_warehouses(
+    marketplace: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get warehouses from ALL integrations of specific marketplace - like SelSup"""
+    from connectors import get_connector, MarketplaceError
+    
+    logger.info(f"📦 Loading ALL warehouses from marketplace: {marketplace}")
+    
+    # Get all API keys for this marketplace
+    profile = await db.seller_profiles.find_one({'user_id': current_user['_id']})
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    api_keys = profile.get('api_keys', [])
+    marketplace_keys = [k for k in api_keys if k.get('marketplace') == marketplace]
+    
+    if not marketplace_keys:
+        return {
+            "marketplace": marketplace,
+            "warehouses": [],
+            "message": f"No API keys configured for {marketplace}. Please add integration first."
+        }
+    
+    logger.info(f"📍 Found {len(marketplace_keys)} integration(s) for {marketplace}")
+    
+    # Collect warehouses from ALL integrations
+    all_warehouses = []
+    seen_warehouse_ids = set()
+    
+    for api_key in marketplace_keys:
+        if not api_key.get('api_key'):
+            continue
+        
+        try:
+            connector = get_connector(
+                marketplace,
+                api_key.get('client_id', ''),
+                api_key['api_key']
+            )
+            
+            warehouses = await connector.get_warehouses()
+            
+            # Add integration_id to each warehouse and deduplicate
+            for wh in warehouses:
+                wh_id = wh.get('id')
+                if wh_id not in seen_warehouse_ids:
+                    wh['integration_id'] = api_key.get('id')
+                    wh['integration_name'] = api_key.get('name', api_key.get('client_id', 'Integration'))
+                    all_warehouses.append(wh)
+                    seen_warehouse_ids.add(wh_id)
+            
+            logger.info(f"✅ Loaded {len(warehouses)} warehouses from integration {api_key.get('id')[:8]}...")
+            
+        except MarketplaceError as e:
+            logger.warning(f"⚠️ Failed to load from one integration: {e.message}")
+            continue
+        except Exception as e:
+            logger.warning(f"⚠️ Unexpected error: {str(e)}")
+            continue
+    
+    logger.info(f"✅ Total loaded {len(all_warehouses)} unique warehouses from {marketplace}")
+    
+    return {
+        "marketplace": marketplace,
+        "warehouses": all_warehouses
+    }
+
 @app.put("/api/warehouses/{warehouse_id}/link")
 async def link_warehouse(
     warehouse_id: str,
