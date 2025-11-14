@@ -326,6 +326,13 @@ const WarehouseDetailNew = () => {
               СВЯЗИ СО СКЛАДАМИ МАРКЕТПЛЕЙСОВ
             </label>
             
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
+              <p className="text-xs text-blue-300">
+                💡 <strong>Важно:</strong> Связь позволяет SelSup знать, какой склад МП соответствует этому складу в системе.
+                Настройка "Передавать остатки" управляется выше на уровне склада, а не для каждой связи отдельно.
+              </p>
+            </div>
+            
             {/* Add new link - NEW 3-FIELD STRUCTURE */}
             <div className="bg-gray-800 p-4 rounded-lg mb-4 space-y-3">
               <p className="text-xs text-mm-cyan mb-3">
