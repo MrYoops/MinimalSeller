@@ -2059,10 +2059,16 @@ async def create_warehouse(
         "name": warehouse_data.name,
         "type": warehouse_data.type,
         "address": warehouse_data.address or "",
-        "comment": warehouse_data.comment or "",
+        "description": warehouse_data.description or "",
         "marketplace_name": warehouse_data.marketplace_name,
         "marketplace_warehouse_id": warehouse_data.marketplace_warehouse_id,
         "sync_with_main_warehouse_id": None,
+        "is_fbo": warehouse_data.is_fbo,
+        "send_stock": warehouse_data.send_stock,
+        "load_orders": warehouse_data.load_orders,
+        "use_for_orders": warehouse_data.use_for_orders,
+        "priority": warehouse_data.priority,
+        "default_cell": warehouse_data.default_cell,
         "created_at": datetime.utcnow().isoformat(),
         "updated_at": datetime.utcnow().isoformat()
     }
