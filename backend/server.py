@@ -2427,9 +2427,12 @@ async def get_warehouse_links(
         "warehouse_id": warehouse_id
     }).to_list(length=100)
     
-    # Remove MongoDB _id from each link
+    # Remove MongoDB _id and convert ObjectId fields to strings
     for link in links:
         link.pop("_id", None)
+        # Convert user_id to string if it's ObjectId
+        if "user_id" in link:
+            link["user_id"] = str(link["user_id"])
     
     logger.info(f"✅ Found {len(links)} links")
     return links
