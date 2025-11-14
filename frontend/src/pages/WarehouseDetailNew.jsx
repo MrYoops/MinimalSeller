@@ -124,18 +124,17 @@ const WarehouseDetailNew = () => {
   };
 
   const handleAddLink = async () => {
-    if (!selectedMarketplace || !selectedIntegration || !selectedMpWarehouse) {
-      alert('Заполните все 3 поля: маркетплейс, интеграцию и склад');
+    if (!selectedMarketplace || !selectedMpWarehouse) {
+      alert('Выберите маркетплейс и склад');
       return;
     }
 
     try {
-      const integration = integrations.find(i => i.id === selectedIntegration);
       const mpWarehouse = mpWarehouses.find(w => w.id === selectedMpWarehouse);
       
       await api.post(`/api/warehouses/${id}/links`, {
-        integration_id: selectedIntegration,
-        marketplace_name: integration.marketplace,
+        integration_id: mpWarehouse.integration_id, // ID интеграции откуда взят склад
+        marketplace_name: selectedMarketplace,
         marketplace_warehouse_id: mpWarehouse.id,
         marketplace_warehouse_name: mpWarehouse.name
       });
@@ -145,9 +144,7 @@ const WarehouseDetailNew = () => {
       
       // Reset form
       setSelectedMarketplace('');
-      setSelectedIntegration('');
       setSelectedMpWarehouse('');
-      setFilteredIntegrations([]);
       setMpWarehouses([]);
     } catch (error) {
       console.error('Error adding link:', error);
