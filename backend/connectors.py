@@ -165,6 +165,9 @@ class OzonConnector(BaseConnector):
             items = list_response.get('result', {}).get('items', [])
             logger.info(f"[Ozon] Received {len(items)} products")
             
+            if items:
+                logger.info(f"[Ozon] Sample item from /v3/product/list: {items[0]}")
+            
             if not items:
                 return all_products
             
