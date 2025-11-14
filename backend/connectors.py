@@ -437,26 +437,35 @@ def get_connector(marketplace: str, client_id: str, api_key: str) -> BaseConnect
             raise MarketplaceError(f"Failed to fetch WB warehouses: {str(e)}", 500)
 
     async def get_warehouses(self) -> List[Dict[str, Any]]:
-        """Get warehouses from Yandex.Market"""
-        logger.info(f"[Yandex] Fetching warehouses for campaign {self.campaign_id}")
+        """Get warehouses from Yandex.Market FBS"""
+        logger.info(f"[Yandex] Fetching FBS warehouses for campaign {self.campaign_id}")
         
         url = f"{self.base_url}/campaigns/{self.campaign_id}/warehouses"
         headers = self._get_headers()
         
+        logger.info(f"[Yandex] Request URL: {url}")
+        
         try:
             response_data = await self._make_request("GET", url, headers)
+            
+            logger.info(f"[Yandex] Raw response: {response_data}")
             
             warehouses = response_data.get('result', {}).get('warehouses', [])
             logger.info(f"[Yandex] Received {len(warehouses)} warehouses")
             
-            return [
-                {
+            formatted_warehouses = []
+            for wh in warehouses:
+                formatted_warehouses.append({
                     "id": str(wh.get('id', '')),
-                    "name": wh.get('name', 'Unnamed warehouse')
-                }
-                for wh in warehouses
-            ]
+                    "name": wh.get('name', 'Unnamed warehouse'),
+                    "type": wh.get('type', 'FBS')
+                })
+            
+            return formatted_warehouses
             
         except MarketplaceError as e:
             logger.error(f"[Yandex] Failed to fetch warehouses: {e.message}")
             raise
+        except Exception as e:
+            logger.error(f"[Yandex] Unexpected error: {str(e)}")
+            raise MarketplaceError(f"Failed to fetch Yandex warehouses: {str(e)}", 500)
