@@ -171,64 +171,25 @@ class OzonConnector(BaseConnector):
             if not items:
                 return all_products
             
-            # Step 2: Get full product info with images and attributes
-            # Use v3/product/info/list (v2/product/info is deprecated)
-            info_url = f"{self.base_url}/v3/product/info/list"
-            # Try using offer_id instead of product_id
-            offer_ids = [item.get('offer_id') for item in items if item.get('offer_id')]
-            
-            logger.info(f"[Ozon] Offer IDs to fetch details for: {offer_ids}")
-            
-            # v3/product/info/list with offer_id
-            info_payload = {
-                "filter": {
-                    "offer_id": offer_ids
-                },
-                "limit": 100
-            }
-            
-            logger.info(f"[Ozon] Info payload: {info_payload}")
-            
-            info_response = await self._make_request("POST", info_url, headers, json_data=info_payload)
-            detailed_items = info_response.get('result', {}).get('items', [])
-            
-            logger.info(f"[Ozon] Received detailed info for {len(detailed_items)} products")
-            
-            # Transform to unified format
-            for item in detailed_items:
-                # Extract images
-                images = []
-                for img in item.get('images', []):
-                    if isinstance(img, dict):
-                        images.append(img.get('file_name') or img.get('url', ''))
-                    elif isinstance(img, str):
-                        images.append(img)
-                
-                # Extract attributes
-                attributes = {}
-                for attr in item.get('attributes', []):
-                    if isinstance(attr, dict):
-                        attr_id = attr.get('attribute_id')
-                        values = attr.get('values', [])
-                        if values and isinstance(values, list):
-                            attributes[attr.get('complex_id', attr_id)] = values[0].get('value', '') if isinstance(values[0], dict) else str(values[0])
-                
+            # For now, just use the data from /v3/product/list
+            # TODO: Fix /v3/product/info/list to get full details (images, attributes)
+            for item in items:
                 all_products.append({
-                    "id": str(item.get('id', '')),
+                    "id": str(item.get('product_id', '')),
                     "sku": item.get('offer_id', ''),
-                    "name": item.get('name', 'Unnamed product'),
-                    "description": item.get('description', ''),
-                    "price": float(item.get('old_price', item.get('price', 0))),
-                    "stock": item.get('stocks', {}).get('present', 0) if isinstance(item.get('stocks'), dict) else 0,
-                    "images": images,
-                    "attributes": attributes,
-                    "category": item.get('category_name', ''),
+                    "name": item.get('offer_id', 'Unnamed product'),  # /v3/product/list doesn't return name
+                    "description": '',
+                    "price": 0,  # /v3/product/list doesn't return price
+                    "stock": 0,
+                    "images": [],
+                    "attributes": {},
+                    "category": '',
                     "marketplace": "ozon",
-                    "status": item.get('status', {}).get('state', 'unknown') if isinstance(item.get('status'), dict) else str(item.get('status', 'unknown')),
-                    "barcode": item.get('barcode', '')
+                    "status": 'archived' if item.get('archived') else 'active',
+                    "barcode": ''
                 })
             
-            logger.info(f"[Ozon] Successfully transformed {len(all_products)} products with full details")
+            logger.info(f"[Ozon] Successfully transformed {len(all_products)} products (basic info only)")
             return all_products
             
         except MarketplaceError as e:
