@@ -685,11 +685,11 @@ class BackendTester:
             return False
     
     def test_ozon_warehouses(self) -> bool:
-        """Test 11: Get Ozon Warehouses with GZIP decompression (CRITICAL)"""
+        """Test 11: Get Ozon Warehouses with Brotli/GZIP decompression (CRITICAL)"""
         print("\n" + "="*60)
-        print("TEST 11: Get Ozon Warehouses with GZIP Decompression (CRITICAL)")
+        print("TEST 11: Get Ozon Warehouses with Brotli/GZIP Decompression (CRITICAL)")
         print("="*60)
-        print_warning("CRITICAL: Testing gzip decompression fix for Ozon API")
+        print_warning("CRITICAL: Testing Brotli and gzip decompression fix for Ozon API")
         print_info("First adding Ozon API key, then fetching warehouses")
         
         if not self.token:
