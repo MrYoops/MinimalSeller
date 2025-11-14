@@ -172,11 +172,10 @@ class OzonConnector(BaseConnector):
             info_url = f"{self.base_url}/v3/product/info/list"
             product_ids = [item.get('product_id') for item in items if item.get('product_id')]
             
-            # v3/product/info/list requires filter with product_id array
+            # v3/product/info/list requires filter with ONLY product_id (no other filters)
             info_payload = {
                 "filter": {
-                    "product_id": product_ids,
-                    "visibility": "ALL"
+                    "product_id": product_ids
                 },
                 "limit": 100
             }
