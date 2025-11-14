@@ -168,13 +168,17 @@ class OzonConnector(BaseConnector):
                 return all_products
             
             # Step 2: Get full product info with images and attributes
-            info_url = f"{self.base_url}/v2/product/info"
+            # Use v3/product/info/list (v2/product/info is deprecated)
+            info_url = f"{self.base_url}/v3/product/info/list"
             product_ids = [item.get('product_id') for item in items if item.get('product_id')]
             
+            # v3/product/info/list requires filter with product_id array
             info_payload = {
-                "product_id": product_ids,
-                "offer_id": [],
-                "sku": []
+                "filter": {
+                    "product_id": product_ids,
+                    "visibility": "ALL"
+                },
+                "limit": 100
             }
             
             info_response = await self._make_request("POST", info_url, headers, json_data=info_payload)
