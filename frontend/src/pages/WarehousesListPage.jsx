@@ -123,38 +123,118 @@ const WarehousesListPage = () => {
         <table className="w-full">
           <thead className="bg-gray-800">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-300">ID</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-300">Название</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-300">Удалить</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Название</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Тип</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Статус</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Связи с МП</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Приоритет</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Действия</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
             {warehouses.length === 0 ? (
               <tr>
-                <td colSpan="3" className="px-6 py-8 text-center text-gray-500">
-                  Нет данных
+                <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                  <div className="space-y-2">
+                    <p className="text-lg">📦 Нет складов</p>
+                    <p className="text-sm">Создайте первый склад для начала работы</p>
+                  </div>
                 </td>
               </tr>
             ) : (
               warehouses.map((warehouse) => (
-                <tr key={warehouse.id} className="hover:bg-gray-800 transition">
-                  <td className="px-6 py-4 text-sm text-gray-300">{warehouse.id.slice(-5)}</td>
-                  <td className="px-6 py-4">
-                    <button
-                      onClick={() => navigate(`/warehouses/${warehouse.id}`)}
-                      className="text-mm-cyan hover:text-cyan-400 transition font-medium"
-                    >
-                      {warehouse.name}
-                    </button>
+                <tr key={warehouse.id} className="hover:bg-gray-800 transition cursor-pointer">
+                  <td 
+                    className="px-4 py-4"
+                    onClick={() => navigate(`/warehouses/${warehouse.id}`)}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="text-2xl">
+                        {warehouse.type === 'main' ? '🏠' : warehouse.is_fbo ? '📦' : '🏢'}
+                      </div>
+                      <div>
+                        <div className="text-mm-cyan hover:text-cyan-400 transition font-medium">
+                          {warehouse.name}
+                        </div>
+                        {warehouse.address && (
+                          <div className="text-xs text-gray-500 mt-1">{warehouse.address}</div>
+                        )}
+                      </div>
+                    </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <button
-                      onClick={() => handleDelete(warehouse.id, warehouse.name)}
-                      disabled={warehouse.type === 'main'}
-                      className="text-red-500 hover:text-red-400 disabled:text-gray-600 disabled:cursor-not-allowed transition"
-                    >
-                      {warehouse.type === 'main' ? '🔒' : '🗑️'}
-                    </button>
+                  <td className="px-4 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      warehouse.type === 'main' 
+                        ? 'bg-purple-900 text-purple-200' 
+                        : warehouse.is_fbo 
+                        ? 'bg-blue-900 text-blue-200' 
+                        : 'bg-green-900 text-green-200'
+                    }`}>
+                      {warehouse.type === 'main' ? 'Основной' : warehouse.is_fbo ? 'FBO' : 'FBS'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {warehouse.load_orders && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-mm-cyan/20 text-mm-cyan">
+                          📥 Заказы
+                        </span>
+                      )}
+                      {warehouse.use_for_orders && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-900/30 text-green-400">
+                          ✓ Отгрузка
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    {warehouse.marketplace_links && warehouse.marketplace_links.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {warehouse.marketplace_links.slice(0, 3).map((link, idx) => (
+                          <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-700 text-gray-300">
+                            {link.marketplace_name === 'ozon' && '🟠'}
+                            {link.marketplace_name === 'wb' && '🟣'}
+                            {link.marketplace_name === 'yandex' && '🔴'}
+                            {link.marketplace_name?.toUpperCase()}
+                          </span>
+                        ))}
+                        {warehouse.marketplace_links.length > 3 && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-700 text-gray-300">
+                            +{warehouse.marketplace_links.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500 text-sm">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-300">
+                    {warehouse.priority || 0}
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center justify-center space-x-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/warehouses/${warehouse.id}`);
+                        }}
+                        className="p-2 text-mm-cyan hover:bg-mm-cyan/10 rounded transition"
+                        title="Редактировать"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(warehouse.id, warehouse.name);
+                        }}
+                        disabled={warehouse.type === 'main'}
+                        className="p-2 text-red-500 hover:bg-red-500/10 disabled:text-gray-600 disabled:cursor-not-allowed rounded transition"
+                        title={warehouse.type === 'main' ? 'Основной склад нельзя удалить' : 'Удалить'}
+                      >
+                        {warehouse.type === 'main' ? '🔒' : '🗑️'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
