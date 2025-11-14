@@ -120,21 +120,25 @@ const WarehouseDetailNew = () => {
     }
   };
 
+  // Step 1: Select Marketplace
+  const handleMarketplaceChange = (marketplace) => {
+    setSelectedMarketplace(marketplace);
+    setSelectedIntegration('');
+    setSelectedMpWarehouse('');
+    setMpWarehouses([]);
+    
+    // Filter integrations by marketplace
+    const filtered = integrations.filter(i => i.marketplace === marketplace);
+    setFilteredIntegrations(filtered);
+  };
+  
+  // Step 2: Select Integration
   const handleIntegrationChange = (integrationId) => {
     setSelectedIntegration(integrationId);
     setSelectedMpWarehouse('');
-    setShowManualInput(false);
-    setManualWarehouseId('');
-    setManualWarehouseName('');
     
-    const integration = integrations.find(i => i.id === integrationId);
-    
-    // For Yandex and WB, show manual input option (they don't return seller warehouses via API)
-    if (integration && (integration.marketplace === 'yandex' || integration.marketplace === 'wb')) {
-      setShowManualInput(true);
-    } else {
-      loadMpWarehouses(integrationId);
-    }
+    // Load warehouses for selected integration (ALL marketplaces - auto load)
+    loadMpWarehouses(integrationId);
   };
 
   const handleAddLink = async () => {
