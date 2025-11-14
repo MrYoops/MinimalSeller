@@ -246,16 +246,6 @@ const WarehouseDetailNew = () => {
             <label className="flex items-center space-x-3 cursor-pointer">
               <input
                 type="checkbox"
-                checked={formData.send_stock}
-                onChange={(e) => handleChange('send_stock', e.target.checked)}
-                className="w-5 h-5 rounded"
-              />
-              <span>ПЕРЕДАВАТЬ ОСТАТКИ</span>
-            </label>
-            
-            <label className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="checkbox"
                 checked={formData.load_orders}
                 onChange={(e) => handleChange('load_orders', e.target.checked)}
                 className="w-5 h-5 rounded"
@@ -272,6 +262,10 @@ const WarehouseDetailNew = () => {
               />
               <span>ИСПОЛЬЗОВАТЬ ДЛЯ ЗАКАЗОВ</span>
             </label>
+            
+            <p className="text-xs text-gray-400 mt-2">
+              💡 Настройка "Передавать остатки" теперь управляется индивидуально для каждой связи со складом МП
+            </p>
           </div>
 
           {/* Priority */}
