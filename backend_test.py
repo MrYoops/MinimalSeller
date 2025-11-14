@@ -13,8 +13,8 @@ from typing import Dict, Any, Optional
 BACKEND_URL = "https://minimalmod-dash.preview.emergentagent.com/api"
 
 # Test credentials
-TEST_SELLER_EMAIL = "seller@test.com"
-TEST_SELLER_PASSWORD = "password123"
+TEST_SELLER_EMAIL = "seller@minimalmod.com"
+TEST_SELLER_PASSWORD = "seller123"
 
 # Colors for output
 class Colors:
