@@ -89,11 +89,27 @@ class BaseConnector:
                         details=error_text
                     )
                 
+                # Try to parse as JSON
                 try:
                     return response.json()
-                except:
-                    # If response is not JSON, return text
-                    return {"raw_response": response.text}
+                except Exception as json_error:
+                    # If JSON parsing fails, check if response is gzip-compressed
+                    # Ozon API sometimes returns gzip without proper Content-Encoding header
+                    try:
+                        content = response.content
+                        # Check for gzip magic bytes (\x1f\x8b)
+                        if content[:2] == b'\x1f\x8b':
+                            logger.info(f"[{self.marketplace_name}] Detected gzip-compressed response, decompressing...")
+                            decompressed = gzip.decompress(content)
+                            decoded = decompressed.decode('utf-8')
+                            return json.loads(decoded)
+                        else:
+                            # Not gzip, return text
+                            logger.warning(f"[{self.marketplace_name}] Response is not JSON and not gzip: {response.text[:100]}")
+                            return {"raw_response": response.text}
+                    except Exception as decompress_error:
+                        logger.error(f"[{self.marketplace_name}] Failed to decompress/parse: {decompress_error}")
+                        return {"raw_response": response.text}
                 
         except httpx.TimeoutException as e:
             logger.error(f"[{self.marketplace_name}] Request timeout: {str(e)}")
