@@ -707,7 +707,7 @@ class BackendTester:
             add_key_payload = {
                 "marketplace": "ozon",
                 "client_id": "3152566",
-                "api_key": "d0d8758a-d6a9-47f2-b9e0-ae926ae37b00"
+                "api_key": "a3acc5e5-45d8-4667-9fab-9f6d0e3bfb3c"
             }
             
             add_response = requests.post(
