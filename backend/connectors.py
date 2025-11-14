@@ -377,8 +377,9 @@ class WildberriesConnector(BaseConnector):
         """Get seller's FBS warehouses from Wildberries (Seller Warehouses API)"""
         logger.info("[WB] Fetching seller's own FBS warehouses")
         
-        # CORRECT endpoint for seller's OWN warehouses (not WB FBO warehouses!)
-        url = f"{self.marketplace_api_url}/api/v3/supplier/warehouses"
+        # CORRECT endpoint for seller's OWN warehouses (Sept 2025 update)
+        # Moved from FBS Orders to Product Management section
+        url = f"{self.marketplace_api_url}/api/v3/warehouses"
         headers = self._get_headers()
         
         logger.info(f"[WB] Request URL: {url}")
@@ -393,15 +394,21 @@ class WildberriesConnector(BaseConnector):
             
             formatted_warehouses = []
             for wh in warehouses:
-                # Parse seller warehouse data from /api/v3/supplier/warehouses
+                # Parse seller warehouse data from /api/v3/warehouses
                 wh_id = wh.get('id') or wh.get('ID')
-                wh_name = wh.get('name') or wh.get('warehouseName') or 'Unnamed warehouse'
+                wh_name = wh.get('name')
+                
+                # Skip if being deleted or invalid
+                if wh.get('isDeleting') or not wh_name or not wh_id:
+                    continue
                 
                 formatted_warehouses.append({
                     "id": str(wh_id),
                     "name": wh_name,
                     "address": wh.get('address', ''),
-                    "warehouse_type": wh.get('warehouseType', 'seller'),
+                    "cargo_type": wh.get('cargoType', 1),  # 1=small, 2=oversized, 3=oversized+
+                    "is_active": not wh.get('isProcessing', False),  # Not being updated
+                    "is_deleting": wh.get('isDeleting', False),
                     "type": "FBS",  # Seller's own warehouses
                     "is_fbs": True
                 })
