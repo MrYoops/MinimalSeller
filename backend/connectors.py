@@ -339,10 +339,11 @@ class WildberriesConnector(BaseConnector):
             raise
     
     async def get_warehouses(self) -> List[Dict[str, Any]]:
-        """Get warehouses from Wildberries FBS"""
-        logger.info("[WB] Fetching FBS warehouses")
+        """Get seller's FBS warehouses from Wildberries"""
+        logger.info("[WB] Fetching seller FBS warehouses")
         
-        url = f"{self.marketplace_api_url}/api/v3/offices"
+        # Correct endpoint for getting Wildberries warehouses (including FBS)
+        url = f"{self.marketplace_api_url}/api/v1/warehouses"
         headers = self._get_headers()
         
         logger.info(f"[WB] Request URL: {url}")
@@ -350,20 +351,26 @@ class WildberriesConnector(BaseConnector):
         try:
             response_data = await self._make_request("GET", url, headers)
             
-            logger.info(f"[WB] Raw response type: {type(response_data)}")
+            logger.info(f"[WB] Raw response: {response_data}")
             
             warehouses = response_data if isinstance(response_data, list) else []
             logger.info(f"[WB] Received {len(warehouses)} warehouses")
             
             formatted_warehouses = []
             for wh in warehouses:
+                # WB returns warehouse data with various fields
+                wh_id = wh.get('ID') or wh.get('officeId') or wh.get('id')
+                wh_name = wh.get('name') or wh.get('officeName') or 'Unnamed warehouse'
+                
                 formatted_warehouses.append({
-                    "id": str(wh.get('id', wh.get('officeId', ''))),
-                    "name": wh.get('name', 'Unnamed warehouse'),
-                    "office_id": wh.get('officeId', 0),
-                    "type": "FBS"
+                    "id": str(wh_id),
+                    "name": wh_name,
+                    "office_id": wh.get('officeId', wh.get('officeID', 0)),
+                    "type": "FBS",
+                    "is_fbs": True
                 })
             
+            logger.info(f"[WB] Formatted {len(formatted_warehouses)} FBS warehouses")
             return formatted_warehouses
             
         except MarketplaceError as e:
