@@ -7,6 +7,7 @@ from datetime import datetime
 import logging
 import json
 import gzip
+import brotli  # For Brotli decompression
 
 logger = logging.getLogger(__name__)
 
