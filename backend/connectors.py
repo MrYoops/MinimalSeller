@@ -221,14 +221,14 @@ class OzonConnector(BaseConnector):
         """Get FBS warehouses from Ozon (seller's own warehouses)"""
         logger.info("[Ozon] Fetching seller FBS warehouses")
         
-        # Use fbo/list endpoint which returns all warehouses including FBS
-        url = f"{self.base_url}/v1/warehouse/fbo/list"
+        # CORRECT endpoint for seller warehouses (FBS)
+        url = f"{self.base_url}/v1/warehouse/list"
         headers = self._get_headers()
         
         logger.info(f"[Ozon] Request URL: {url}")
         logger.info(f"[Ozon] Client-Id: {self.client_id[:10]}...")
         
-        # Empty payload to get all warehouses
+        # Empty payload to get all seller warehouses
         payload = {}
         
         try:
@@ -242,15 +242,13 @@ class OzonConnector(BaseConnector):
             
             formatted_warehouses = []
             for wh in warehouses:
-                # Filter only FBS warehouses (seller's own warehouses)
-                warehouse_type = wh.get('type', '').upper()
-                
+                # All warehouses from /v1/warehouse/list are seller's warehouses
                 formatted_warehouses.append({
                     "id": str(wh.get('warehouse_id', wh.get('id', ''))),
                     "name": wh.get('name', 'Unnamed warehouse'),
                     "is_enabled": wh.get('is_enabled', True),
-                    "type": warehouse_type,
-                    "is_fbs": warehouse_type == 'FBS' or 'FBS' in warehouse_type
+                    "type": wh.get('type', 'FBS').upper(),
+                    "is_fbs": True  # All from this endpoint are seller's warehouses
                 })
             
             logger.info(f"[Ozon] Formatted {len(formatted_warehouses)} warehouses")
