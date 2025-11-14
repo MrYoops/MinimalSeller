@@ -2584,7 +2584,7 @@ import uuid
 # КАТЕГОРИИ ТОВАРОВ
 # ============================================
 
-@app.get("/api/products/categories", response_model=List[ProductCategoryResponse])
+@app.get("/api/catalog/categories", response_model=List[ProductCategoryResponse])
 async def get_product_categories(
     search: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
@@ -2623,7 +2623,7 @@ async def get_product_categories(
     return result
 
 
-@app.post("/api/products/categories", response_model=ProductCategoryResponse, status_code=201)
+@app.post("/api/catalog/categories", response_model=ProductCategoryResponse, status_code=201)
 async def create_product_category(
     category: ProductCategoryCreate,
     current_user: dict = Depends(get_current_user)
@@ -2672,7 +2672,7 @@ async def create_product_category(
     )
 
 
-@app.put("/api/products/categories/{category_id}", response_model=ProductCategoryResponse)
+@app.put("/api/catalog/categories/{category_id}", response_model=ProductCategoryResponse)
 async def update_product_category(
     category_id: str,
     category: ProductCategoryUpdate,
@@ -2721,7 +2721,7 @@ async def update_product_category(
     )
 
 
-@app.delete("/api/products/categories/{category_id}")
+@app.delete("/api/catalog/categories/{category_id}")
 async def delete_product_category(
     category_id: str,
     current_user: dict = Depends(get_current_user)
