@@ -449,7 +449,11 @@ const WarehouseDetailNew = () => {
               
               <button
                 onClick={handleAddLink}
-                disabled={!selectedMarketplace || !selectedMpWarehouse}
+                disabled={
+                  !selectedMarketplace || 
+                  (selectedMarketplace === 'yandex' && (!manualWarehouseId || !manualWarehouseName)) ||
+                  (selectedMarketplace !== 'yandex' && !selectedMpWarehouse)
+                }
                 className="w-full px-4 py-2 bg-mm-purple hover:bg-purple-600 rounded transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 <FiPlus />
