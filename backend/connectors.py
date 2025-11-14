@@ -145,10 +145,10 @@ class OzonConnector(BaseConnector):
         headers = self._get_headers()
         
         # Correct payload format for v3/product/info/list
+        # NOTE: Ozon API requires using ONLY ONE of: offer_id, product_id, or sku
+        # To get all products, we should NOT include empty arrays for unused filters
         list_payload = {
             "filter": {
-                "offer_id": [],
-                "product_id": [],
                 "visibility": "ALL"
             },
             "last_id": "",
