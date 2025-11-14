@@ -22,6 +22,11 @@ const WarehouseDetailNew = () => {
   const [loadingMpWarehouses, setLoadingMpWarehouses] = useState(false);
   const [warehouseLinks, setWarehouseLinks] = useState([]); // Multiple links
   
+  // For Yandex manual warehouse ID input
+  const [manualWarehouseId, setManualWarehouseId] = useState('');
+  const [manualWarehouseName, setManualWarehouseName] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: '',
     is_fbo: false,
