@@ -142,43 +142,13 @@ const WarehouseDetailNew = () => {
   };
 
   const handleAddLink = async () => {
-    const integration = integrations.find(i => i.id === selectedIntegration);
-    
-    // For Yandex and WB with manual input
-    if (showManualInput && (integration?.marketplace === 'yandex' || integration?.marketplace === 'wb')) {
-      if (!manualWarehouseId || !manualWarehouseName) {
-        alert('Введите ID и название склада');
-        return;
-      }
-      
-      try {
-        await api.post(`/api/warehouses/${id}/links`, {
-          integration_id: selectedIntegration,
-          marketplace_name: integration.marketplace,
-          marketplace_warehouse_id: manualWarehouseId,
-          marketplace_warehouse_name: manualWarehouseName
-        });
-
-        alert(`✅ Связь со складом ${integration.marketplace.toUpperCase()} добавлена!`);
-        fetchWarehouseLinks();
-        setSelectedIntegration('');
-        setManualWarehouseId('');
-        setManualWarehouseName('');
-        setShowManualInput(false);
-      } catch (error) {
-        console.error('Error adding link:', error);
-        alert('Ошибка: ' + (error.response?.data?.detail || error.message));
-      }
-      return;
-    }
-    
-    // For other marketplaces (auto-load)
-    if (!selectedIntegration || !selectedMpWarehouse) {
-      alert('Выберите интеграцию и склад');
+    if (!selectedMarketplace || !selectedIntegration || !selectedMpWarehouse) {
+      alert('Заполните все 3 поля: маркетплейс, интеграцию и склад');
       return;
     }
 
     try {
+      const integration = integrations.find(i => i.id === selectedIntegration);
       const mpWarehouse = mpWarehouses.find(w => w.id === selectedMpWarehouse);
       
       await api.post(`/api/warehouses/${id}/links`, {
@@ -188,10 +158,14 @@ const WarehouseDetailNew = () => {
         marketplace_warehouse_name: mpWarehouse.name
       });
 
-      alert('✅ Связь добавлена!');
+      alert(`✅ Связь со складом ${selectedMarketplace.toUpperCase()} добавлена!`);
       fetchWarehouseLinks();
+      
+      // Reset form
+      setSelectedMarketplace('');
       setSelectedIntegration('');
       setSelectedMpWarehouse('');
+      setFilteredIntegrations([]);
       setMpWarehouses([]);
     } catch (error) {
       console.error('Error adding link:', error);
