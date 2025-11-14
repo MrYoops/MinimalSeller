@@ -335,23 +335,51 @@ const WarehouseDetailNew = () => {
             
             {/* Add new link */}
             <div className="bg-gray-800 p-4 rounded-lg mb-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs mb-1">Выберите интеграцию</label>
-                  <select
-                    value={selectedIntegration}
-                    onChange={(e) => handleIntegrationChange(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-mm-cyan text-sm"
-                  >
-                    <option value="">-- Выбрать --</option>
-                    {integrations.map(integration => (
-                      <option key={integration.id} value={integration.id}>
-                        {integration.marketplace?.toUpperCase() || 'N/A'} - {integration.name || (integration.api_key ? integration.api_key.substring(0, 10) : 'No Key')}
-                      </option>
-                    ))}
-                  </select>
+              <div>
+                <label className="block text-xs mb-1">Выберите интеграцию</label>
+                <select
+                  value={selectedIntegration}
+                  onChange={(e) => handleIntegrationChange(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-mm-cyan text-sm"
+                >
+                  <option value="">-- Выбрать --</option>
+                  {integrations.map(integration => (
+                    <option key={integration.id} value={integration.id}>
+                      {integration.marketplace?.toUpperCase() || 'N/A'} - {integration.name || (integration.api_key ? integration.api_key.substring(0, 10) : 'No Key')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Manual input for Yandex */}
+              {showManualInput ? (
+                <div className="space-y-3 border-l-2 border-mm-cyan pl-3">
+                  <p className="text-xs text-mm-cyan">
+                    💡 Для Yandex.Market необходимо ввести ID склада вручную
+                  </p>
+                  <div>
+                    <label className="block text-xs mb-1">ID склада (из личного кабинета Yandex)</label>
+                    <input
+                      type="text"
+                      value={manualWarehouseId}
+                      onChange={(e) => setManualWarehouseId(e.target.value)}
+                      placeholder="Например: 12345"
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-mm-cyan text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1">Название склада</label>
+                    <input
+                      type="text"
+                      value={manualWarehouseName}
+                      onChange={(e) => setManualWarehouseName(e.target.value)}
+                      placeholder="Например: Москва FBS"
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-mm-cyan text-sm"
+                    />
+                  </div>
                 </div>
-                
+              ) : (
+                /* Auto-load for other marketplaces */
                 <div>
                   <label className="block text-xs mb-1">
                     Выберите склад
@@ -371,11 +399,11 @@ const WarehouseDetailNew = () => {
                     ))}
                   </select>
                 </div>
-              </div>
+              )}
               
               <button
                 onClick={handleAddLink}
-                disabled={!selectedIntegration || !selectedMpWarehouse}
+                disabled={!selectedIntegration || (!selectedMpWarehouse && !showManualInput) || (showManualInput && (!manualWarehouseId || !manualWarehouseName))}
                 className="w-full px-4 py-2 bg-mm-purple hover:bg-purple-600 rounded transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 <FiPlus />
