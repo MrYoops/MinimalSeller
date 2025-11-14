@@ -137,16 +137,15 @@ class OzonConnector(BaseConnector):
         return headers
     
     async def get_products(self) -> List[Dict[str, Any]]:
-        """Get products from Ozon - REAL API CALL"""
-        logger.info("[Ozon] Fetching products from API (v3/product/list)")
+        """Get products from Ozon with full details (images, attributes)"""
+        logger.info("[Ozon] Fetching products with full details")
         
-        url = f"{self.base_url}/v3/product/list"
+        # Step 1: Get product list
+        list_url = f"{self.base_url}/v3/product/list"
         headers = self._get_headers()
         
-        payload = {
-            "filter": {
-                "visibility": "ALL"
-            },
+        list_payload = {
+            "filter": {"visibility": "ALL"},
             "last_id": "",
             "limit": 100
         }
@@ -154,25 +153,64 @@ class OzonConnector(BaseConnector):
         all_products = []
         
         try:
-            response_data = await self._make_request("POST", url, headers, json_data=payload)
-            
-            items = response_data.get('result', {}).get('items', [])
+            # Get product list
+            list_response = await self._make_request("POST", list_url, headers, json_data=list_payload)
+            items = list_response.get('result', {}).get('items', [])
             logger.info(f"[Ozon] Received {len(items)} products")
             
+            if not items:
+                return all_products
+            
+            # Step 2: Get full product info with images and attributes
+            info_url = f"{self.base_url}/v2/product/info"
+            product_ids = [item.get('product_id') for item in items if item.get('product_id')]
+            
+            info_payload = {
+                "product_id": product_ids,
+                "offer_id": [],
+                "sku": []
+            }
+            
+            info_response = await self._make_request("POST", info_url, headers, json_data=info_payload)
+            detailed_items = info_response.get('result', {}).get('items', [])
+            
+            logger.info(f"[Ozon] Received detailed info for {len(detailed_items)} products")
+            
             # Transform to unified format
-            for item in items:
+            for item in detailed_items:
+                # Extract images
+                images = []
+                for img in item.get('images', []):
+                    if isinstance(img, dict):
+                        images.append(img.get('file_name') or img.get('url', ''))
+                    elif isinstance(img, str):
+                        images.append(img)
+                
+                # Extract attributes
+                attributes = {}
+                for attr in item.get('attributes', []):
+                    if isinstance(attr, dict):
+                        attr_id = attr.get('attribute_id')
+                        values = attr.get('values', [])
+                        if values and isinstance(values, list):
+                            attributes[attr.get('complex_id', attr_id)] = values[0].get('value', '') if isinstance(values[0], dict) else str(values[0])
+                
                 all_products.append({
-                    "id": str(item.get('product_id', '')),
+                    "id": str(item.get('id', '')),
                     "sku": item.get('offer_id', ''),
                     "name": item.get('name', 'Unnamed product'),
-                    "price": float(item.get('price', 0)),
-                    "stock": 0,
+                    "description": item.get('description', ''),
+                    "price": float(item.get('old_price', item.get('price', 0))),
+                    "stock": item.get('stocks', {}).get('present', 0) if isinstance(item.get('stocks'), dict) else 0,
+                    "images": images,
+                    "attributes": attributes,
+                    "category": item.get('category_name', ''),
                     "marketplace": "ozon",
                     "status": item.get('status', {}).get('state', 'unknown') if isinstance(item.get('status'), dict) else str(item.get('status', 'unknown')),
                     "barcode": item.get('barcode', '')
                 })
             
-            logger.info(f"[Ozon] Successfully transformed {len(all_products)} products")
+            logger.info(f"[Ozon] Successfully transformed {len(all_products)} products with full details")
             return all_products
             
         except MarketplaceError as e:
