@@ -2421,14 +2421,16 @@ async def create_warehouse_link(
     import uuid
     
     logger.info(f"🔗 Creating link for warehouse: {warehouse_id}")
+    logger.info(f"   Link data: {link_data}")
     
-    # Verify warehouse belongs to user
+    # Verify warehouse belongs to user (UUID format)
     warehouse = await db.warehouses.find_one({
         "_id": warehouse_id,
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])
     })
     
     if not warehouse:
+        logger.error(f"❌ Warehouse {warehouse_id} not found for user {current_user['_id']}")
         raise HTTPException(status_code=404, detail="Warehouse not found")
     
     # Check if link already exists
@@ -2450,12 +2452,15 @@ async def create_warehouse_link(
         "marketplace_warehouse_name": link_data.get("marketplace_warehouse_name"),
         "send_stock": link_data.get("send_stock", True),  # Default to True
         "created_at": datetime.utcnow().isoformat(),
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])
     }
     
-    await db.warehouse_links.insert_one(link)
+    result = await db.warehouse_links.insert_one(link)
     
     logger.info(f"✅ Link created: {link['id']}")
+    
+    # Return link without MongoDB _id
+    link.pop("_id", None)
     return {"message": "Link created successfully", "link": link}
 
 
