@@ -121,27 +121,68 @@ const WarehouseDetailNew = () => {
     setSelectedMarketplace(marketplace);
     setSelectedMpWarehouse('');
     setMpWarehouses([]);
+    setManualWarehouseId('');
+    setManualWarehouseName('');
     
-    if (marketplace) {
+    // For Yandex, we need manual ID input (API doesn't provide warehouse list)
+    if (marketplace && marketplace !== 'yandex') {
       loadMpWarehouses(marketplace);
     }
   };
 
   const handleAddLink = async () => {
-    if (!selectedMarketplace || !selectedMpWarehouse) {
-      alert('Выберите маркетплейс и склад');
+    // Validation
+    if (!selectedMarketplace) {
+      alert('Выберите маркетплейс');
       return;
+    }
+    
+    // For Yandex - manual ID input required
+    if (selectedMarketplace === 'yandex') {
+      if (!manualWarehouseId || !manualWarehouseName) {
+        alert('Введите ID склада и название для Яндекс.Маркет');
+        return;
+      }
+    } else {
+      // For Ozon/WB - select from dropdown
+      if (!selectedMpWarehouse) {
+        alert('Выберите склад из списка');
+        return;
+      }
     }
 
     try {
-      const mpWarehouse = mpWarehouses.find(w => w.id === selectedMpWarehouse);
+      let linkData;
       
-      await api.post(`/api/warehouses/${id}/links`, {
-        integration_id: mpWarehouse.integration_id, // ID интеграции откуда взят склад
-        marketplace_name: selectedMarketplace,
-        marketplace_warehouse_id: mpWarehouse.id,
-        marketplace_warehouse_name: mpWarehouse.name
-      });
+      if (selectedMarketplace === 'yandex') {
+        // Yandex - use manual input
+        // For Yandex, we need to find any integration of this marketplace
+        const integrations = await api.get('/api/seller/api-keys');
+        const yandexIntegration = integrations.data.find(i => i.marketplace === 'yandex');
+        
+        if (!yandexIntegration) {
+          alert('Сначала добавьте интеграцию Яндекс.Маркет в разделе ИНТЕГРАЦИИ');
+          return;
+        }
+        
+        linkData = {
+          integration_id: yandexIntegration.id,
+          marketplace_name: 'yandex',
+          marketplace_warehouse_id: manualWarehouseId,
+          marketplace_warehouse_name: manualWarehouseName
+        };
+      } else {
+        // Ozon/WB - use selected warehouse from dropdown
+        const mpWarehouse = mpWarehouses.find(w => w.id === selectedMpWarehouse);
+        linkData = {
+          integration_id: mpWarehouse.integration_id,
+          marketplace_name: selectedMarketplace,
+          marketplace_warehouse_id: mpWarehouse.id,
+          marketplace_warehouse_name: mpWarehouse.name
+        };
+      }
+      
+      await api.post(`/api/warehouses/${id}/links`, linkData);
 
       // First reload links, THEN show alert
       await fetchWarehouseLinks();
@@ -150,6 +191,8 @@ const WarehouseDetailNew = () => {
       setSelectedMarketplace('');
       setSelectedMpWarehouse('');
       setMpWarehouses([]);
+      setManualWarehouseId('');
+      setManualWarehouseName('');
       
       // Show success alert AFTER UI update
       alert(`✅ Связь со складом ${selectedMarketplace.toUpperCase()} добавлена!`);
