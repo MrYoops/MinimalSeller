@@ -32,7 +32,8 @@ async def test_ozon_warehouse():
         print(f"Content-Length: {response.headers.get('content-length')}")
         print(f"\nRaw content (first 100 bytes): {response.content[:100]}")
         print(f"\nFirst 2 bytes (hex): {response.content[:2].hex()}")
-        print(f"Is gzip magic bytes? {response.content[:2] == b'\\x1f\\x8b'}")
+        gzip_magic = b'\x1f\x8b'
+        print(f"Is gzip magic bytes? {response.content[:2] == gzip_magic}")
         
         # Try to parse as JSON
         try:
