@@ -383,8 +383,8 @@ const WarehouseDetailNew = () => {
                 </select>
               </div>
               
-              {/* Step 2: Select Warehouse (Auto-loaded from ALL integrations) */}
-              {selectedMarketplace && (
+              {/* Step 2: Select Warehouse (Auto-loaded from ALL integrations) OR Manual Input for Yandex */}
+              {selectedMarketplace && selectedMarketplace !== 'yandex' && (
                 <div>
                   <label className="block text-xs mb-1 font-mono">
                     2️⃣ ВЫБЕРИТЕ СКЛАД FBS
@@ -410,6 +410,40 @@ const WarehouseDetailNew = () => {
                       <br/>• Создан FBS склад в личном кабинете {selectedMarketplace.toUpperCase()}
                     </p>
                   )}
+                </div>
+              )}
+              
+              {/* For Yandex - Manual ID Input */}
+              {selectedMarketplace === 'yandex' && (
+                <div className="space-y-3">
+                  <div className="bg-yellow-900/20 border border-yellow-500/30 rounded p-2">
+                    <p className="text-xs text-yellow-300">
+                      ⚠️ <strong>Яндекс.Маркет:</strong> ID склада нельзя получить через API. 
+                      Возьмите его из ЛК Яндекс.Маркет → Логистика → Склады
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs mb-1 font-mono">2️⃣ ID СКЛАДА ЯНДЕКС.МАРКЕТ</label>
+                    <input
+                      type="text"
+                      value={manualWarehouseId}
+                      onChange={(e) => setManualWarehouseId(e.target.value)}
+                      placeholder="Введите ID склада из ЛК Яндекс"
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-mm-cyan text-sm"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs mb-1 font-mono">НАЗВАНИЕ СКЛАДА</label>
+                    <input
+                      type="text"
+                      value={manualWarehouseName}
+                      onChange={(e) => setManualWarehouseName(e.target.value)}
+                      placeholder="Введите название склада"
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-mm-cyan text-sm"
+                    />
+                  </div>
                 </div>
               )}
               
