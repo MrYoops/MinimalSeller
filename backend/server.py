@@ -2813,3 +2813,493 @@ async def get_stock(current_user: dict = Depends(get_current_user)):
     
     logger.info(f"✅ Found {len(result)} stock records")
     return result
+
+
+# ============================================================================
+# PRODUCT CATALOG ENDPOINTS - SelSup Style (Товары)
+# ============================================================================
+
+# Import new models
+from models import (
+    ProductCategoryCreate, ProductCategoryUpdate, ProductCategoryResponse,
+    ProductCatalogCreate, ProductCatalogUpdate, ProductCatalogResponse,
+    ProductVariantCreate, ProductVariantUpdate, ProductVariantResponse,
+    ProductPhotoCreate, ProductPhotoUpdate, ProductPhotoResponse,
+    ProductPriceCreate, ProductPriceUpdate, ProductPriceResponse, BulkPriceUpdate,
+    ProductStockCreate as CatalogStockCreate, ProductStockUpdate as CatalogStockUpdate, ProductStockResponse,
+    ProductKitCreate, ProductKitUpdate, ProductKitResponse, ProductKitItem,
+    ProductMarketplaceLinkCreate, ProductMarketplaceLinkUpdate, ProductMarketplaceLinkResponse
+)
+import uuid
+
+
+# ============================================
+# КАТЕГОРИИ ТОВАРОВ
+# ============================================
+
+@app.get("/api/products/categories", response_model=List[ProductCategoryResponse])
+async def get_product_categories(
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить все категории товаров"""
+    logger.info(f"📂 Fetching categories for user {current_user['_id']}")
+    
+    query = {"seller_id": current_user["_id"]}
+    if search:
+        query["name"] = {"$regex": search, "$options": "i"}
+    
+    categories = await db.product_categories.find(query).to_list(length=1000)
+    
+    result = []
+    for cat in categories:
+        # Подсчитать количество товаров в категории
+        products_count = await db.product_catalog.count_documents({
+            "seller_id": current_user["_id"],
+            "category_id": str(cat["_id"])
+        })
+        
+        result.append(ProductCategoryResponse(
+            id=str(cat["_id"]),
+            seller_id=str(cat["seller_id"]),
+            name=cat["name"],
+            parent_id=cat.get("parent_id"),
+            group_by_color=cat.get("group_by_color", False),
+            group_by_size=cat.get("group_by_size", False),
+            common_attributes=cat.get("common_attributes", {}),
+            products_count=products_count,
+            created_at=cat.get("created_at", datetime.utcnow()),
+            updated_at=cat.get("updated_at", datetime.utcnow())
+        ))
+    
+    logger.info(f"✅ Found {len(result)} categories")
+    return result
+
+
+@app.post("/api/products/categories", response_model=ProductCategoryResponse, status_code=201)
+async def create_product_category(
+    category: ProductCategoryCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Создать категорию товаров"""
+    logger.info(f"📂 Creating category: {category.name}")
+    
+    # Проверить уникальность имени
+    existing = await db.product_categories.find_one({
+        "seller_id": current_user["_id"],
+        "name": category.name
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Категория с таким названием уже существует")
+    
+    # Создать категорию
+    category_id = str(uuid.uuid4())
+    now = datetime.utcnow()
+    
+    new_category = {
+        "_id": category_id,
+        "seller_id": current_user["_id"],
+        "name": category.name,
+        "parent_id": category.parent_id,
+        "group_by_color": category.group_by_color,
+        "group_by_size": category.group_by_size,
+        "common_attributes": category.common_attributes,
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.product_categories.insert_one(new_category)
+    logger.info(f"✅ Category created: {category_id}")
+    
+    return ProductCategoryResponse(
+        id=category_id,
+        seller_id=current_user["_id"],
+        name=category.name,
+        parent_id=category.parent_id,
+        group_by_color=category.group_by_color,
+        group_by_size=category.group_by_size,
+        common_attributes=category.common_attributes,
+        products_count=0,
+        created_at=now,
+        updated_at=now
+    )
+
+
+@app.put("/api/products/categories/{category_id}", response_model=ProductCategoryResponse)
+async def update_product_category(
+    category_id: str,
+    category: ProductCategoryUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Обновить категорию"""
+    logger.info(f"📂 Updating category: {category_id}")
+    
+    # Проверить существование
+    existing = await db.product_categories.find_one({
+        "_id": category_id,
+        "seller_id": current_user["_id"]
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Категория не найдена")
+    
+    # Подготовить обновление
+    update_data = {k: v for k, v in category.dict(exclude_unset=True).items() if v is not None}
+    if update_data:
+        update_data["updated_at"] = datetime.utcnow()
+        await db.product_categories.update_one(
+            {"_id": category_id},
+            {"$set": update_data}
+        )
+    
+    # Получить обновленную категорию
+    updated = await db.product_categories.find_one({"_id": category_id})
+    products_count = await db.product_catalog.count_documents({
+        "seller_id": current_user["_id"],
+        "category_id": category_id
+    })
+    
+    logger.info(f"✅ Category updated: {category_id}")
+    
+    return ProductCategoryResponse(
+        id=str(updated["_id"]),
+        seller_id=str(updated["seller_id"]),
+        name=updated["name"],
+        parent_id=updated.get("parent_id"),
+        group_by_color=updated.get("group_by_color", False),
+        group_by_size=updated.get("group_by_size", False),
+        common_attributes=updated.get("common_attributes", {}),
+        products_count=products_count,
+        created_at=updated.get("created_at", datetime.utcnow()),
+        updated_at=updated.get("updated_at", datetime.utcnow())
+    )
+
+
+@app.delete("/api/products/categories/{category_id}")
+async def delete_product_category(
+    category_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Удалить категорию"""
+    logger.info(f"📂 Deleting category: {category_id}")
+    
+    # Проверить существование
+    existing = await db.product_categories.find_one({
+        "_id": category_id,
+        "seller_id": current_user["_id"]
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Категория не найдена")
+    
+    # Проверить, есть ли товары в категории
+    products_count = await db.product_catalog.count_documents({
+        "seller_id": current_user["_id"],
+        "category_id": category_id
+    })
+    if products_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Невозможно удалить категорию. В ней {products_count} товаров. Сначала удалите или переместите товары."
+        )
+    
+    # Удалить категорию
+    await db.product_categories.delete_one({"_id": category_id})
+    logger.info(f"✅ Category deleted: {category_id}")
+    
+    return {"success": True, "message": "Категория успешно удалена"}
+
+
+# ============================================
+# ТОВАРЫ (КАТАЛОГ)
+# ============================================
+
+@app.get("/api/catalog/products", response_model=List[ProductCatalogResponse])
+async def get_catalog_products(
+    search: Optional[str] = None,
+    category_id: Optional[str] = None,
+    brand: Optional[str] = None,
+    status: Optional[str] = None,
+    page: int = 1,
+    limit: int = 50,
+    sort_by: str = "created_at",  # created_at, name, article
+    ascending: bool = False,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить список товаров с фильтрами и поиском"""
+    logger.info(f"📦 Fetching catalog products for user {current_user['_id']}")
+    
+    # Построить запрос
+    query = {"seller_id": current_user["_id"]}
+    
+    if search:
+        query["$or"] = [
+            {"article": {"$regex": search, "$options": "i"}},
+            {"name": {"$regex": search, "$options": "i"}},
+            {"brand": {"$regex": search, "$options": "i"}}
+        ]
+    
+    if category_id:
+        query["category_id"] = category_id
+    
+    if brand:
+        query["brand"] = {"$regex": brand, "$options": "i"}
+    
+    if status:
+        query["status"] = status
+    
+    # Подсчитать общее количество
+    total = await db.product_catalog.count_documents(query)
+    
+    # Получить товары с пагинацией
+    skip = (page - 1) * limit
+    sort_direction = 1 if ascending else -1
+    
+    products = await db.product_catalog.find(query).sort(sort_by, sort_direction).skip(skip).limit(limit).to_list(length=limit)
+    
+    result = []
+    for prod in products:
+        # Получить название категории
+        category_name = None
+        if prod.get("category_id"):
+            category = await db.product_categories.find_one({"_id": prod["category_id"]})
+            if category:
+                category_name = category["name"]
+        
+        # Подсчитать вариации и фото
+        variants_count = await db.product_variants.count_documents({"product_id": str(prod["_id"])})
+        photos_count = await db.product_photos.count_documents({"product_id": str(prod["_id"])})
+        
+        result.append(ProductCatalogResponse(
+            id=str(prod["_id"]),
+            seller_id=str(prod["seller_id"]),
+            article=prod["article"],
+            name=prod["name"],
+            brand=prod.get("brand"),
+            category_id=prod.get("category_id"),
+            category_name=category_name,
+            description=prod.get("description", ""),
+            status=prod.get("status", "draft"),
+            is_grouped=prod.get("is_grouped", False),
+            group_by_color=prod.get("group_by_color", False),
+            group_by_size=prod.get("group_by_size", False),
+            variants_count=variants_count,
+            photos_count=photos_count,
+            created_at=prod.get("created_at", datetime.utcnow()),
+            updated_at=prod.get("updated_at", datetime.utcnow())
+        ))
+    
+    logger.info(f"✅ Found {len(result)} products (total: {total})")
+    return result
+
+
+@app.get("/api/catalog/products/{product_id}", response_model=ProductCatalogResponse)
+async def get_catalog_product(
+    product_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить детали товара"""
+    logger.info(f"📦 Fetching product: {product_id}")
+    
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Получить название категории
+    category_name = None
+    if product.get("category_id"):
+        category = await db.product_categories.find_one({"_id": product["category_id"]})
+        if category:
+            category_name = category["name"]
+    
+    # Подсчитать вариации и фото
+    variants_count = await db.product_variants.count_documents({"product_id": product_id})
+    photos_count = await db.product_photos.count_documents({"product_id": product_id})
+    
+    return ProductCatalogResponse(
+        id=str(product["_id"]),
+        seller_id=str(product["seller_id"]),
+        article=product["article"],
+        name=product["name"],
+        brand=product.get("brand"),
+        category_id=product.get("category_id"),
+        category_name=category_name,
+        description=product.get("description", ""),
+        status=product.get("status", "draft"),
+        is_grouped=product.get("is_grouped", False),
+        group_by_color=product.get("group_by_color", False),
+        group_by_size=product.get("group_by_size", False),
+        variants_count=variants_count,
+        photos_count=photos_count,
+        created_at=product.get("created_at", datetime.utcnow()),
+        updated_at=product.get("updated_at", datetime.utcnow())
+    )
+
+
+@app.post("/api/catalog/products", response_model=ProductCatalogResponse, status_code=201)
+async def create_catalog_product(
+    product: ProductCatalogCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Создать товар"""
+    logger.info(f"📦 Creating product: {product.article}")
+    
+    # Проверить уникальность артикула
+    existing = await db.product_catalog.find_one({
+        "seller_id": current_user["_id"],
+        "article": product.article
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Товар с таким артикулом уже существует")
+    
+    # Проверить категорию
+    if product.category_id:
+        category = await db.product_categories.find_one({
+            "_id": product.category_id,
+            "seller_id": current_user["_id"]
+        })
+        if not category:
+            raise HTTPException(status_code=404, detail="Категория не найдена")
+    
+    # Создать товар
+    product_id = str(uuid.uuid4())
+    now = datetime.utcnow()
+    
+    new_product = {
+        "_id": product_id,
+        "seller_id": current_user["_id"],
+        "article": product.article,
+        "name": product.name,
+        "brand": product.brand,
+        "category_id": product.category_id,
+        "description": product.description,
+        "status": product.status,
+        "is_grouped": product.is_grouped,
+        "group_by_color": product.group_by_color,
+        "group_by_size": product.group_by_size,
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.product_catalog.insert_one(new_product)
+    logger.info(f"✅ Product created: {product_id}")
+    
+    return ProductCatalogResponse(
+        id=product_id,
+        seller_id=current_user["_id"],
+        article=product.article,
+        name=product.name,
+        brand=product.brand,
+        category_id=product.category_id,
+        category_name=None,
+        description=product.description,
+        status=product.status,
+        is_grouped=product.is_grouped,
+        group_by_color=product.group_by_color,
+        group_by_size=product.group_by_size,
+        variants_count=0,
+        photos_count=0,
+        created_at=now,
+        updated_at=now
+    )
+
+
+@app.put("/api/catalog/products/{product_id}", response_model=ProductCatalogResponse)
+async def update_catalog_product(
+    product_id: str,
+    product: ProductCatalogUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Обновить товар"""
+    logger.info(f"📦 Updating product: {product_id}")
+    
+    # Проверить существование
+    existing = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Проверить уникальность артикула
+    if product.article and product.article != existing["article"]:
+        duplicate = await db.product_catalog.find_one({
+            "seller_id": current_user["_id"],
+            "article": product.article,
+            "_id": {"$ne": product_id}
+        })
+        if duplicate:
+            raise HTTPException(status_code=400, detail="Товар с таким артикулом уже существует")
+    
+    # Подготовить обновление
+    update_data = {k: v for k, v in product.dict(exclude_unset=True).items() if v is not None}
+    if update_data:
+        update_data["updated_at"] = datetime.utcnow()
+        await db.product_catalog.update_one(
+            {"_id": product_id},
+            {"$set": update_data}
+        )
+    
+    # Получить обновленный товар
+    updated = await db.product_catalog.find_one({"_id": product_id})
+    
+    # Получить название категории
+    category_name = None
+    if updated.get("category_id"):
+        category = await db.product_categories.find_one({"_id": updated["category_id"]})
+        if category:
+            category_name = category["name"]
+    
+    # Подсчитать вариации и фото
+    variants_count = await db.product_variants.count_documents({"product_id": product_id})
+    photos_count = await db.product_photos.count_documents({"product_id": product_id})
+    
+    logger.info(f"✅ Product updated: {product_id}")
+    
+    return ProductCatalogResponse(
+        id=str(updated["_id"]),
+        seller_id=str(updated["seller_id"]),
+        article=updated["article"],
+        name=updated["name"],
+        brand=updated.get("brand"),
+        category_id=updated.get("category_id"),
+        category_name=category_name,
+        description=updated.get("description", ""),
+        status=updated.get("status", "draft"),
+        is_grouped=updated.get("is_grouped", False),
+        group_by_color=updated.get("group_by_color", False),
+        group_by_size=updated.get("group_by_size", False),
+        variants_count=variants_count,
+        photos_count=photos_count,
+        created_at=updated.get("created_at", datetime.utcnow()),
+        updated_at=updated.get("updated_at", datetime.utcnow())
+    )
+
+
+@app.delete("/api/catalog/products/{product_id}")
+async def delete_catalog_product(
+    product_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Архивировать товар"""
+    logger.info(f"📦 Archiving product: {product_id}")
+    
+    # Проверить существование
+    existing = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Архивировать вместо удаления
+    await db.product_catalog.update_one(
+        {"_id": product_id},
+        {"$set": {"status": "archived", "updated_at": datetime.utcnow()}}
+    )
+    
+    logger.info(f"✅ Product archived: {product_id}")
+    
+    return {"success": True, "message": "Товар успешно архивирован"}
