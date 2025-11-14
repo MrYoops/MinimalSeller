@@ -180,32 +180,43 @@ class OzonConnector(BaseConnector):
             raise
     
     async def get_warehouses(self) -> List[Dict[str, Any]]:
-        """Get warehouses from Ozon FBS"""
-        logger.info("[Ozon] Fetching FBS warehouses")
+        """Get FBS warehouses from Ozon (seller's own warehouses)"""
+        logger.info("[Ozon] Fetching seller FBS warehouses")
         
-        url = f"{self.base_url}/v1/warehouse/list"
+        # Use fbo/list endpoint which returns all warehouses including FBS
+        url = f"{self.base_url}/v1/warehouse/fbo/list"
         headers = self._get_headers()
         
         logger.info(f"[Ozon] Request URL: {url}")
         logger.info(f"[Ozon] Client-Id: {self.client_id[:10]}...")
         
+        payload = {
+            "filter_by_supply_type": "ALL"  # Get all warehouse types
+        }
+        
         try:
-            response_data = await self._make_request("POST", url, headers, json_data={})
+            response_data = await self._make_request("POST", url, headers, json_data=payload)
             
             logger.info(f"[Ozon] Raw response: {response_data}")
             
+            # Result contains list of warehouses
             warehouses = response_data.get('result', [])
-            logger.info(f"[Ozon] Received {len(warehouses)} warehouses")
+            logger.info(f"[Ozon] Received {len(warehouses)} total warehouses")
             
             formatted_warehouses = []
             for wh in warehouses:
+                # Filter only FBS warehouses (seller's own warehouses)
+                warehouse_type = wh.get('type', '').upper()
+                
                 formatted_warehouses.append({
                     "id": str(wh.get('warehouse_id', wh.get('id', ''))),
                     "name": wh.get('name', 'Unnamed warehouse'),
                     "is_enabled": wh.get('is_enabled', True),
-                    "type": wh.get('type', 'FBS')
+                    "type": warehouse_type,
+                    "is_fbs": warehouse_type == 'FBS' or 'FBS' in warehouse_type
                 })
             
+            logger.info(f"[Ozon] Formatted {len(formatted_warehouses)} warehouses")
             return formatted_warehouses
             
         except MarketplaceError as e:
