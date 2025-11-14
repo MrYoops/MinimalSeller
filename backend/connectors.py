@@ -144,8 +144,13 @@ class OzonConnector(BaseConnector):
         list_url = f"{self.base_url}/v3/product/info/list"
         headers = self._get_headers()
         
+        # Correct payload format for v3/product/info/list
         list_payload = {
-            "filter": {"visibility": "ALL"},
+            "filter": {
+                "offer_id": [],
+                "product_id": [],
+                "visibility": "ALL"
+            },
             "last_id": "",
             "limit": 100
         }
