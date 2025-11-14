@@ -253,40 +253,58 @@ const WarehouseDetailNew = () => {
           </div>
 
           {/* Basic Settings */}
-          <div className="space-y-2">
-            <label className="flex items-center space-x-3 cursor-pointer">
+          <div className="space-y-3">
+            <label className="flex items-center space-x-3 cursor-pointer hover:bg-gray-800 p-2 rounded transition">
               <input
                 type="checkbox"
                 checked={formData.is_fbo}
                 onChange={(e) => handleChange('is_fbo', e.target.checked)}
                 className="w-5 h-5 rounded"
               />
-              <span>СКЛАД ДЛЯ УЧЕТА ОСТАТКОВ FBO</span>
+              <div>
+                <span className="font-medium">СКЛАД ДЛЯ УЧЕТА ОСТАТКОВ FBO</span>
+                <p className="text-xs text-gray-400 mt-1">Для аналитики FIFO по заказам FBO</p>
+              </div>
             </label>
             
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center space-x-3 cursor-pointer hover:bg-gray-800 p-2 rounded transition">
+              <input
+                type="checkbox"
+                checked={formData.send_stock}
+                onChange={(e) => handleChange('send_stock', e.target.checked)}
+                className="w-5 h-5 rounded"
+              />
+              <div>
+                <span className="font-medium">ПЕРЕДАВАТЬ ОСТАТКИ</span>
+                <p className="text-xs text-gray-400 mt-1">SelSup будет автоматически обновлять остатки на маркетплейсах. Отключите для фулфилмента.</p>
+              </div>
+            </label>
+            
+            <label className="flex items-center space-x-3 cursor-pointer hover:bg-gray-800 p-2 rounded transition">
               <input
                 type="checkbox"
                 checked={formData.load_orders}
                 onChange={(e) => handleChange('load_orders', e.target.checked)}
                 className="w-5 h-5 rounded"
               />
-              <span>ЗАГРУЖАТЬ ЗАКАЗЫ</span>
+              <div>
+                <span className="font-medium">ЗАГРУЖАТЬ ЗАКАЗЫ</span>
+                <p className="text-xs text-gray-400 mt-1">Импортировать заказы с этого склада. Отключите для фулфилмента.</p>
+              </div>
             </label>
             
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label className="flex items-center space-x-3 cursor-pointer hover:bg-gray-800 p-2 rounded transition">
               <input
                 type="checkbox"
                 checked={formData.use_for_orders}
                 onChange={(e) => handleChange('use_for_orders', e.target.checked)}
                 className="w-5 h-5 rounded"
               />
-              <span>ИСПОЛЬЗОВАТЬ ДЛЯ ЗАКАЗОВ</span>
+              <div>
+                <span className="font-medium">ИСПОЛЬЗОВАТЬ ДЛЯ ЗАКАЗОВ</span>
+                <p className="text-xs text-gray-400 mt-1">Склад будет проставляться в заказах. Иначе только для остатков.</p>
+              </div>
             </label>
-            
-            <p className="text-xs text-gray-400 mt-2">
-              💡 Настройка "Передавать остатки" теперь управляется индивидуально для каждой связи со складом МП
-            </p>
           </div>
 
           {/* Priority */}
