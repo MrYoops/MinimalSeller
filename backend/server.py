@@ -2592,7 +2592,7 @@ async def get_product_categories(
     """Получить все категории товаров"""
     logger.info(f"📂 Fetching categories for user {current_user['_id']}")
     
-    query = {"seller_id": current_user["_id"]}
+    query = {"seller_id": str(current_user["_id"])}
     if search:
         query["name"] = {"$regex": search, "$options": "i"}
     
@@ -2602,7 +2602,7 @@ async def get_product_categories(
     for cat in categories:
         # Подсчитать количество товаров в категории
         products_count = await db.product_catalog.count_documents({
-            "seller_id": current_user["_id"],
+            "seller_id": str(current_user["_id"]),
             "category_id": str(cat["_id"])
         })
         
@@ -2633,7 +2633,7 @@ async def create_product_category(
     
     # Проверить уникальность имени
     existing = await db.product_categories.find_one({
-        "seller_id": current_user["_id"],
+        "seller_id": str(current_user["_id"]),
         "name": category.name
     })
     if existing:
@@ -2645,7 +2645,7 @@ async def create_product_category(
     
     new_category = {
         "_id": category_id,
-        "seller_id": current_user["_id"],
+        "seller_id": str(current_user["_id"]),
         "name": category.name,
         "parent_id": category.parent_id,
         "group_by_color": category.group_by_color,
@@ -2660,7 +2660,7 @@ async def create_product_category(
     
     return ProductCategoryResponse(
         id=category_id,
-        seller_id=current_user["_id"],
+        seller_id=str(current_user["_id"]),
         name=category.name,
         parent_id=category.parent_id,
         group_by_color=category.group_by_color,
@@ -2684,7 +2684,7 @@ async def update_product_category(
     # Проверить существование
     existing = await db.product_categories.find_one({
         "_id": category_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not existing:
         raise HTTPException(status_code=404, detail="Категория не найдена")
@@ -2701,7 +2701,7 @@ async def update_product_category(
     # Получить обновленную категорию
     updated = await db.product_categories.find_one({"_id": category_id})
     products_count = await db.product_catalog.count_documents({
-        "seller_id": current_user["_id"],
+        "seller_id": str(current_user["_id"]),
         "category_id": category_id
     })
     
@@ -2732,14 +2732,14 @@ async def delete_product_category(
     # Проверить существование
     existing = await db.product_categories.find_one({
         "_id": category_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not existing:
         raise HTTPException(status_code=404, detail="Категория не найдена")
     
     # Проверить, есть ли товары в категории
     products_count = await db.product_catalog.count_documents({
-        "seller_id": current_user["_id"],
+        "seller_id": str(current_user["_id"]),
         "category_id": category_id
     })
     if products_count > 0:
@@ -2775,7 +2775,7 @@ async def get_catalog_products(
     logger.info(f"📦 Fetching catalog products for user {current_user['_id']}")
     
     # Построить запрос
-    query = {"seller_id": current_user["_id"]}
+    query = {"seller_id": str(current_user["_id"])}
     
     if search:
         query["$or"] = [
@@ -2848,7 +2848,7 @@ async def get_catalog_product(
     
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     
     if not product:
@@ -2895,7 +2895,7 @@ async def create_catalog_product(
     
     # Проверить уникальность артикула
     existing = await db.product_catalog.find_one({
-        "seller_id": current_user["_id"],
+        "seller_id": str(current_user["_id"]),
         "article": product.article
     })
     if existing:
@@ -2905,7 +2905,7 @@ async def create_catalog_product(
     if product.category_id:
         category = await db.product_categories.find_one({
             "_id": product.category_id,
-            "seller_id": current_user["_id"]
+            "seller_id": str(current_user["_id"])
         })
         if not category:
             raise HTTPException(status_code=404, detail="Категория не найдена")
@@ -2916,7 +2916,7 @@ async def create_catalog_product(
     
     new_product = {
         "_id": product_id,
-        "seller_id": current_user["_id"],
+        "seller_id": str(current_user["_id"]),
         "article": product.article,
         "name": product.name,
         "brand": product.brand,
@@ -2935,7 +2935,7 @@ async def create_catalog_product(
     
     return ProductCatalogResponse(
         id=product_id,
-        seller_id=current_user["_id"],
+        seller_id=str(current_user["_id"]),
         article=product.article,
         name=product.name,
         brand=product.brand,
@@ -2965,7 +2965,7 @@ async def update_catalog_product(
     # Проверить существование
     existing = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not existing:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -2973,7 +2973,7 @@ async def update_catalog_product(
     # Проверить уникальность артикула
     if product.article and product.article != existing["article"]:
         duplicate = await db.product_catalog.find_one({
-            "seller_id": current_user["_id"],
+            "seller_id": str(current_user["_id"]),
             "article": product.article,
             "_id": {"$ne": product_id}
         })
@@ -3036,7 +3036,7 @@ async def delete_catalog_product(
     # Проверить существование
     existing = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not existing:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3068,7 +3068,7 @@ async def get_product_variants(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3113,7 +3113,7 @@ async def create_product_variant(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3172,7 +3172,7 @@ async def update_product_variant(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3239,7 +3239,7 @@ async def delete_product_variant(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3294,7 +3294,7 @@ async def get_product_photos(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3335,7 +3335,7 @@ async def create_product_photo(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3390,7 +3390,7 @@ async def update_product_photo(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3439,7 +3439,7 @@ async def delete_product_photo(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3476,7 +3476,7 @@ async def get_product_prices(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3525,7 +3525,7 @@ async def create_product_price(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3619,7 +3619,7 @@ async def bulk_update_prices(
     for product_id in bulk_update.product_ids:
         product = await db.product_catalog.find_one({
             "_id": product_id,
-            "seller_id": current_user["_id"]
+            "seller_id": str(current_user["_id"])
         })
         if not product:
             raise HTTPException(status_code=404, detail=f"Товар {product_id} не найден")
@@ -3700,7 +3700,7 @@ async def get_product_stock(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3756,7 +3756,7 @@ async def create_product_stock(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3867,7 +3867,7 @@ async def get_product_kits(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3924,7 +3924,7 @@ async def create_product_kit(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -3933,7 +3933,7 @@ async def create_product_kit(
     for item in kit.items:
         item_product = await db.product_catalog.find_one({
             "_id": item.product_id,
-            "seller_id": current_user["_id"]
+            "seller_id": str(current_user["_id"])
         })
         if not item_product:
             raise HTTPException(status_code=404, detail=f"Товар {item.product_id} не найден")
@@ -3987,7 +3987,7 @@ async def update_product_kit(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
@@ -4009,7 +4009,7 @@ async def update_product_kit(
         for item in kit.items:
             item_product = await db.product_catalog.find_one({
                 "_id": item.product_id,
-                "seller_id": current_user["_id"]
+                "seller_id": str(current_user["_id"])
             })
             if not item_product:
                 raise HTTPException(status_code=404, detail=f"Товар {item.product_id} не найден")
@@ -4051,7 +4051,7 @@ async def delete_product_kit(
     # Проверить существование товара
     product = await db.product_catalog.find_one({
         "_id": product_id,
-        "seller_id": current_user["_id"]
+        "seller_id": str(current_user["_id"])
     })
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
