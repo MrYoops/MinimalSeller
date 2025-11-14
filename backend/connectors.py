@@ -481,23 +481,31 @@ class YandexMarketConnector(BaseConnector):
     
     async def get_warehouses(self) -> List[Dict[str, Any]]:
         """Get seller's FBS warehouses from Yandex.Market"""
-        logger.info(f"[Yandex] Fetching seller FBS warehouses")
+        logger.info(f"[Yandex] Fetching seller's FBS warehouses for campaign {self.campaign_id}")
         
-        # Correct endpoint for getting fulfillment warehouses (FBS)
-        url = f"{self.base_url}/warehouses"
+        # Get warehouses via business endpoint
+        # Note: campaign_id is used as businessId in newer API
+        url = f"{self.base_url}/businesses/{self.campaign_id}/warehouses"
         headers = self._get_headers()
         
         logger.info(f"[Yandex] Request URL: {url}")
         
+        # POST request with campaignIds
+        payload = {
+            "campaignIds": [self.campaign_id],
+            "components": ["STATUS"]
+        }
+        
         try:
-            response_data = await self._make_request("GET", url, headers)
+            response_data = await self._make_request("POST", url, headers, json_data=payload)
             
             logger.info(f"[Yandex] Raw response: {response_data}")
             
-            # Parse response - may be in different formats
+            # Parse response
             warehouses = []
             if isinstance(response_data, dict):
-                warehouses = response_data.get('result', {}).get('warehouses', [])
+                result = response_data.get('result', {})
+                warehouses = result.get('warehouses', [])
                 if not warehouses:
                     warehouses = response_data.get('warehouses', [])
             elif isinstance(response_data, list):
@@ -507,18 +515,20 @@ class YandexMarketConnector(BaseConnector):
             
             formatted_warehouses = []
             for wh in warehouses:
-                # Filter FBS warehouses
-                wh_type = wh.get('type', 'FBS')
+                # Parse warehouse data
+                wh_id = wh.get('id') or wh.get('warehouseId')
+                wh_name = wh.get('name', 'Unnamed warehouse')
                 
                 formatted_warehouses.append({
-                    "id": str(wh.get('id', wh.get('warehouseId', ''))),
-                    "name": wh.get('name', 'Unnamed warehouse'),
-                    "type": wh_type,
-                    "is_fbs": wh_type in ['FBS', 'FULFILLMENT'],
-                    "address": wh.get('address', {}).get('fullAddress', '')
+                    "id": str(wh_id),
+                    "name": wh_name,
+                    "type": "FBS",
+                    "is_fbs": True,
+                    "address": wh.get('address', ''),
+                    "status": wh.get('status', {}).get('value', 'UNKNOWN') if isinstance(wh.get('status'), dict) else 'ACTIVE'
                 })
             
-            logger.info(f"[Yandex] Formatted {len(formatted_warehouses)} warehouses")
+            logger.info(f"[Yandex] Formatted {len(formatted_warehouses)} FBS warehouses")
             return formatted_warehouses
             
         except MarketplaceError as e:
