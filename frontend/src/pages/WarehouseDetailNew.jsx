@@ -333,35 +333,11 @@ const WarehouseDetailNew = () => {
                 </select>
               </div>
               
-              {/* Step 2: Select Integration */}
+              {/* Step 2: Select Warehouse (Auto-loaded from ALL integrations) */}
               {selectedMarketplace && (
                 <div>
-                  <label className="block text-xs mb-1 font-mono">2️⃣ ВЫБЕРИТЕ ИНТЕГРАЦИЮ</label>
-                  <select
-                    value={selectedIntegration}
-                    onChange={(e) => handleIntegrationChange(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-mm-cyan text-sm"
-                  >
-                    <option value="">-- Выбрать интеграцию --</option>
-                    {filteredIntegrations.map(integration => (
-                      <option key={integration.id} value={integration.id}>
-                        {integration.name || (integration.api_key ? `API: ${integration.api_key.substring(0, 15)}...` : 'No Key')}
-                      </option>
-                    ))}
-                  </select>
-                  {filteredIntegrations.length === 0 && (
-                    <p className="text-xs text-red-400 mt-1">
-                      ⚠️ Нет интеграций для {selectedMarketplace.toUpperCase()}. Добавьте в разделе ИНТЕГРАЦИИ.
-                    </p>
-                  )}
-                </div>
-              )}
-              
-              {/* Step 3: Select Warehouse (Auto-loaded from MP) */}
-              {selectedIntegration && (
-                <div>
                   <label className="block text-xs mb-1 font-mono">
-                    3️⃣ ВЫБЕРИТЕ СКЛАД FBS
+                    2️⃣ ВЫБЕРИТЕ СКЛАД FBS
                     {loadingMpWarehouses && <span className="ml-2 text-mm-cyan animate-pulse">загрузка...</span>}
                   </label>
                   <select
@@ -387,7 +363,7 @@ const WarehouseDetailNew = () => {
               
               <button
                 onClick={handleAddLink}
-                disabled={!selectedMarketplace || !selectedIntegration || !selectedMpWarehouse}
+                disabled={!selectedMarketplace || !selectedMpWarehouse}
                 className="w-full px-4 py-2 bg-mm-purple hover:bg-purple-600 rounded transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 <FiPlus />
