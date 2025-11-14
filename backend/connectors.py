@@ -97,15 +97,18 @@ class BaseConnector:
                     # Check Content-Encoding header first
                     content_encoding = response.headers.get('content-encoding', '').lower()
                     content = response.content
+                    gzip_magic = b'\x1f\x8b'
                     
                     logger.info(f"[{self.marketplace_name}] JSON parsing failed: {json_error}")
                     logger.info(f"[{self.marketplace_name}] Content-Encoding header: '{content_encoding}'")
                     logger.info(f"[{self.marketplace_name}] First 2 bytes: {content[:2].hex() if len(content) >= 2 else 'N/A'}")
                     
                     # Check for gzip either by header or magic bytes
-                    is_gzip = content_encoding == 'gzip' or content[:2] == b'\x1f\x8b'
+                    has_gzip_header = content_encoding == 'gzip'
+                    has_gzip_magic = content[:2] == gzip_magic
+                    is_gzip = has_gzip_header or has_gzip_magic
                     
-                    logger.info(f"[{self.marketplace_name}] is_gzip check: {is_gzip} (header={content_encoding == 'gzip'}, magic={content[:2] == b'\\x1f\\x8b'})")
+                    logger.info(f"[{self.marketplace_name}] is_gzip check: {is_gzip} (header={has_gzip_header}, magic={has_gzip_magic})")
                     
                     if is_gzip:
                         try:
