@@ -9,6 +9,7 @@ import ProductsPageNew from './pages/ProductsPageNew'
 import StockBalancesPage from './pages/StockBalancesPage'
 // import WarehouseDetail from './pages/WarehouseDetail'
 import WarehouseDetailNew from './pages/WarehouseDetailNew'
+import IntegrationsPage from './pages/IntegrationsPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 
