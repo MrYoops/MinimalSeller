@@ -139,13 +139,16 @@ const WarehouseDetailNew = () => {
         marketplace_warehouse_name: mpWarehouse.name
       });
 
-      alert(`✅ Связь со складом ${selectedMarketplace.toUpperCase()} добавлена!`);
-      fetchWarehouseLinks();
+      // First reload links, THEN show alert
+      await fetchWarehouseLinks();
       
       // Reset form
       setSelectedMarketplace('');
       setSelectedMpWarehouse('');
       setMpWarehouses([]);
+      
+      // Show success alert AFTER UI update
+      alert(`✅ Связь со складом ${selectedMarketplace.toUpperCase()} добавлена!`);
     } catch (error) {
       console.error('Error adding link:', error);
       alert('Ошибка: ' + (error.response?.data?.detail || error.message));
