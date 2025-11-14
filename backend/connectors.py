@@ -366,30 +366,40 @@ def get_connector(marketplace: str, client_id: str, api_key: str) -> BaseConnect
     return connector_class(client_id, api_key)
 
     async def get_warehouses(self) -> List[Dict[str, Any]]:
-        """Get warehouses from Ozon"""
-        logger.info("[Ozon] Fetching warehouses")
+        """Get warehouses from Ozon FBS"""
+        logger.info("[Ozon] Fetching FBS warehouses")
         
         url = f"{self.base_url}/v1/warehouse/list"
         headers = self._get_headers()
         
+        logger.info(f"[Ozon] Request URL: {url}")
+        logger.info(f"[Ozon] Client-Id: {self.client_id[:10]}...")
+        
         try:
             response_data = await self._make_request("POST", url, headers, json_data={})
+            
+            logger.info(f"[Ozon] Raw response: {response_data}")
             
             warehouses = response_data.get('result', [])
             logger.info(f"[Ozon] Received {len(warehouses)} warehouses")
             
-            return [
-                {
-                    "id": str(wh.get('warehouse_id', '')),
+            formatted_warehouses = []
+            for wh in warehouses:
+                formatted_warehouses.append({
+                    "id": str(wh.get('warehouse_id', wh.get('id', ''))),
                     "name": wh.get('name', 'Unnamed warehouse'),
-                    "is_enabled": wh.get('is_enabled', False)
-                }
-                for wh in warehouses
-            ]
+                    "is_enabled": wh.get('is_enabled', True),
+                    "type": wh.get('type', 'FBS')
+                })
+            
+            return formatted_warehouses
             
         except MarketplaceError as e:
             logger.error(f"[Ozon] Failed to fetch warehouses: {e.message}")
             raise
+        except Exception as e:
+            logger.error(f"[Ozon] Unexpected error: {str(e)}")
+            raise MarketplaceError(f"Failed to fetch Ozon warehouses: {str(e)}", 500)
 
     async def get_warehouses(self) -> List[Dict[str, Any]]:
         """Get warehouses from Wildberries"""
