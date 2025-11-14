@@ -312,10 +312,10 @@ const WarehouseDetailNew = () => {
               </p>
             </div>
             
-            {/* Add new link - NEW 3-FIELD STRUCTURE */}
+            {/* Add new link - SIMPLIFIED 2-STEP (like SelSup) */}
             <div className="bg-gray-800 p-4 rounded-lg mb-4 space-y-3">
               <p className="text-xs text-mm-cyan mb-3">
-                🔗 Загрузка FBS складов с маркетплейса
+                🔗 Автоматическая загрузка FBS складов со ВСЕХ интеграций маркетплейса
               </p>
               
               {/* Step 1: Select Marketplace */}
@@ -349,13 +349,15 @@ const WarehouseDetailNew = () => {
                     <option value="">-- Выбрать склад --</option>
                     {mpWarehouses.map(wh => (
                       <option key={wh.id} value={wh.id}>
-                        {wh.name} (ID: {wh.id})
+                        {wh.name} (ID: {wh.id}) {wh.integration_name ? `[${wh.integration_name}]` : ''}
                       </option>
                     ))}
                   </select>
                   {mpWarehouses.length === 0 && !loadingMpWarehouses && (
                     <p className="text-xs text-yellow-400 mt-1">
-                      ⚠️ Склады не найдены. Создайте FBS склад в личном кабинете {selectedMarketplace.toUpperCase()}.
+                      ⚠️ Склады не найдены. Убедитесь что:
+                      <br/>• Добавлена хотя бы одна интеграция {selectedMarketplace.toUpperCase()} в разделе ИНТЕГРАЦИИ
+                      <br/>• Создан FBS склад в личном кабинете {selectedMarketplace.toUpperCase()}
                     </p>
                   )}
                 </div>
