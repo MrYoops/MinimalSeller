@@ -2561,9 +2561,6 @@ async def update_warehouse_link(
     return {"message": "Link updated successfully"}
 
 
-    return {"message": "Связь установлена", "warehouse_id": warehouse_id}
-
-
 # ============================================
 # PRODUCTS ENDPOINTS
 # ============================================
