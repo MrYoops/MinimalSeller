@@ -2393,19 +2393,24 @@ async def get_warehouse_links(
     """Get all links for a warehouse"""
     logger.info(f"📋 Getting links for warehouse: {warehouse_id}")
     
-    # Verify warehouse belongs to user
+    # Verify warehouse belongs to user (UUID format)
     warehouse = await db.warehouses.find_one({
         "_id": warehouse_id,
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])
     })
     
     if not warehouse:
+        logger.error(f"❌ Warehouse {warehouse_id} not found for user {current_user['_id']}")
         raise HTTPException(status_code=404, detail="Warehouse not found")
     
     # Get links
     links = await db.warehouse_links.find({
         "warehouse_id": warehouse_id
     }).to_list(length=100)
+    
+    # Remove MongoDB _id from each link
+    for link in links:
+        link.pop("_id", None)
     
     logger.info(f"✅ Found {len(links)} links")
     return links
