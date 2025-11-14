@@ -174,14 +174,15 @@ class OzonConnector(BaseConnector):
             # Step 2: Get full product info with images and attributes
             # Use v3/product/info/list (v2/product/info is deprecated)
             info_url = f"{self.base_url}/v3/product/info/list"
-            product_ids = [item.get('product_id') for item in items if item.get('product_id')]
+            # Try using offer_id instead of product_id
+            offer_ids = [item.get('offer_id') for item in items if item.get('offer_id')]
             
-            logger.info(f"[Ozon] Product IDs to fetch details for: {product_ids}")
+            logger.info(f"[Ozon] Offer IDs to fetch details for: {offer_ids}")
             
-            # v3/product/info/list requires filter with ONLY product_id (no other filters)
+            # v3/product/info/list with offer_id
             info_payload = {
                 "filter": {
-                    "product_id": product_ids
+                    "offer_id": offer_ids
                 },
                 "limit": 100
             }
