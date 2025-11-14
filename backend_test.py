@@ -751,7 +751,7 @@ class BackendTester:
                 
                 if isinstance(warehouses, list):
                     print_success(f"✅ Successfully retrieved Ozon warehouses!")
-                    print_success(f"✅ Response properly parsed as JSON (gzip decompression working)")
+                    print_success(f"✅ Response properly parsed as JSON (Brotli/gzip decompression working)")
                     print_info(f"Total warehouses: {len(warehouses)}")
                     
                     if len(warehouses) == 0:
