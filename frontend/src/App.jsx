@@ -46,6 +46,9 @@ function AppRoutes() {
       <Route path="/warehouses/:id" element={
         <ProtectedRoute><WarehouseDetailNew /></ProtectedRoute>
       } />
+      <Route path="/integrations" element={
+        <ProtectedRoute><IntegrationsPage /></ProtectedRoute>
+      } />
       {/* <Route path="/warehouses-old/:id" element={
         <ProtectedRoute><WarehouseDetailPage /></ProtectedRoute>
       } /> */}
