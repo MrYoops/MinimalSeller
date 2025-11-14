@@ -158,7 +158,7 @@ const WarehouseDetailNew = () => {
           marketplace_warehouse_name: manualWarehouseName
         });
 
-        alert('✅ Связь со складом Yandex добавлена!');
+        alert(`✅ Связь со складом ${integration.marketplace.toUpperCase()} добавлена!`);
         fetchWarehouseLinks();
         setSelectedIntegration('');
         setManualWarehouseId('');
