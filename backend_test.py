@@ -773,9 +773,9 @@ class BackendTester:
                         print_warning("⚠️  WARNING: Only FBO warehouses returned, but should return seller's FBS warehouses!")
                         print_warning("The endpoint should use /v1/warehouse/list to get seller's warehouses")
                     
-                    # Step 3: Check backend logs for gzip detection message
-                    print_info("\nStep 3: Checking backend logs for gzip decompression...")
-                    self.check_backend_logs_for_gzip()
+                    # Step 3: Check backend logs for Brotli/gzip detection message
+                    print_info("\nStep 3: Checking backend logs for Brotli/gzip decompression...")
+                    self.check_backend_logs_for_compression()
                     
                     self.passed += 1
                     return True
