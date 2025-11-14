@@ -441,10 +441,11 @@ class YandexMarketConnector(BaseConnector):
             raise
     
     async def get_warehouses(self) -> List[Dict[str, Any]]:
-        """Get warehouses from Yandex.Market FBS"""
-        logger.info(f"[Yandex] Fetching FBS warehouses for campaign {self.campaign_id}")
+        """Get seller's FBS warehouses from Yandex.Market"""
+        logger.info(f"[Yandex] Fetching seller FBS warehouses")
         
-        url = f"{self.base_url}/campaigns/{self.campaign_id}/warehouses"
+        # Correct endpoint for getting fulfillment warehouses (FBS)
+        url = f"{self.base_url}/warehouses"
         headers = self._get_headers()
         
         logger.info(f"[Yandex] Request URL: {url}")
@@ -454,17 +455,31 @@ class YandexMarketConnector(BaseConnector):
             
             logger.info(f"[Yandex] Raw response: {response_data}")
             
-            warehouses = response_data.get('result', {}).get('warehouses', [])
+            # Parse response - may be in different formats
+            warehouses = []
+            if isinstance(response_data, dict):
+                warehouses = response_data.get('result', {}).get('warehouses', [])
+                if not warehouses:
+                    warehouses = response_data.get('warehouses', [])
+            elif isinstance(response_data, list):
+                warehouses = response_data
+            
             logger.info(f"[Yandex] Received {len(warehouses)} warehouses")
             
             formatted_warehouses = []
             for wh in warehouses:
+                # Filter FBS warehouses
+                wh_type = wh.get('type', 'FBS')
+                
                 formatted_warehouses.append({
-                    "id": str(wh.get('id', '')),
+                    "id": str(wh.get('id', wh.get('warehouseId', ''))),
                     "name": wh.get('name', 'Unnamed warehouse'),
-                    "type": wh.get('type', 'FBS')
+                    "type": wh_type,
+                    "is_fbs": wh_type in ['FBS', 'FULFILLMENT'],
+                    "address": wh.get('address', {}).get('fullAddress', '')
                 })
             
+            logger.info(f"[Yandex] Formatted {len(formatted_warehouses)} warehouses")
             return formatted_warehouses
             
         except MarketplaceError as e:
