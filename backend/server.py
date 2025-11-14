@@ -3303,3 +3303,411 @@ async def delete_catalog_product(
     logger.info(f"✅ Product archived: {product_id}")
     
     return {"success": True, "message": "Товар успешно архивирован"}
+
+
+
+# ============================================
+# ВАРИАЦИИ ТОВАРОВ (ЦВЕТ + РАЗМЕР)
+# ============================================
+
+@app.get("/api/catalog/products/{product_id}/variants", response_model=List[ProductVariantResponse])
+async def get_product_variants(
+    product_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить все вариации товара"""
+    logger.info(f"🎨 Fetching variants for product: {product_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Получить все вариации
+    variants = await db.product_variants.find({"product_id": product_id}).to_list(length=1000)
+    
+    result = []
+    for variant in variants:
+        # Подсчитать фото для этой вариации
+        photos_count = await db.product_photos.count_documents({
+            "product_id": product_id,
+            "variant_id": str(variant["_id"])
+        })
+        
+        result.append(ProductVariantResponse(
+            id=str(variant["_id"]),
+            product_id=str(variant["product_id"]),
+            color=variant.get("color"),
+            size=variant.get("size"),
+            sku=variant["sku"],
+            barcode=variant.get("barcode"),
+            gtin=variant.get("gtin"),
+            photos_count=photos_count,
+            created_at=variant.get("created_at", datetime.utcnow()),
+            updated_at=variant.get("updated_at", datetime.utcnow())
+        ))
+    
+    logger.info(f"✅ Found {len(result)} variants")
+    return result
+
+
+@app.post("/api/catalog/products/{product_id}/variants", response_model=ProductVariantResponse, status_code=201)
+async def create_product_variant(
+    product_id: str,
+    variant: ProductVariantCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Добавить вариацию товара"""
+    logger.info(f"🎨 Creating variant for product: {product_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Проверить уникальность SKU
+    existing_sku = await db.product_variants.find_one({
+        "product_id": product_id,
+        "sku": variant.sku
+    })
+    if existing_sku:
+        raise HTTPException(status_code=400, detail="Вариация с таким SKU уже существует")
+    
+    # Создать вариацию
+    variant_id = str(uuid.uuid4())
+    now = datetime.utcnow()
+    
+    new_variant = {
+        "_id": variant_id,
+        "product_id": product_id,
+        "color": variant.color,
+        "size": variant.size,
+        "sku": variant.sku,
+        "barcode": variant.barcode,
+        "gtin": variant.gtin,
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.product_variants.insert_one(new_variant)
+    logger.info(f"✅ Variant created: {variant_id}")
+    
+    return ProductVariantResponse(
+        id=variant_id,
+        product_id=product_id,
+        color=variant.color,
+        size=variant.size,
+        sku=variant.sku,
+        barcode=variant.barcode,
+        gtin=variant.gtin,
+        photos_count=0,
+        created_at=now,
+        updated_at=now
+    )
+
+
+@app.put("/api/catalog/products/{product_id}/variants/{variant_id}", response_model=ProductVariantResponse)
+async def update_product_variant(
+    product_id: str,
+    variant_id: str,
+    variant: ProductVariantUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Обновить вариацию"""
+    logger.info(f"🎨 Updating variant: {variant_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Проверить существование вариации
+    existing = await db.product_variants.find_one({
+        "_id": variant_id,
+        "product_id": product_id
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Вариация не найдена")
+    
+    # Проверить уникальность SKU
+    if variant.sku and variant.sku != existing.get("sku"):
+        duplicate = await db.product_variants.find_one({
+            "product_id": product_id,
+            "sku": variant.sku,
+            "_id": {"$ne": variant_id}
+        })
+        if duplicate:
+            raise HTTPException(status_code=400, detail="Вариация с таким SKU уже существует")
+    
+    # Подготовить обновление
+    update_data = {k: v for k, v in variant.dict(exclude_unset=True).items() if v is not None}
+    if update_data:
+        update_data["updated_at"] = datetime.utcnow()
+        await db.product_variants.update_one(
+            {"_id": variant_id},
+            {"$set": update_data}
+        )
+    
+    # Получить обновленную вариацию
+    updated = await db.product_variants.find_one({"_id": variant_id})
+    photos_count = await db.product_photos.count_documents({
+        "product_id": product_id,
+        "variant_id": variant_id
+    })
+    
+    logger.info(f"✅ Variant updated: {variant_id}")
+    
+    return ProductVariantResponse(
+        id=str(updated["_id"]),
+        product_id=str(updated["product_id"]),
+        color=updated.get("color"),
+        size=updated.get("size"),
+        sku=updated["sku"],
+        barcode=updated.get("barcode"),
+        gtin=updated.get("gtin"),
+        photos_count=photos_count,
+        created_at=updated.get("created_at", datetime.utcnow()),
+        updated_at=updated.get("updated_at", datetime.utcnow())
+    )
+
+
+@app.delete("/api/catalog/products/{product_id}/variants/{variant_id}")
+async def delete_product_variant(
+    product_id: str,
+    variant_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Удалить вариацию"""
+    logger.info(f"🎨 Deleting variant: {variant_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Проверить существование вариации
+    existing = await db.product_variants.find_one({
+        "_id": variant_id,
+        "product_id": product_id
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Вариация не найдена")
+    
+    # Удалить связанные фото
+    await db.product_photos.delete_many({
+        "product_id": product_id,
+        "variant_id": variant_id
+    })
+    
+    # Удалить связанные цены
+    await db.product_prices.delete_many({
+        "product_id": product_id,
+        "variant_id": variant_id
+    })
+    
+    # Удалить связанные остатки
+    await db.product_stock.delete_many({
+        "product_id": product_id,
+        "variant_id": variant_id
+    })
+    
+    # Удалить вариацию
+    await db.product_variants.delete_one({"_id": variant_id})
+    
+    logger.info(f"✅ Variant deleted: {variant_id}")
+    
+    return {"success": True, "message": "Вариация успешно удалена"}
+
+
+# ============================================
+# ФОТО ТОВАРОВ
+# ============================================
+
+@app.get("/api/catalog/products/{product_id}/photos", response_model=List[ProductPhotoResponse])
+async def get_product_photos(
+    product_id: str,
+    variant_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить все фото товара"""
+    logger.info(f"📷 Fetching photos for product: {product_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Построить запрос
+    query = {"product_id": product_id}
+    if variant_id:
+        query["variant_id"] = variant_id
+    
+    # Получить фото
+    photos = await db.product_photos.find(query).sort("order", 1).to_list(length=1000)
+    
+    result = []
+    for photo in photos:
+        result.append(ProductPhotoResponse(
+            id=str(photo["_id"]),
+            product_id=str(photo["product_id"]),
+            variant_id=photo.get("variant_id"),
+            url=photo["url"],
+            order=photo.get("order", 0),
+            marketplaces=photo.get("marketplaces", {"wb": True, "ozon": True, "yandex": True}),
+            created_at=photo.get("created_at", datetime.utcnow())
+        ))
+    
+    logger.info(f"✅ Found {len(result)} photos")
+    return result
+
+
+@app.post("/api/catalog/products/{product_id}/photos", response_model=ProductPhotoResponse, status_code=201)
+async def create_product_photo(
+    product_id: str,
+    photo: ProductPhotoCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Добавить фото товара"""
+    logger.info(f"📷 Creating photo for product: {product_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Если указана вариация, проверить её существование
+    if photo.variant_id:
+        variant = await db.product_variants.find_one({
+            "_id": photo.variant_id,
+            "product_id": product_id
+        })
+        if not variant:
+            raise HTTPException(status_code=404, detail="Вариация не найдена")
+    
+    # Создать фото
+    photo_id = str(uuid.uuid4())
+    now = datetime.utcnow()
+    
+    new_photo = {
+        "_id": photo_id,
+        "product_id": product_id,
+        "variant_id": photo.variant_id,
+        "url": photo.url,
+        "order": photo.order,
+        "marketplaces": photo.marketplaces,
+        "created_at": now
+    }
+    
+    await db.product_photos.insert_one(new_photo)
+    logger.info(f"✅ Photo created: {photo_id}")
+    
+    return ProductPhotoResponse(
+        id=photo_id,
+        product_id=product_id,
+        variant_id=photo.variant_id,
+        url=photo.url,
+        order=photo.order,
+        marketplaces=photo.marketplaces,
+        created_at=now
+    )
+
+
+@app.put("/api/catalog/products/{product_id}/photos/{photo_id}", response_model=ProductPhotoResponse)
+async def update_product_photo(
+    product_id: str,
+    photo_id: str,
+    photo: ProductPhotoUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Обновить фото"""
+    logger.info(f"📷 Updating photo: {photo_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Проверить существование фото
+    existing = await db.product_photos.find_one({
+        "_id": photo_id,
+        "product_id": product_id
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Фото не найдено")
+    
+    # Подготовить обновление
+    update_data = {k: v for k, v in photo.dict(exclude_unset=True).items() if v is not None}
+    if update_data:
+        await db.product_photos.update_one(
+            {"_id": photo_id},
+            {"$set": update_data}
+        )
+    
+    # Получить обновленное фото
+    updated = await db.product_photos.find_one({"_id": photo_id})
+    
+    logger.info(f"✅ Photo updated: {photo_id}")
+    
+    return ProductPhotoResponse(
+        id=str(updated["_id"]),
+        product_id=str(updated["product_id"]),
+        variant_id=updated.get("variant_id"),
+        url=updated["url"],
+        order=updated.get("order", 0),
+        marketplaces=updated.get("marketplaces", {"wb": True, "ozon": True, "yandex": True}),
+        created_at=updated.get("created_at", datetime.utcnow())
+    )
+
+
+@app.delete("/api/catalog/products/{product_id}/photos/{photo_id}")
+async def delete_product_photo(
+    product_id: str,
+    photo_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Удалить фото"""
+    logger.info(f"📷 Deleting photo: {photo_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Проверить существование фото
+    existing = await db.product_photos.find_one({
+        "_id": photo_id,
+        "product_id": product_id
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Фото не найдено")
+    
+    # Удалить фото
+    await db.product_photos.delete_one({"_id": photo_id})
+    
+    logger.info(f"✅ Photo deleted: {photo_id}")
+    
+    return {"success": True, "message": "Фото успешно удалено"}
