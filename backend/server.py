@@ -2105,10 +2105,12 @@ async def get_warehouses(current_user: dict = Depends(get_current_user)):
             "warehouse_id": str(wh["_id"])
         }).to_list(length=100)
         
-        # Remove MongoDB _id from links
+        # Remove MongoDB _id from links and convert to serializable format
         marketplace_links = []
         for link in links:
             link.pop("_id", None)
+            # Ensure all values are JSON serializable
+            link["user_id"] = str(link.get("user_id", ""))
             marketplace_links.append(link)
         
         warehouse_dict = {
@@ -2122,8 +2124,8 @@ async def get_warehouses(current_user: dict = Depends(get_current_user)):
             "use_for_orders": wh.get("use_for_orders", True),
             "priority": wh.get("priority", 0),
             "address": wh.get("address", ""),
-            "created_at": wh["created_at"] if isinstance(wh["created_at"], str) else wh["created_at"].isoformat(),
-            "updated_at": wh["updated_at"] if isinstance(wh["updated_at"], str) else wh["updated_at"].isoformat(),
+            "created_at": wh["created_at"] if isinstance(wh["created_at"], str) else wh["created_at"].isoformat() if hasattr(wh["created_at"], 'isoformat') else str(wh["created_at"]),
+            "updated_at": wh["updated_at"] if isinstance(wh["updated_at"], str) else wh["updated_at"].isoformat() if hasattr(wh["updated_at"], 'isoformat') else str(wh["updated_at"]),
             "marketplace_links": marketplace_links  # Add links info
         }
         result.append(warehouse_dict)
