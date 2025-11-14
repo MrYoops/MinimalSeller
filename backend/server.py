@@ -2093,23 +2093,40 @@ async def create_warehouse(
         "updated_at": new_warehouse["updated_at"]
     }
 
-@app.get("/api/warehouses", response_model=List[Warehouse])
+@app.get("/api/warehouses")
 async def get_warehouses(current_user: dict = Depends(get_current_user)):
-    """Get all warehouses for current user"""
+    """Get all warehouses for current user with marketplace links"""
     warehouses = await db.warehouses.find({"user_id": current_user["_id"]}).to_list(length=100)
     
     result = []
     for wh in warehouses:
-        result.append(Warehouse(
-            id=str(wh["_id"]),
-            user_id=str(wh["user_id"]),
-            name=wh["name"],
-            type=wh["type"],
-            address=wh.get("address", ""),
-            comment=wh.get("comment", ""),
-            created_at=datetime.fromisoformat(wh["created_at"]) if isinstance(wh["created_at"], str) else wh["created_at"],
-            updated_at=datetime.fromisoformat(wh["updated_at"]) if isinstance(wh["updated_at"], str) else wh["updated_at"]
-        ))
+        # Get marketplace links for this warehouse
+        links = await db.warehouse_links.find({
+            "warehouse_id": str(wh["_id"])
+        }).to_list(length=100)
+        
+        # Remove MongoDB _id from links
+        marketplace_links = []
+        for link in links:
+            link.pop("_id", None)
+            marketplace_links.append(link)
+        
+        warehouse_dict = {
+            "id": str(wh["_id"]),
+            "user_id": str(wh["user_id"]),
+            "name": wh["name"],
+            "type": wh["type"],
+            "is_fbo": wh.get("is_fbo", False),
+            "send_stock": wh.get("send_stock", True),
+            "load_orders": wh.get("load_orders", True),
+            "use_for_orders": wh.get("use_for_orders", True),
+            "priority": wh.get("priority", 0),
+            "address": wh.get("address", ""),
+            "created_at": wh["created_at"] if isinstance(wh["created_at"], str) else wh["created_at"].isoformat(),
+            "updated_at": wh["updated_at"] if isinstance(wh["updated_at"], str) else wh["updated_at"].isoformat(),
+            "marketplace_links": marketplace_links  # Add links info
+        }
+        result.append(warehouse_dict)
     
     return result
 
