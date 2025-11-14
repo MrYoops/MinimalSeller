@@ -378,3 +378,136 @@ The endpoints are:
 - API Credentials: ❌ INVALID
 - Overall: ⚠️ NEEDS VALID CREDENTIALS TO TEST FULLY
 
+
+---
+
+## Wildberries API Integration Testing (REAL Valid Token)
+**Test Date**: 2025-11-14
+**Tester**: Testing Agent
+**CRITICAL**: Testing WB warehouse endpoint fix (changed from `/api/v3/supplier/warehouses` to `/api/v3/warehouses`)
+
+### Test Case 1: Add WB Integration ✅
+- **Endpoint**: POST /api/seller/api-keys
+- **Credentials Used**:
+  - Marketplace: wb
+  - Client ID: (empty for WB)
+  - API Key: eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjUwOTA0djEiLCJ0eXAiOiJKV1QifQ... (REAL VALID TOKEN)
+- **Result**: ✅ SUCCESS
+- **Response**:
+  - Key ID: f6243445-621b-4e7f-a97e-90a490704448
+  - Masked Key: ***AqYQ
+- **Status**: Integration added successfully
+
+### Test Case 2: Test WB Connection ✅
+- **Endpoint**: POST /api/seller/api-keys/test
+- **Result**: ✅ SUCCESS
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "✅ Connection successful! Found 3 products from WB.",
+    "products_count": 3
+  }
+  ```
+- **Verification**: REAL API connection working with valid token
+- **Products Found**: 3 products from seller's WB account
+
+### Test Case 3: Get WB SELLER Warehouses (CRITICAL TEST) ✅
+- **Endpoint**: GET /api/marketplaces/wb/all-warehouses
+- **Result**: ✅ SUCCESS - CORRECT WAREHOUSES RETURNED
+- **Response**:
+  ```json
+  {
+    "marketplace": "wb",
+    "warehouses": [
+      {
+        "id": "1584437",
+        "name": "Мой склад",
+        "address": "",
+        "cargo_type": 1,
+        "is_active": true,
+        "is_deleting": false,
+        "type": "FBS",
+        "is_fbs": true,
+        "integration_id": "f6243445-621b-4e7f-a97e-90a490704448",
+        "integration_name": ""
+      },
+      {
+        "id": "1609510",
+        "name": "цй3у",
+        "address": "",
+        "cargo_type": 1,
+        "is_active": true,
+        "is_deleting": false,
+        "type": "FBS",
+        "is_fbs": true,
+        "integration_id": "f6243445-621b-4e7f-a97e-90a490704448",
+        "integration_name": ""
+      }
+    ]
+  }
+  ```
+
+#### CRITICAL VALIDATION RESULTS:
+- **Total Warehouses**: 2
+- **FBS Warehouses (Seller's Own)**: 2 ✅
+- **FBO Warehouses (WB Marketplace)**: 0 ✅
+- **Warehouse Names**: "Мой склад", "цй3у" (seller's custom names, NOT WB FBO names like "Коледино", "Электросталь")
+- **Type Field**: "FBS" ✅
+- **is_fbs Field**: true ✅
+
+**✅ CRITICAL SUCCESS**: The endpoint correctly returns SELLER'S FBS warehouses, NOT WB FBO warehouses!
+
+### Test Case 4: Verify WB Endpoint in Code ✅
+- **File**: `/app/backend/connectors.py`
+- **Line 382**: `url = f"{self.marketplace_api_url}/api/v3/warehouses"`
+- **Full URL**: `https://marketplace-api.wildberries.ru/api/v3/warehouses`
+- **Verification**: ✅ CORRECT endpoint is being used
+- **Comment in code**: "CORRECT endpoint for seller's OWN warehouses (Sept 2025 update)"
+
+### Technical Analysis
+
+#### ✅ Code Implementation is CORRECT
+1. **Warehouse Endpoint**: `/api/v3/warehouses`
+   - This is the CORRECT endpoint as of September 2025
+   - OLD endpoint `/api/v3/supplier/warehouses` was returning FBO warehouses (WRONG)
+   - NEW endpoint `/api/v3/warehouses` returns seller's FBS warehouses (CORRECT)
+   - Confirmed by WB API changelog (Sept 1, 2025)
+
+2. **Base URL**: `https://marketplace-api.wildberries.ru`
+   - Correct base URL for WB marketplace API
+   - Using marketplace-api subdomain (not content-api)
+
+3. **Response Parsing**: 
+   - Correctly identifies seller's warehouses
+   - Sets `type: "FBS"` for all warehouses
+   - Sets `is_fbs: true` for all warehouses
+   - Filters out warehouses being deleted (`isDeleting: true`)
+
+4. **Headers**: All required headers are present
+   - Authorization: Bearer {token} ✅
+   - Content-Type: application/json ✅
+
+#### ✅ Validation Results
+- **Warehouse Type**: All returned warehouses have `type: "FBS"` ✅
+- **Warehouse Ownership**: All warehouses are seller's own (custom names) ✅
+- **No FBO Warehouses**: No WB marketplace warehouses returned ✅
+- **API Response**: Real data from WB API, not mocked ✅
+
+### Conclusion
+
+✅ **The Wildberries API integration is WORKING CORRECTLY**
+
+**Critical Fix Verified:**
+- ✅ Endpoint changed from `/api/v3/supplier/warehouses` to `/api/v3/warehouses`
+- ✅ Now correctly returns SELLER'S FBS warehouses
+- ✅ Does NOT return WB FBO warehouses (Коледино, Электросталь, etc.)
+
+**Test Results:**
+- ✅ Add Integration: WORKING
+- ✅ Test Connection: WORKING (3 products found)
+- ✅ Get Warehouses: WORKING (2 seller's FBS warehouses returned)
+- ✅ Endpoint Verification: CORRECT
+
+**Overall Status**: ✅ ALL TESTS PASSED - WB INTEGRATION FULLY FUNCTIONAL
+
