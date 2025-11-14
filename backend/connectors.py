@@ -178,6 +178,42 @@ class OzonConnector(BaseConnector):
         except MarketplaceError as e:
             logger.error(f"[Ozon] Failed to fetch products: {e.message}")
             raise
+    
+    async def get_warehouses(self) -> List[Dict[str, Any]]:
+        """Get warehouses from Ozon FBS"""
+        logger.info("[Ozon] Fetching FBS warehouses")
+        
+        url = f"{self.base_url}/v1/warehouse/list"
+        headers = self._get_headers()
+        
+        logger.info(f"[Ozon] Request URL: {url}")
+        logger.info(f"[Ozon] Client-Id: {self.client_id[:10]}...")
+        
+        try:
+            response_data = await self._make_request("POST", url, headers, json_data={})
+            
+            logger.info(f"[Ozon] Raw response: {response_data}")
+            
+            warehouses = response_data.get('result', [])
+            logger.info(f"[Ozon] Received {len(warehouses)} warehouses")
+            
+            formatted_warehouses = []
+            for wh in warehouses:
+                formatted_warehouses.append({
+                    "id": str(wh.get('warehouse_id', wh.get('id', ''))),
+                    "name": wh.get('name', 'Unnamed warehouse'),
+                    "is_enabled": wh.get('is_enabled', True),
+                    "type": wh.get('type', 'FBS')
+                })
+            
+            return formatted_warehouses
+            
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Failed to fetch warehouses: {e.message}")
+            raise
+        except Exception as e:
+            logger.error(f"[Ozon] Unexpected error: {str(e)}")
+            raise MarketplaceError(f"Failed to fetch Ozon warehouses: {str(e)}", 500)
 
 class WildberriesConnector(BaseConnector):
     """Wildberries marketplace connector - REAL API with full headers"""
