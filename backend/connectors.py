@@ -377,8 +377,8 @@ class WildberriesConnector(BaseConnector):
         """Get seller's FBS warehouses from Wildberries (Seller Warehouses API)"""
         logger.info("[WB] Fetching seller's own FBS warehouses")
         
-        # Seller Warehouses API endpoint (returns seller's warehouses, not WB fulfillment centers)
-        url = f"https://supplies-api.wildberries.ru/api/v1/warehouses"
+        # CORRECT endpoint for seller's OWN warehouses (not WB FBO warehouses!)
+        url = f"{self.marketplace_api_url}/api/v3/supplier/warehouses"
         headers = self._get_headers()
         
         logger.info(f"[WB] Request URL: {url}")
@@ -393,17 +393,16 @@ class WildberriesConnector(BaseConnector):
             
             formatted_warehouses = []
             for wh in warehouses:
-                # Parse seller warehouse data
-                wh_id = wh.get('id') or wh.get('officeId') or wh.get('ID')
+                # Parse seller warehouse data from /api/v3/supplier/warehouses
+                wh_id = wh.get('id') or wh.get('ID')
                 wh_name = wh.get('name') or wh.get('warehouseName') or 'Unnamed warehouse'
                 
                 formatted_warehouses.append({
                     "id": str(wh_id),
                     "name": wh_name,
-                    "office_id": wh.get('officeId', wh.get('officeID', 0)),
-                    "cargo_type": wh.get('cargoType', 0),
-                    "geo_name": wh.get('geoName', ''),
-                    "type": "FBS",
+                    "address": wh.get('address', ''),
+                    "warehouse_type": wh.get('warehouseType', 'seller'),
+                    "type": "FBS",  # Seller's own warehouses
                     "is_fbs": True
                 })
             
