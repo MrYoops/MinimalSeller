@@ -141,13 +141,43 @@ const WarehouseDetailNew = () => {
   };
 
   const handleAddLink = async () => {
+    const integration = integrations.find(i => i.id === selectedIntegration);
+    
+    // For Yandex with manual input
+    if (showManualInput && integration?.marketplace === 'yandex') {
+      if (!manualWarehouseId || !manualWarehouseName) {
+        alert('Введите ID и название склада');
+        return;
+      }
+      
+      try {
+        await api.post(`/api/warehouses/${id}/links`, {
+          integration_id: selectedIntegration,
+          marketplace_name: integration.marketplace,
+          marketplace_warehouse_id: manualWarehouseId,
+          marketplace_warehouse_name: manualWarehouseName
+        });
+
+        alert('✅ Связь со складом Yandex добавлена!');
+        fetchWarehouseLinks();
+        setSelectedIntegration('');
+        setManualWarehouseId('');
+        setManualWarehouseName('');
+        setShowManualInput(false);
+      } catch (error) {
+        console.error('Error adding link:', error);
+        alert('Ошибка: ' + (error.response?.data?.detail || error.message));
+      }
+      return;
+    }
+    
+    // For other marketplaces (auto-load)
     if (!selectedIntegration || !selectedMpWarehouse) {
       alert('Выберите интеграцию и склад');
       return;
     }
 
     try {
-      const integration = integrations.find(i => i.id === selectedIntegration);
       const mpWarehouse = mpWarehouses.find(w => w.id === selectedMpWarehouse);
       
       await api.post(`/api/warehouses/${id}/links`, {
