@@ -14,13 +14,10 @@ const WarehouseDetailNew = () => {
   const [showAdditional, setShowAdditional] = useState(false);
   const [showAisles, setShowAisles] = useState(false);
   
-  // Marketplace connections state - NEW 3-FIELD STRUCTURE
-  const [integrations, setIntegrations] = useState([]);
+  // Marketplace connections state - SIMPLIFIED 2-STEP (like SelSup)
   const [selectedMarketplace, setSelectedMarketplace] = useState(''); // Step 1: Marketplace
-  const [filteredIntegrations, setFilteredIntegrations] = useState([]); // Step 2: Integrations for selected MP
-  const [selectedIntegration, setSelectedIntegration] = useState(''); // Step 2: Selected integration
-  const [mpWarehouses, setMpWarehouses] = useState([]); // Step 3: Warehouses from MP
-  const [selectedMpWarehouse, setSelectedMpWarehouse] = useState(''); // Step 3: Selected warehouse
+  const [mpWarehouses, setMpWarehouses] = useState([]); // Step 2: Warehouses from ALL integrations
+  const [selectedMpWarehouse, setSelectedMpWarehouse] = useState(''); // Step 2: Selected warehouse
   const [loadingMpWarehouses, setLoadingMpWarehouses] = useState(false);
   const [warehouseLinks, setWarehouseLinks] = useState([]); // Multiple links
   
