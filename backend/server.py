@@ -2478,10 +2478,10 @@ async def delete_warehouse_link(
     """Delete a warehouse link"""
     logger.info(f"🗑️ Deleting link: {link_id}")
     
-    # Verify warehouse belongs to user
+    # Verify warehouse belongs to user (UUID format)
     warehouse = await db.warehouses.find_one({
         "_id": warehouse_id,
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])
     })
     
     if not warehouse:
