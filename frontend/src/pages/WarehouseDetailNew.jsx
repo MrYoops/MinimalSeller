@@ -132,8 +132,8 @@ const WarehouseDetailNew = () => {
     
     const integration = integrations.find(i => i.id === integrationId);
     
-    // For Yandex, show manual input option
-    if (integration && integration.marketplace === 'yandex') {
+    // For Yandex and WB, show manual input option (they don't return seller warehouses via API)
+    if (integration && (integration.marketplace === 'yandex' || integration.marketplace === 'wb')) {
       setShowManualInput(true);
     } else {
       loadMpWarehouses(integrationId);
