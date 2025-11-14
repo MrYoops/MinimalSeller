@@ -126,7 +126,18 @@ const WarehouseDetailNew = () => {
   const handleIntegrationChange = (integrationId) => {
     setSelectedIntegration(integrationId);
     setSelectedMpWarehouse('');
-    loadMpWarehouses(integrationId);
+    setShowManualInput(false);
+    setManualWarehouseId('');
+    setManualWarehouseName('');
+    
+    const integration = integrations.find(i => i.id === integrationId);
+    
+    // For Yandex, show manual input option
+    if (integration && integration.marketplace === 'yandex') {
+      setShowManualInput(true);
+    } else {
+      loadMpWarehouses(integrationId);
+    }
   };
 
   const handleAddLink = async () => {
