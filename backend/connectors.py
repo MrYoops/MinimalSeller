@@ -98,14 +98,21 @@ class BaseConnector:
                     content_encoding = response.headers.get('content-encoding', '').lower()
                     content = response.content
                     
+                    logger.info(f"[{self.marketplace_name}] JSON parsing failed: {json_error}")
+                    logger.info(f"[{self.marketplace_name}] Content-Encoding header: '{content_encoding}'")
+                    logger.info(f"[{self.marketplace_name}] First 2 bytes: {content[:2].hex() if len(content) >= 2 else 'N/A'}")
+                    
                     # Check for gzip either by header or magic bytes
                     is_gzip = content_encoding == 'gzip' or content[:2] == b'\x1f\x8b'
+                    
+                    logger.info(f"[{self.marketplace_name}] is_gzip check: {is_gzip} (header={content_encoding == 'gzip'}, magic={content[:2] == b'\\x1f\\x8b'})")
                     
                     if is_gzip:
                         try:
                             logger.info(f"[{self.marketplace_name}] Detected gzip-compressed response (header: {content_encoding}), decompressing...")
                             decompressed = gzip.decompress(content)
                             decoded = decompressed.decode('utf-8')
+                            logger.info(f"[{self.marketplace_name}] Successfully decompressed {len(content)} -> {len(decoded)} bytes")
                             return json.loads(decoded)
                         except Exception as decompress_error:
                             logger.error(f"[{self.marketplace_name}] Failed to decompress gzip: {decompress_error}")
