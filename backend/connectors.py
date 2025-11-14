@@ -140,8 +140,8 @@ class OzonConnector(BaseConnector):
         """Get products from Ozon with full details (images, attributes)"""
         logger.info("[Ozon] Fetching products with full details")
         
-        # Step 1: Get product list
-        list_url = f"{self.base_url}/v3/product/list"
+        # CORRECT endpoint as of 2024-2025: /v3/product/info/list
+        list_url = f"{self.base_url}/v3/product/info/list"
         headers = self._get_headers()
         
         list_payload = {
@@ -153,7 +153,7 @@ class OzonConnector(BaseConnector):
         all_products = []
         
         try:
-            # Get product list
+            # Get product list with full info
             list_response = await self._make_request("POST", list_url, headers, json_data=list_payload)
             items = list_response.get('result', {}).get('items', [])
             logger.info(f"[Ozon] Received {len(items)} products")
