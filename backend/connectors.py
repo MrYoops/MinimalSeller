@@ -326,6 +326,41 @@ class WildberriesConnector(BaseConnector):
         except MarketplaceError as e:
             logger.error(f"[WB] Failed to fetch products: {e.message}")
             raise
+    
+    async def get_warehouses(self) -> List[Dict[str, Any]]:
+        """Get warehouses from Wildberries FBS"""
+        logger.info("[WB] Fetching FBS warehouses")
+        
+        url = f"{self.marketplace_api_url}/api/v3/offices"
+        headers = self._get_headers()
+        
+        logger.info(f"[WB] Request URL: {url}")
+        
+        try:
+            response_data = await self._make_request("GET", url, headers)
+            
+            logger.info(f"[WB] Raw response type: {type(response_data)}")
+            
+            warehouses = response_data if isinstance(response_data, list) else []
+            logger.info(f"[WB] Received {len(warehouses)} warehouses")
+            
+            formatted_warehouses = []
+            for wh in warehouses:
+                formatted_warehouses.append({
+                    "id": str(wh.get('id', wh.get('officeId', ''))),
+                    "name": wh.get('name', 'Unnamed warehouse'),
+                    "office_id": wh.get('officeId', 0),
+                    "type": "FBS"
+                })
+            
+            return formatted_warehouses
+            
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to fetch warehouses: {e.message}")
+            raise
+        except Exception as e:
+            logger.error(f"[WB] Unexpected error: {str(e)}")
+            raise MarketplaceError(f"Failed to fetch WB warehouses: {str(e)}", 500)
 
 class YandexMarketConnector(BaseConnector):
     """Yandex.Market connector - REAL API with full headers"""
