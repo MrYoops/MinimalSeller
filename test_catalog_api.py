@@ -93,7 +93,7 @@ def test_create_category():
     }
     
     response = requests.post(
-        f"{BACKEND_URL}/products/categories",
+        f"{BACKEND_URL}/catalog/categories",
         headers=get_headers(),
         json=category_data
     )
