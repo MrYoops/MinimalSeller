@@ -80,15 +80,6 @@ const WarehouseDetailNew = () => {
     }
   };
 
-  const fetchIntegrations = async () => {
-    try {
-      const response = await api.get('/api/seller/api-keys');
-      setIntegrations(response.data);
-    } catch (error) {
-      console.error('Error fetching integrations:', error);
-    }
-  };
-
   const fetchWarehouseLinks = async () => {
     try {
       const response = await api.get(`/api/warehouses/${id}/links`);
@@ -98,16 +89,21 @@ const WarehouseDetailNew = () => {
     }
   };
 
-  const loadMpWarehouses = async (integrationId) => {
-    if (!integrationId) {
+  const loadMpWarehouses = async (marketplace) => {
+    if (!marketplace) {
       setMpWarehouses([]);
       return;
     }
 
     setLoadingMpWarehouses(true);
     try {
-      const response = await api.get(`/api/integrations/${integrationId}/warehouses`);
+      // NEW API - Load ALL warehouses from ALL integrations of this marketplace
+      const response = await api.get(`/api/marketplaces/${marketplace}/all-warehouses`);
       setMpWarehouses(response.data.warehouses || []);
+      
+      if (response.data.warehouses.length === 0 && response.data.message) {
+        alert(response.data.message);
+      }
     } catch (error) {
       console.error('Error loading MP warehouses:', error);
       alert('Ошибка загрузки складов: ' + (error.response?.data?.detail || error.message));
@@ -116,25 +112,15 @@ const WarehouseDetailNew = () => {
     }
   };
 
-  // Step 1: Select Marketplace
+  // When marketplace is selected - load ALL warehouses immediately
   const handleMarketplaceChange = (marketplace) => {
     setSelectedMarketplace(marketplace);
-    setSelectedIntegration('');
     setSelectedMpWarehouse('');
     setMpWarehouses([]);
     
-    // Filter integrations by marketplace
-    const filtered = integrations.filter(i => i.marketplace === marketplace);
-    setFilteredIntegrations(filtered);
-  };
-  
-  // Step 2: Select Integration
-  const handleIntegrationChange = (integrationId) => {
-    setSelectedIntegration(integrationId);
-    setSelectedMpWarehouse('');
-    
-    // Load warehouses for selected integration (ALL marketplaces - auto load)
-    loadMpWarehouses(integrationId);
+    if (marketplace) {
+      loadMpWarehouses(marketplace);
+    }
   };
 
   const handleAddLink = async () => {
