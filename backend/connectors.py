@@ -94,22 +94,26 @@ class BaseConnector:
                     return response.json()
                 except Exception as json_error:
                     # If JSON parsing fails, check if response is gzip-compressed
-                    # Ozon API sometimes returns gzip without proper Content-Encoding header
-                    try:
-                        content = response.content
-                        # Check for gzip magic bytes (\x1f\x8b)
-                        if content[:2] == b'\x1f\x8b':
-                            logger.info(f"[{self.marketplace_name}] Detected gzip-compressed response, decompressing...")
+                    # Check Content-Encoding header first
+                    content_encoding = response.headers.get('content-encoding', '').lower()
+                    content = response.content
+                    
+                    # Check for gzip either by header or magic bytes
+                    is_gzip = content_encoding == 'gzip' or content[:2] == b'\x1f\x8b'
+                    
+                    if is_gzip:
+                        try:
+                            logger.info(f"[{self.marketplace_name}] Detected gzip-compressed response (header: {content_encoding}), decompressing...")
                             decompressed = gzip.decompress(content)
                             decoded = decompressed.decode('utf-8')
                             return json.loads(decoded)
-                        else:
-                            # Not gzip, return text
-                            logger.warning(f"[{self.marketplace_name}] Response is not JSON and not gzip: {response.text[:100]}")
-                            return {"raw_response": response.text}
-                    except Exception as decompress_error:
-                        logger.error(f"[{self.marketplace_name}] Failed to decompress/parse: {decompress_error}")
-                        return {"raw_response": response.text}
+                        except Exception as decompress_error:
+                            logger.error(f"[{self.marketplace_name}] Failed to decompress gzip: {decompress_error}")
+                            # Fall through to return raw response
+                    
+                    # Not gzip or decompression failed, return text
+                    logger.warning(f"[{self.marketplace_name}] Response is not JSON and not gzip: {response.text[:100]}")
+                    return {"raw_response": response.text}
                 
         except httpx.TimeoutException as e:
             logger.error(f"[{self.marketplace_name}] Request timeout: {str(e)}")
