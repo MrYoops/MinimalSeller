@@ -2396,7 +2396,7 @@ async def link_warehouse(
         {"$set": update_data}
     )
     
-    logger.info(f"✅ Warehouse link updated")
+    logger.info("✅ Warehouse link updated")
     
 
 
