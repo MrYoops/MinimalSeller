@@ -2233,6 +2233,12 @@ async def get_integration_warehouses(
     if not api_key:
         raise HTTPException(status_code=404, detail="Integration not found")
     
+    # Validate API key
+    if not api_key.get('api_key'):
+        raise HTTPException(status_code=400, detail=f"API key not configured for {api_key.get('marketplace', 'this integration')}")
+    
+    logger.info(f"📍 Marketplace: {api_key['marketplace']}, Client ID: {api_key.get('client_id', 'N/A')[:10]}...")
+    
     try:
         connector = get_connector(
             api_key['marketplace'],
