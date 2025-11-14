@@ -14,18 +14,15 @@ const WarehouseDetailNew = () => {
   const [showAdditional, setShowAdditional] = useState(false);
   const [showAisles, setShowAisles] = useState(false);
   
-  // Marketplace connections state
+  // Marketplace connections state - NEW 3-FIELD STRUCTURE
   const [integrations, setIntegrations] = useState([]);
-  const [selectedIntegration, setSelectedIntegration] = useState('');
-  const [mpWarehouses, setMpWarehouses] = useState([]);
-  const [selectedMpWarehouse, setSelectedMpWarehouse] = useState('');
+  const [selectedMarketplace, setSelectedMarketplace] = useState(''); // Step 1: Marketplace
+  const [filteredIntegrations, setFilteredIntegrations] = useState([]); // Step 2: Integrations for selected MP
+  const [selectedIntegration, setSelectedIntegration] = useState(''); // Step 2: Selected integration
+  const [mpWarehouses, setMpWarehouses] = useState([]); // Step 3: Warehouses from MP
+  const [selectedMpWarehouse, setSelectedMpWarehouse] = useState(''); // Step 3: Selected warehouse
   const [loadingMpWarehouses, setLoadingMpWarehouses] = useState(false);
   const [warehouseLinks, setWarehouseLinks] = useState([]); // Multiple links
-  
-  // For Yandex manual warehouse ID input
-  const [manualWarehouseId, setManualWarehouseId] = useState('');
-  const [manualWarehouseName, setManualWarehouseName] = useState('');
-  const [showManualInput, setShowManualInput] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
