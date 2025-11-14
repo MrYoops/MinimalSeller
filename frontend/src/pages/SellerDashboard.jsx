@@ -108,7 +108,7 @@ function SellerDashboard() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {activeTab === 'api-keys' && <APIKeysPage />}
+        {activeTab === 'api-keys' && <IntegrationsPage />}
         
         {activeTab === 'warehouses' && <WarehousesSection />}
         
