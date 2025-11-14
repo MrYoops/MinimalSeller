@@ -2083,7 +2083,12 @@ async def create_warehouse(
         "name": new_warehouse["name"],
         "type": new_warehouse["type"],
         "address": new_warehouse["address"],
-        "comment": new_warehouse["comment"],
+        "description": new_warehouse.get("description", ""),
+        "is_fbo": new_warehouse.get("is_fbo", False),
+        "send_stock": new_warehouse.get("send_stock", True),
+        "load_orders": new_warehouse.get("load_orders", True),
+        "use_for_orders": new_warehouse.get("use_for_orders", True),
+        "priority": new_warehouse.get("priority", 0),
         "created_at": new_warehouse["created_at"],
         "updated_at": new_warehouse["updated_at"]
     }
