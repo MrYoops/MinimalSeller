@@ -3458,3 +3458,615 @@ async def delete_product_photo(
     logger.info(f"✅ Photo deleted: {photo_id}")
     
     return {"success": True, "message": "Фото успешно удалено"}
+
+
+
+# ============================================
+# ЦЕНЫ ТОВАРОВ
+# ============================================
+
+@app.get("/api/catalog/products/{product_id}/prices", response_model=List[ProductPriceResponse])
+async def get_product_prices(
+    product_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить все цены товара (для всех вариаций)"""
+    logger.info(f"💰 Fetching prices for product: {product_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Получить все цены
+    prices = await db.product_prices.find({"product_id": product_id}).to_list(length=1000)
+    
+    result = []
+    for price in prices:
+        # Получить инфо о вариации для удобства отображения
+        variant_color = None
+        variant_size = None
+        if price.get("variant_id"):
+            variant = await db.product_variants.find_one({"_id": price["variant_id"]})
+            if variant:
+                variant_color = variant.get("color")
+                variant_size = variant.get("size")
+        
+        result.append(ProductPriceResponse(
+            id=str(price["_id"]),
+            product_id=str(price["product_id"]),
+            variant_id=price.get("variant_id"),
+            variant_color=variant_color,
+            variant_size=variant_size,
+            purchase_price=price.get("purchase_price", 0.0),
+            retail_price=price.get("retail_price", 0.0),
+            price_without_discount=price.get("price_without_discount", 0.0),
+            marketplace_prices=price.get("marketplace_prices", {"wb": 0.0, "ozon": 0.0, "yandex": 0.0}),
+            created_at=price.get("created_at", datetime.utcnow()),
+            updated_at=price.get("updated_at", datetime.utcnow())
+        ))
+    
+    logger.info(f"✅ Found {len(result)} prices")
+    return result
+
+
+@app.post("/api/catalog/products/{product_id}/prices", response_model=ProductPriceResponse, status_code=201)
+async def create_product_price(
+    product_id: str,
+    price: ProductPriceCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Создать/обновить цену товара"""
+    logger.info(f"💰 Creating price for product: {product_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Если указана вариация, проверить её существование
+    if price.variant_id:
+        variant = await db.product_variants.find_one({
+            "_id": price.variant_id,
+            "product_id": product_id
+        })
+        if not variant:
+            raise HTTPException(status_code=404, detail="Вариация не найдена")
+    
+    # Проверить, существует ли уже цена для этой вариации
+    existing = await db.product_prices.find_one({
+        "product_id": product_id,
+        "variant_id": price.variant_id
+    })
+    
+    if existing:
+        # Обновить существующую цену
+        update_data = {
+            "purchase_price": price.purchase_price,
+            "retail_price": price.retail_price,
+            "price_without_discount": price.price_without_discount,
+            "marketplace_prices": price.marketplace_prices,
+            "updated_at": datetime.utcnow()
+        }
+        await db.product_prices.update_one(
+            {"_id": existing["_id"]},
+            {"$set": update_data}
+        )
+        price_id = str(existing["_id"])
+        logger.info(f"✅ Price updated: {price_id}")
+    else:
+        # Создать новую цену
+        price_id = str(uuid.uuid4())
+        now = datetime.utcnow()
+        
+        new_price = {
+            "_id": price_id,
+            "product_id": product_id,
+            "variant_id": price.variant_id,
+            "purchase_price": price.purchase_price,
+            "retail_price": price.retail_price,
+            "price_without_discount": price.price_without_discount,
+            "marketplace_prices": price.marketplace_prices,
+            "created_at": now,
+            "updated_at": now
+        }
+        
+        await db.product_prices.insert_one(new_price)
+        logger.info(f"✅ Price created: {price_id}")
+    
+    # Получить созданную/обновленную цену
+    updated = await db.product_prices.find_one({"_id": price_id})
+    
+    # Получить инфо о вариации
+    variant_color = None
+    variant_size = None
+    if updated.get("variant_id"):
+        variant = await db.product_variants.find_one({"_id": updated["variant_id"]})
+        if variant:
+            variant_color = variant.get("color")
+            variant_size = variant.get("size")
+    
+    return ProductPriceResponse(
+        id=str(updated["_id"]),
+        product_id=str(updated["product_id"]),
+        variant_id=updated.get("variant_id"),
+        variant_color=variant_color,
+        variant_size=variant_size,
+        purchase_price=updated.get("purchase_price", 0.0),
+        retail_price=updated.get("retail_price", 0.0),
+        price_without_discount=updated.get("price_without_discount", 0.0),
+        marketplace_prices=updated.get("marketplace_prices", {"wb": 0.0, "ozon": 0.0, "yandex": 0.0}),
+        created_at=updated.get("created_at", datetime.utcnow()),
+        updated_at=updated.get("updated_at", datetime.utcnow())
+    )
+
+
+@app.post("/api/catalog/products/prices/bulk")
+async def bulk_update_prices(
+    bulk_update: BulkPriceUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Массовое изменение цен"""
+    logger.info(f"💰 Bulk price update: {len(bulk_update.product_ids)} products")
+    
+    # Проверить что все товары принадлежат пользователю
+    for product_id in bulk_update.product_ids:
+        product = await db.product_catalog.find_one({
+            "_id": product_id,
+            "seller_id": current_user["_id"]
+        })
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Товар {product_id} не найден")
+    
+    # Получить все цены для этих товаров
+    prices = await db.product_prices.find({
+        "product_id": {"$in": bulk_update.product_ids}
+    }).to_list(length=10000)
+    
+    updated_count = 0
+    
+    for price in prices:
+        # Определить поле для обновления
+        field_parts = bulk_update.target_field.split(".")
+        
+        if len(field_parts) == 1:
+            # Простое поле (retail_price, purchase_price)
+            old_value = price.get(bulk_update.target_field, 0.0)
+        else:
+            # Вложенное поле (marketplace_prices.wb)
+            old_value = price.get(field_parts[0], {}).get(field_parts[1], 0.0)
+        
+        # Вычислить новое значение
+        if bulk_update.operation == "increase_percent":
+            new_value = old_value * (1 + bulk_update.value / 100)
+        elif bulk_update.operation == "decrease_percent":
+            new_value = old_value * (1 - bulk_update.value / 100)
+        elif bulk_update.operation == "increase_amount":
+            new_value = old_value + bulk_update.value
+        elif bulk_update.operation == "decrease_amount":
+            new_value = old_value - bulk_update.value
+        elif bulk_update.operation == "set_value":
+            new_value = bulk_update.value
+        else:
+            raise HTTPException(status_code=400, detail="Неизвестная операция")
+        
+        # Обновить в БД
+        if len(field_parts) == 1:
+            await db.product_prices.update_one(
+                {"_id": price["_id"]},
+                {"$set": {
+                    bulk_update.target_field: new_value,
+                    "updated_at": datetime.utcnow()
+                }}
+            )
+        else:
+            await db.product_prices.update_one(
+                {"_id": price["_id"]},
+                {"$set": {
+                    f"{field_parts[0]}.{field_parts[1]}": new_value,
+                    "updated_at": datetime.utcnow()
+                }}
+            )
+        
+        updated_count += 1
+    
+    logger.info(f"✅ Bulk update complete: {updated_count} prices updated")
+    
+    return {
+        "success": True,
+        "message": f"Цены обновлены для {updated_count} вариаций",
+        "updated_count": updated_count
+    }
+
+
+# ============================================
+# ОСТАТКИ ТОВАРОВ
+# ============================================
+
+@app.get("/api/catalog/products/{product_id}/stock", response_model=List[ProductStockResponse])
+async def get_product_stock(
+    product_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить остатки товара (для всех вариаций и складов)"""
+    logger.info(f"📦 Fetching stock for product: {product_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Получить все остатки
+    stocks = await db.product_stock.find({"product_id": product_id}).to_list(length=1000)
+    
+    result = []
+    for stock in stocks:
+        # Получить инфо о вариации
+        variant_color = None
+        variant_size = None
+        if stock.get("variant_id"):
+            variant = await db.product_variants.find_one({"_id": stock["variant_id"]})
+            if variant:
+                variant_color = variant.get("color")
+                variant_size = variant.get("size")
+        
+        # Получить название склада
+        warehouse_name = None
+        if stock.get("warehouse_id"):
+            warehouse = await db.warehouses.find_one({"_id": stock["warehouse_id"]})
+            if warehouse:
+                warehouse_name = warehouse.get("name")
+        
+        result.append(ProductStockResponse(
+            id=str(stock["_id"]),
+            product_id=str(stock["product_id"]),
+            variant_id=stock.get("variant_id"),
+            variant_color=variant_color,
+            variant_size=variant_size,
+            warehouse_id=str(stock["warehouse_id"]),
+            warehouse_name=warehouse_name,
+            quantity=stock.get("quantity", 0),
+            reserved=stock.get("reserved", 0),
+            available=stock.get("available", 0),
+            updated_at=stock.get("updated_at", datetime.utcnow())
+        ))
+    
+    logger.info(f"✅ Found {len(result)} stock records")
+    return result
+
+
+@app.post("/api/catalog/products/{product_id}/stock", response_model=ProductStockResponse, status_code=201)
+async def create_product_stock(
+    product_id: str,
+    stock: CatalogStockCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Создать/обновить остаток товара"""
+    logger.info(f"📦 Creating stock for product: {product_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Проверить существование склада
+    warehouse = await db.warehouses.find_one({
+        "_id": stock.warehouse_id,
+        "user_id": current_user["_id"]
+    })
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Склад не найден")
+    
+    # Если указана вариация, проверить её существование
+    if stock.variant_id:
+        variant = await db.product_variants.find_one({
+            "_id": stock.variant_id,
+            "product_id": product_id
+        })
+        if not variant:
+            raise HTTPException(status_code=404, detail="Вариация не найдена")
+    
+    # Проверить, существует ли уже остаток для этой вариации на этом складе
+    existing = await db.product_stock.find_one({
+        "product_id": product_id,
+        "variant_id": stock.variant_id,
+        "warehouse_id": stock.warehouse_id
+    })
+    
+    if existing:
+        # Обновить существующий остаток
+        update_data = {
+            "quantity": stock.quantity,
+            "reserved": stock.reserved,
+            "available": stock.available,
+            "updated_at": datetime.utcnow()
+        }
+        await db.product_stock.update_one(
+            {"_id": existing["_id"]},
+            {"$set": update_data}
+        )
+        stock_id = str(existing["_id"])
+        logger.info(f"✅ Stock updated: {stock_id}")
+    else:
+        # Создать новый остаток
+        stock_id = str(uuid.uuid4())
+        now = datetime.utcnow()
+        
+        new_stock = {
+            "_id": stock_id,
+            "product_id": product_id,
+            "variant_id": stock.variant_id,
+            "warehouse_id": stock.warehouse_id,
+            "quantity": stock.quantity,
+            "reserved": stock.reserved,
+            "available": stock.available,
+            "updated_at": now
+        }
+        
+        await db.product_stock.insert_one(new_stock)
+        logger.info(f"✅ Stock created: {stock_id}")
+    
+    # Получить созданный/обновленный остаток
+    updated = await db.product_stock.find_one({"_id": stock_id})
+    
+    # Получить инфо о вариации
+    variant_color = None
+    variant_size = None
+    if updated.get("variant_id"):
+        variant = await db.product_variants.find_one({"_id": updated["variant_id"]})
+        if variant:
+            variant_color = variant.get("color")
+            variant_size = variant.get("size")
+    
+    # Получить название склада
+    warehouse_name = None
+    if updated.get("warehouse_id"):
+        warehouse = await db.warehouses.find_one({"_id": updated["warehouse_id"]})
+        if warehouse:
+            warehouse_name = warehouse.get("name")
+    
+    return ProductStockResponse(
+        id=str(updated["_id"]),
+        product_id=str(updated["product_id"]),
+        variant_id=updated.get("variant_id"),
+        variant_color=variant_color,
+        variant_size=variant_size,
+        warehouse_id=str(updated["warehouse_id"]),
+        warehouse_name=warehouse_name,
+        quantity=updated.get("quantity", 0),
+        reserved=updated.get("reserved", 0),
+        available=updated.get("available", 0),
+        updated_at=updated.get("updated_at", datetime.utcnow())
+    )
+
+
+# ============================================
+# КОМПЛЕКТЫ ТОВАРОВ
+# ============================================
+
+@app.get("/api/catalog/products/{product_id}/kits", response_model=List[ProductKitResponse])
+async def get_product_kits(
+    product_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить все комплекты товара"""
+    logger.info(f"📦 Fetching kits for product: {product_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Получить все комплекты
+    kits = await db.product_kits.find({"product_id": product_id}).to_list(length=1000)
+    
+    result = []
+    for kit in kits:
+        # Рассчитать минимальный остаток (для автоматического расчета остатка комплекта)
+        calculated_stock = 999999
+        for item in kit.get("items", []):
+            # Получить остатки для этого товара/вариации
+            stock_query = {"product_id": item["product_id"]}
+            if item.get("variant_id"):
+                stock_query["variant_id"] = item["variant_id"]
+            
+            stocks = await db.product_stock.find(stock_query).to_list(length=1000)
+            
+            # Суммировать остатки по всем складам
+            total_available = sum([s.get("available", 0) for s in stocks])
+            
+            # Рассчитать сколько комплектов можно собрать из этого товара
+            max_kits_from_item = total_available // item["quantity"]
+            
+            calculated_stock = min(calculated_stock, max_kits_from_item)
+        
+        if calculated_stock == 999999:
+            calculated_stock = 0
+        
+        result.append(ProductKitResponse(
+            id=str(kit["_id"]),
+            product_id=str(kit["product_id"]),
+            name=kit["name"],
+            items=kit.get("items", []),
+            calculated_stock=calculated_stock,
+            created_at=kit.get("created_at", datetime.utcnow()),
+            updated_at=kit.get("updated_at", datetime.utcnow())
+        ))
+    
+    logger.info(f"✅ Found {len(result)} kits")
+    return result
+
+
+@app.post("/api/catalog/products/{product_id}/kits", response_model=ProductKitResponse, status_code=201)
+async def create_product_kit(
+    product_id: str,
+    kit: ProductKitCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Создать комплект товара"""
+    logger.info(f"📦 Creating kit for product: {product_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Проверить существование всех товаров в комплекте
+    for item in kit.items:
+        item_product = await db.product_catalog.find_one({
+            "_id": item.product_id,
+            "seller_id": current_user["_id"]
+        })
+        if not item_product:
+            raise HTTPException(status_code=404, detail=f"Товар {item.product_id} не найден")
+        
+        # Если указана вариация, проверить её существование
+        if item.variant_id:
+            variant = await db.product_variants.find_one({
+                "_id": item.variant_id,
+                "product_id": item.product_id
+            })
+            if not variant:
+                raise HTTPException(status_code=404, detail=f"Вариация {item.variant_id} не найдена")
+    
+    # Создать комплект
+    kit_id = str(uuid.uuid4())
+    now = datetime.utcnow()
+    
+    new_kit = {
+        "_id": kit_id,
+        "product_id": product_id,
+        "name": kit.name,
+        "items": [item.dict() for item in kit.items],
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.product_kits.insert_one(new_kit)
+    logger.info(f"✅ Kit created: {kit_id}")
+    
+    return ProductKitResponse(
+        id=kit_id,
+        product_id=product_id,
+        name=kit.name,
+        items=kit.items,
+        calculated_stock=0,  # Будет рассчитан при следующем запросе
+        created_at=now,
+        updated_at=now
+    )
+
+
+@app.put("/api/catalog/products/{product_id}/kits/{kit_id}", response_model=ProductKitResponse)
+async def update_product_kit(
+    product_id: str,
+    kit_id: str,
+    kit: ProductKitUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Обновить комплект"""
+    logger.info(f"📦 Updating kit: {kit_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Проверить существование комплекта
+    existing = await db.product_kits.find_one({
+        "_id": kit_id,
+        "product_id": product_id
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Комплект не найден")
+    
+    # Подготовить обновление
+    update_data = {}
+    if kit.name is not None:
+        update_data["name"] = kit.name
+    if kit.items is not None:
+        # Проверить все товары в новом составе
+        for item in kit.items:
+            item_product = await db.product_catalog.find_one({
+                "_id": item.product_id,
+                "seller_id": current_user["_id"]
+            })
+            if not item_product:
+                raise HTTPException(status_code=404, detail=f"Товар {item.product_id} не найден")
+        
+        update_data["items"] = [item.dict() for item in kit.items]
+    
+    if update_data:
+        update_data["updated_at"] = datetime.utcnow()
+        await db.product_kits.update_one(
+            {"_id": kit_id},
+            {"$set": update_data}
+        )
+    
+    # Получить обновленный комплект
+    updated = await db.product_kits.find_one({"_id": kit_id})
+    
+    logger.info(f"✅ Kit updated: {kit_id}")
+    
+    return ProductKitResponse(
+        id=str(updated["_id"]),
+        product_id=str(updated["product_id"]),
+        name=updated["name"],
+        items=updated.get("items", []),
+        calculated_stock=0,  # Будет рассчитан при следующем запросе GET
+        created_at=updated.get("created_at", datetime.utcnow()),
+        updated_at=updated.get("updated_at", datetime.utcnow())
+    )
+
+
+@app.delete("/api/catalog/products/{product_id}/kits/{kit_id}")
+async def delete_product_kit(
+    product_id: str,
+    kit_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Удалить комплект"""
+    logger.info(f"📦 Deleting kit: {kit_id}")
+    
+    # Проверить существование товара
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": current_user["_id"]
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Проверить существование комплекта
+    existing = await db.product_kits.find_one({
+        "_id": kit_id,
+        "product_id": product_id
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Комплект не найден")
+    
+    # Удалить комплект
+    await db.product_kits.delete_one({"_id": kit_id})
+    
+    logger.info(f"✅ Kit deleted: {kit_id}")
+    
+    return {"success": True, "message": "Комплект успешно удален"}
