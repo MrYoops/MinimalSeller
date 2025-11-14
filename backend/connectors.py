@@ -5,6 +5,8 @@ import httpx
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
+import json
+import gzip
 
 logger = logging.getLogger(__name__)
 
