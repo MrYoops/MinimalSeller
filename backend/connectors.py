@@ -140,13 +140,12 @@ class OzonConnector(BaseConnector):
         """Get products from Ozon with full details (images, attributes)"""
         logger.info("[Ozon] Fetching products with full details")
         
-        # CORRECT endpoint as of 2024-2025: /v3/product/info/list
-        list_url = f"{self.base_url}/v3/product/info/list"
+        # CORRECT endpoint to get ALL products: /v3/product/list (not /v3/product/info/list)
+        # /v3/product/info/list requires specific IDs, while /v3/product/list can get all products
+        list_url = f"{self.base_url}/v3/product/list"
         headers = self._get_headers()
         
-        # Correct payload format for v3/product/info/list
-        # NOTE: Ozon API requires using ONLY ONE of: offer_id, product_id, or sku
-        # To get all products, we should NOT include empty arrays for unused filters
+        # Correct payload format for v3/product/list
         list_payload = {
             "filter": {
                 "visibility": "ALL"
