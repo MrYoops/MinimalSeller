@@ -2396,6 +2396,46 @@ async def delete_warehouse_link(
     logger.info(f"✅ Link deleted: {link_id}")
     return {"message": "Link deleted successfully"}
 
+
+@app.put("/api/warehouses/{warehouse_id}/links/{link_id}")
+async def update_warehouse_link(
+    warehouse_id: str,
+    link_id: str,
+    link_data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Update warehouse link (e.g., send_stock flag)"""
+    logger.info(f"📝 Updating link: {link_id}")
+    
+    # Verify warehouse belongs to user
+    warehouse = await db.warehouses.find_one({
+        "_id": warehouse_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not warehouse:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+    
+    # Update link
+    update_fields = {}
+    if "send_stock" in link_data:
+        update_fields["send_stock"] = link_data["send_stock"]
+    
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    result = await db.warehouse_links.update_one(
+        {"id": link_id, "warehouse_id": warehouse_id},
+        {"$set": update_fields}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Link not found")
+    
+    logger.info(f"✅ Link updated: {link_id}")
+    return {"message": "Link updated successfully"}
+
+
     return {"message": "Связь установлена", "warehouse_id": warehouse_id}
 
 
