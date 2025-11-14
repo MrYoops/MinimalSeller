@@ -94,7 +94,7 @@ class BaseConnector:
                 try:
                     return response.json()
                 except Exception as json_error:
-                    # If JSON parsing fails, check if response is gzip-compressed
+                    # If JSON parsing fails, check if response is compressed
                     # Check Content-Encoding header first
                     content_encoding = response.headers.get('content-encoding', '').lower()
                     content = response.content
@@ -104,26 +104,36 @@ class BaseConnector:
                     logger.info(f"[{self.marketplace_name}] Content-Encoding header: '{content_encoding}'")
                     logger.info(f"[{self.marketplace_name}] First 2 bytes: {content[:2].hex() if len(content) >= 2 else 'N/A'}")
                     
-                    # Check for gzip either by header or magic bytes
+                    # Check for compression type
                     has_gzip_header = content_encoding == 'gzip'
                     has_gzip_magic = content[:2] == gzip_magic
-                    is_gzip = has_gzip_header or has_gzip_magic
+                    has_brotli_header = content_encoding == 'br'
+                    is_compressed = has_gzip_header or has_gzip_magic or has_brotli_header
                     
-                    logger.info(f"[{self.marketplace_name}] is_gzip check: {is_gzip} (header={has_gzip_header}, magic={has_gzip_magic})")
+                    logger.info(f"[{self.marketplace_name}] Compression check: gzip_header={has_gzip_header}, gzip_magic={has_gzip_magic}, brotli={has_brotli_header}")
                     
-                    if is_gzip:
+                    if is_compressed:
                         try:
-                            logger.info(f"[{self.marketplace_name}] Detected gzip-compressed response (header: {content_encoding}), decompressing...")
-                            decompressed = gzip.decompress(content)
-                            decoded = decompressed.decode('utf-8')
-                            logger.info(f"[{self.marketplace_name}] Successfully decompressed {len(content)} -> {len(decoded)} bytes")
-                            return json.loads(decoded)
+                            # Try Brotli first if header indicates it
+                            if has_brotli_header:
+                                logger.info(f"[{self.marketplace_name}] Detected Brotli-compressed response, decompressing...")
+                                decompressed = brotli.decompress(content)
+                                decoded = decompressed.decode('utf-8')
+                                logger.info(f"[{self.marketplace_name}] Successfully decompressed Brotli: {len(content)} -> {len(decoded)} bytes")
+                                return json.loads(decoded)
+                            # Try gzip
+                            elif has_gzip_header or has_gzip_magic:
+                                logger.info(f"[{self.marketplace_name}] Detected gzip-compressed response, decompressing...")
+                                decompressed = gzip.decompress(content)
+                                decoded = decompressed.decode('utf-8')
+                                logger.info(f"[{self.marketplace_name}] Successfully decompressed gzip: {len(content)} -> {len(decoded)} bytes")
+                                return json.loads(decoded)
                         except Exception as decompress_error:
-                            logger.error(f"[{self.marketplace_name}] Failed to decompress gzip: {decompress_error}")
+                            logger.error(f"[{self.marketplace_name}] Failed to decompress: {decompress_error}")
                             # Fall through to return raw response
                     
-                    # Not gzip or decompression failed, return text
-                    logger.warning(f"[{self.marketplace_name}] Response is not JSON and not gzip: {response.text[:100]}")
+                    # Not compressed or decompression failed, return text
+                    logger.warning(f"[{self.marketplace_name}] Response is not JSON and not compressed: {response.text[:100]}")
                     return {"raw_response": response.text}
                 
         except httpx.TimeoutException as e:
