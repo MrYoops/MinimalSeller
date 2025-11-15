@@ -237,10 +237,24 @@ export default function CatalogProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-mm-border">
-              {products.map((product) => (
+              {productsWithPhotos.map((product) => (
                 <tr key={product.id} className="hover:bg-mm-dark/50 transition">
                   <td className="px-4 py-3">
-                    <div className="w-12 h-12 bg-mm-dark rounded flex items-center justify-center">
+                    {product.firstPhoto ? (
+                      <img
+                        src={product.firstPhoto}
+                        alt={product.name}
+                        className="w-12 h-12 object-cover rounded bg-mm-dark"
+                        onError={(e) => {
+                          e.target.style.display = 'none'
+                          e.target.nextSibling.style.display = 'flex'
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className="w-12 h-12 bg-mm-dark rounded flex items-center justify-center"
+                      style={{ display: product.firstPhoto ? 'none' : 'flex' }}
+                    >
                       <FiPackage className="text-mm-text-secondary" />
                     </div>
                   </td>
