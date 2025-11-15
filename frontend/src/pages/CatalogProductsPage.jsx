@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 export default function CatalogProductsPage() {
   const { api } = useAuth()
   const [products, setProducts] = useState([])
+  const [productsWithPhotos, setProductsWithPhotos] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -45,7 +46,27 @@ export default function CatalogProductsPage() {
       if (selectedStatus) params.status = selectedStatus
 
       const response = await api.get('/api/catalog/products', { params })
-      setProducts(response.data)
+      const productsData = response.data
+      setProducts(productsData)
+      
+      // Загрузить первое фото для каждого товара
+      const productsWithPhotosData = await Promise.all(
+        productsData.map(async (product) => {
+          try {
+            const photosResponse = await api.get(`/api/catalog/products/${product.id}/photos`)
+            const photos = photosResponse.data
+            return {
+              ...product,
+              firstPhoto: photos.length > 0 ? photos[0].url : null
+            }
+          } catch (error) {
+            console.error(`Failed to load photos for product ${product.id}:`, error)
+            return { ...product, firstPhoto: null }
+          }
+        })
+      )
+      
+      setProductsWithPhotos(productsWithPhotosData)
     } catch (error) {
       console.error('Failed to load products:', error)
     } finally {
