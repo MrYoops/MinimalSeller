@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiBox, FiDollarSign, FiPieChart, FiLink, FiTrash2, FiEdit } from 'react-icons/fi'
-import { BsBoxSeam } from 'react-icons/bs'
+import { BsBoxSeam } from 'bs-box-seam'
 import SettingsDropdown from '../components/SettingsDropdown'
 import IntegrationsPage from './IntegrationsPage'
 import OrdersPage from './OrdersPage'
@@ -13,6 +13,7 @@ import WarehousesPage from './WarehousesPage'
 import WarehousesSection from './WarehousesSection'
 import ProductsPage from './ProductsPage'
 import StockPage from './StockPage'
+import CatalogProductsPage from './CatalogProductsPage'
 
 function SellerDashboard() {
   const { user, logout, api } = useAuth()
