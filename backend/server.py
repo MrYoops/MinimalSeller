@@ -2926,6 +2926,9 @@ async def create_catalog_product(
         "is_grouped": product.is_grouped,
         "group_by_color": product.group_by_color,
         "group_by_size": product.group_by_size,
+        "characteristics": product.characteristics,
+        "marketplace_category_id": product.marketplace_category_id,
+        "marketplace": product.marketplace,
         "created_at": now,
         "updated_at": now
     }
@@ -2946,6 +2949,9 @@ async def create_catalog_product(
         is_grouped=product.is_grouped,
         group_by_color=product.group_by_color,
         group_by_size=product.group_by_size,
+        characteristics=product.characteristics,
+        marketplace_category_id=product.marketplace_category_id,
+        marketplace=product.marketplace,
         variants_count=0,
         photos_count=0,
         created_at=now,
