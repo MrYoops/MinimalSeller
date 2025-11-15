@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import { FiArrowLeft, FiDownload, FiUpload, FiCheck, FiX } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 export default function CatalogImportPage() {
+  const { api } = useAuth()
   const navigate = useNavigate()
   const [step, setStep] = useState(1) // 1: выбор, 2: загрузка, 3: результат
   const [importType, setImportType] = useState('') // 'marketplace' или 'excel'
