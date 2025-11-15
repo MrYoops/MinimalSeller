@@ -35,15 +35,13 @@ export default function CatalogImportPage() {
 
     setImporting(true)
     try {
-      // TODO: Реализовать импорт с маркетплейса
-      alert('Импорт с маркетплейса будет реализован в следующей версии')
-      // const response = await api.post('/api/catalog/import/marketplace', {
-      //   marketplace: selectedMarketplace
-      // })
-      // setResult(response.data)
-      // setStep(3)
+      const response = await api.post('/api/catalog/import/marketplace', null, {
+        params: { marketplace: selectedMarketplace }
+      })
+      setResult(response.data)
+      setStep(3)
     } catch (error) {
-      alert('Ошибка импорта: ' + error.message)
+      alert('Ошибка импорта: ' + (error.response?.data?.detail || error.message))
     } finally {
       setImporting(false)
     }
