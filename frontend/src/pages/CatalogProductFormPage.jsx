@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiPackage } from 'react-icons/fi'
 import { useParams, useNavigate } from 'react-router-dom'
-import api from '../api'
+import { useAuth } from '../context/AuthContext'
 
 export default function CatalogProductFormPage() {
+  const { api } = useAuth()
   const { id } = useParams()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
