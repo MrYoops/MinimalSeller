@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiBox, FiDollarSign, FiPieChart, FiLink, FiTrash2, FiEdit } from 'react-icons/fi'
-import { BsBoxSeam } from 'bs-box-seam'
+import { BsBoxSeam } from 'react-icons/bs'
 import SettingsDropdown from '../components/SettingsDropdown'
 import IntegrationsPage from './IntegrationsPage'
 import OrdersPage from './OrdersPage'
