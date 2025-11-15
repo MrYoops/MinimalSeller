@@ -62,6 +62,18 @@ function AppRoutes() {
       <Route path="/stock-balances" element={
         <ProtectedRoute><StockBalancesPage /></ProtectedRoute>
       } />
+      <Route path="/catalog/categories" element={
+        <ProtectedRoute><CatalogCategoriesPage /></ProtectedRoute>
+      } />
+      <Route path="/catalog/products/new" element={
+        <ProtectedRoute><CatalogProductFormPage /></ProtectedRoute>
+      } />
+      <Route path="/catalog/products/:id/edit" element={
+        <ProtectedRoute><CatalogProductFormPage /></ProtectedRoute>
+      } />
+      <Route path="/catalog/import" element={
+        <ProtectedRoute><CatalogImportPage /></ProtectedRoute>
+      } />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
