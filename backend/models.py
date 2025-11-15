@@ -379,6 +379,9 @@ class ProductCatalogCreate(BaseModel):
     is_grouped: bool = False  # Объединенная карточка (с вариациями)
     group_by_color: bool = False  # Разделять по цвету
     group_by_size: bool = False  # Разделять по размеру
+    characteristics: Dict[str, Any] = {}  # Характеристики товара (название: значение)
+    marketplace_category_id: Optional[str] = None  # ID категории на маркетплейсе
+    marketplace: Optional[str] = None  # Маркетплейс источник
 
 class ProductCatalogUpdate(BaseModel):
     """Обновление товара"""
@@ -391,6 +394,9 @@ class ProductCatalogUpdate(BaseModel):
     is_grouped: Optional[bool] = None
     group_by_color: Optional[bool] = None
     group_by_size: Optional[bool] = None
+    characteristics: Optional[Dict[str, Any]] = None
+    marketplace_category_id: Optional[str] = None
+    marketplace: Optional[str] = None
 
 class ProductCatalogResponse(BaseModel):
     """Ответ с данными товара"""
@@ -406,6 +412,9 @@ class ProductCatalogResponse(BaseModel):
     is_grouped: bool
     group_by_color: bool
     group_by_size: bool
+    characteristics: Dict[str, Any] = {}  # Характеристики
+    marketplace_category_id: Optional[str] = None
+    marketplace: Optional[str] = None
     variants_count: int = 0  # Количество вариаций (цветов/размеров)
     photos_count: int = 0
     created_at: datetime
