@@ -282,6 +282,62 @@ class OzonConnector(BaseConnector):
         except Exception as e:
             logger.error(f"[Ozon] Unexpected error: {str(e)}")
             raise MarketplaceError(f"Failed to fetch Ozon warehouses: {str(e)}", 500)
+    
+    async def get_categories(self) -> List[Dict[str, Any]]:
+        """Get category tree from Ozon with attributes"""
+        logger.info("[Ozon] Fetching category tree")
+        
+        url = f"{self.base_url}/v1/description-category/tree"
+        headers = self._get_headers()
+        payload = {"language": "DEFAULT"}  # or "RU", "EN"
+        
+        try:
+            response_data = await self._make_request("POST", url, headers, json_data=payload)
+            
+            categories = response_data.get('result', [])
+            logger.info(f"[Ozon] Received {len(categories)} categories")
+            
+            formatted_categories = []
+            for cat in categories:
+                formatted_categories.append({
+                    "id": str(cat.get('category_id', cat.get('description_category_id', ''))),
+                    "name": cat.get('category_name', 'Unnamed'),
+                    "type_id": cat.get('type_id', 0),
+                    "type_name": cat.get('type_name', ''),
+                    "disabled": cat.get('disabled', False),
+                    "marketplace": "ozon"
+                })
+            
+            logger.info(f"[Ozon] Formatted {len(formatted_categories)} categories")
+            return formatted_categories
+            
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Failed to fetch categories: {e.message}")
+            raise
+    
+    async def get_category_attributes(self, category_id: int, type_id: int) -> List[Dict[str, Any]]:
+        """Get attributes/characteristics for a specific category"""
+        logger.info(f"[Ozon] Fetching attributes for category {category_id}, type {type_id}")
+        
+        url = f"{self.base_url}/v1/description-category/attribute"
+        headers = self._get_headers()
+        payload = {
+            "description_category_id": category_id,
+            "type_id": type_id,
+            "language": "DEFAULT"
+        }
+        
+        try:
+            response_data = await self._make_request("POST", url, headers, json_data=payload)
+            
+            attributes = response_data.get('result', [])
+            logger.info(f"[Ozon] Received {len(attributes)} attributes")
+            
+            return attributes
+            
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Failed to fetch attributes: {e.message}")
+            raise
 
 class WildberriesConnector(BaseConnector):
     """Wildberries marketplace connector - REAL API with full headers"""
