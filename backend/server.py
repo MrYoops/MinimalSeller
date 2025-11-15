@@ -4070,3 +4070,281 @@ async def delete_product_kit(
     logger.info(f"✅ Kit deleted: {kit_id}")
     
     return {"success": True, "message": "Комплект успешно удален"}
+
+
+
+# ============================================
+# ИМПОРТ КАТЕГОРИЙ С МАРКЕТПЛЕЙСОВ
+# ============================================
+
+@app.get("/api/marketplaces/{marketplace}/categories")
+async def get_marketplace_categories(
+    marketplace: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить категории с маркетплейса"""
+    logger.info(f"📂 Fetching categories from {marketplace}")
+    
+    # Получить интеграции пользователя для этого маркетплейса
+    api_keys = await db.api_keys.find({
+        "user_id": str(current_user["_id"]),
+        "marketplace": marketplace
+    }).to_list(length=100)
+    
+    if not api_keys:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Нет активных интеграций с {marketplace.upper()}. Добавьте API ключи в разделе ИНТЕГРАЦИИ."
+        )
+    
+    all_categories = []
+    
+    for api_key in api_keys:
+        try:
+            from connectors import OzonConnector, WildberriesConnector
+            
+            if marketplace == "ozon":
+                connector = OzonConnector(api_key["client_id"], api_key["api_key"])
+                categories = await connector.get_categories()
+            elif marketplace == "wb":
+                connector = WildberriesConnector(api_key.get("client_id", ""), api_key["api_key"])
+                categories = await connector.get_categories()
+            else:
+                raise HTTPException(status_code=400, detail="Неподдерживаемый маркетплейс")
+            
+            # Добавить integration_id и integration_name
+            for cat in categories:
+                cat["integration_id"] = str(api_key["_id"])
+                cat["integration_name"] = api_key.get("name", "")
+            
+            all_categories.extend(categories)
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch categories from integration {api_key['_id']}: {str(e)}")
+            continue
+    
+    logger.info(f"✅ Fetched {len(all_categories)} categories from {marketplace}")
+    
+    return {
+        "marketplace": marketplace,
+        "categories": all_categories
+    }
+
+
+@app.get("/api/marketplaces/{marketplace}/categories/{category_id}/attributes")
+async def get_category_attributes(
+    marketplace: str,
+    category_id: str,
+    type_id: Optional[int] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить характеристики категории"""
+    logger.info(f"📂 Fetching attributes for category {category_id} from {marketplace}")
+    
+    # Получить интеграции
+    api_keys = await db.api_keys.find({
+        "user_id": str(current_user["_id"]),
+        "marketplace": marketplace
+    }).to_list(length=100)
+    
+    if not api_keys:
+        raise HTTPException(status_code=400, detail=f"Нет активных интеграций с {marketplace.upper()}")
+    
+    # Используем первую интеграцию
+    api_key = api_keys[0]
+    
+    try:
+        from connectors import OzonConnector, WildberriesConnector
+        
+        if marketplace == "ozon":
+            if not type_id:
+                raise HTTPException(status_code=400, detail="type_id обязателен для Ozon")
+            connector = OzonConnector(api_key["client_id"], api_key["api_key"])
+            attributes = await connector.get_category_attributes(int(category_id), type_id)
+        elif marketplace == "wb":
+            connector = WildberriesConnector(api_key.get("client_id", ""), api_key["api_key"])
+            attributes = await connector.get_category_characteristics(int(category_id))
+        else:
+            raise HTTPException(status_code=400, detail="Неподдерживаемый маркетплейс")
+        
+        return {
+            "marketplace": marketplace,
+            "category_id": category_id,
+            "attributes": attributes
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to fetch attributes: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# ИМПОРТ ТОВАРОВ С МАРКЕТПЛЕЙСОВ
+# ============================================
+
+@app.post("/api/catalog/import/marketplace")
+async def import_from_marketplace(
+    marketplace: str,
+    integration_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Импортировать товары с маркетплейса"""
+    logger.info(f"📦 Importing products from {marketplace}")
+    
+    # Получить интеграции
+    query = {
+        "user_id": str(current_user["_id"]),
+        "marketplace": marketplace
+    }
+    if integration_id:
+        query["_id"] = integration_id
+    
+    api_keys = await db.api_keys.find(query).to_list(length=100)
+    
+    if not api_keys:
+        raise HTTPException(status_code=400, detail=f"Нет активных интеграций с {marketplace.upper()}")
+    
+    created = 0
+    updated = 0
+    errors = 0
+    error_messages = []
+    
+    for api_key in api_keys:
+        try:
+            from connectors import OzonConnector, WildberriesConnector, YandexMarketConnector
+            
+            # Создать коннектор
+            if marketplace == "ozon":
+                connector = OzonConnector(api_key["client_id"], api_key["api_key"])
+            elif marketplace == "wb":
+                connector = WildberriesConnector(api_key.get("client_id", ""), api_key["api_key"])
+            elif marketplace == "yandex":
+                connector = YandexMarketConnector(api_key["client_id"], api_key["api_key"])
+            else:
+                raise HTTPException(status_code=400, detail="Неподдерживаемый маркетплейс")
+            
+            # Получить товары с маркетплейса
+            products = await connector.get_products()
+            logger.info(f"[{marketplace}] Fetched {len(products)} products from integration {api_key['_id']}")
+            
+            # Импортировать каждый товар
+            for mp_product in products:
+                try:
+                    # Проверить существует ли товар с таким артикулом
+                    article = mp_product.get('sku', mp_product.get('id', ''))
+                    if not article:
+                        errors += 1
+                        error_messages.append(f"Товар без артикула: {mp_product.get('name', 'Unnamed')}")
+                        continue
+                    
+                    existing = await db.product_catalog.find_one({
+                        "seller_id": str(current_user["_id"]),
+                        "article": article
+                    })
+                    
+                    now = datetime.utcnow()
+                    
+                    product_data = {
+                        "seller_id": str(current_user["_id"]),
+                        "article": article,
+                        "name": mp_product.get('name', article),
+                        "brand": mp_product.get('brand', ''),
+                        "category_id": None,  # Категория устанавливается позже
+                        "description": mp_product.get('description', ''),
+                        "status": mp_product.get('status', 'active'),
+                        "is_grouped": False,  # Пока простые карточки
+                        "group_by_color": False,
+                        "group_by_size": False,
+                        "updated_at": now
+                    }
+                    
+                    if existing:
+                        # Обновить существующий товар
+                        await db.product_catalog.update_one(
+                            {"_id": existing["_id"]},
+                            {"$set": product_data}
+                        )
+                        product_id = str(existing["_id"])
+                        updated += 1
+                    else:
+                        # Создать новый товар
+                        product_id = str(uuid.uuid4())
+                        product_data["_id"] = product_id
+                        product_data["created_at"] = now
+                        await db.product_catalog.insert_one(product_data)
+                        created += 1
+                    
+                    # Создать/обновить фото
+                    if mp_product.get('images'):
+                        # Удалить старые фото
+                        await db.product_photos.delete_many({"product_id": product_id})
+                        
+                        # Добавить новые фото
+                        for idx, img_url in enumerate(mp_product.get('images', [])[:10]):
+                            photo_id = str(uuid.uuid4())
+                            await db.product_photos.insert_one({
+                                "_id": photo_id,
+                                "product_id": product_id,
+                                "variant_id": None,
+                                "url": img_url,
+                                "order": idx + 1,
+                                "marketplaces": {
+                                    marketplace: True,
+                                    "wb": marketplace == "wb",
+                                    "ozon": marketplace == "ozon",
+                                    "yandex": marketplace == "yandex"
+                                },
+                                "created_at": now
+                            })
+                    
+                    # Создать/обновить цену
+                    if mp_product.get('price', 0) > 0:
+                        price_id = str(uuid.uuid4())
+                        await db.product_prices.update_one(
+                            {
+                                "product_id": product_id,
+                                "variant_id": None
+                            },
+                            {
+                                "$set": {
+                                    "_id": price_id,
+                                    "product_id": product_id,
+                                    "variant_id": None,
+                                    "purchase_price": 0,
+                                    "retail_price": mp_product.get('price', 0),
+                                    "price_without_discount": mp_product.get('price', 0),
+                                    "marketplace_prices": {
+                                        marketplace: mp_product.get('price', 0),
+                                        "wb": mp_product.get('price', 0) if marketplace == "wb" else 0,
+                                        "ozon": mp_product.get('price', 0) if marketplace == "ozon" else 0,
+                                        "yandex": mp_product.get('price', 0) if marketplace == "yandex" else 0
+                                    },
+                                    "created_at": now,
+                                    "updated_at": now
+                                }
+                            },
+                            upsert=True
+                        )
+                    
+                except Exception as item_error:
+                    errors += 1
+                    error_messages.append(f"Ошибка импорта товара {article}: {str(item_error)}")
+                    logger.error(f"Failed to import product {article}: {str(item_error)}")
+                    continue
+        
+        except Exception as integration_error:
+            errors += 1
+            error_messages.append(f"Ошибка интеграции {api_key['_id']}: {str(integration_error)}")
+            logger.error(f"Failed integration {api_key['_id']}: {str(integration_error)}")
+            continue
+    
+    logger.info(f"✅ Import complete: created={created}, updated={updated}, errors={errors}")
+    
+    return {
+        "success": True,
+        "created": created,
+        "updated": updated,
+        "errors": errors,
+        "error_messages": error_messages[:10]  # Первые 10 ошибок
+    }
+
