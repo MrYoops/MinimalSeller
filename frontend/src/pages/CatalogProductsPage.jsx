@@ -304,10 +304,10 @@ export default function CatalogProductsPage() {
       )}
 
       {/* Pagination */}
-      {products.length > 0 && (
+      {productsWithPhotos.length > 0 && (
         <div className="flex justify-between items-center">
           <div className="text-sm text-mm-text-secondary">
-            Показано товаров: {products.length}
+            Показано товаров: {productsWithPhotos.length}
           </div>
           <div className="flex gap-2">
             <button
@@ -322,7 +322,7 @@ export default function CatalogProductsPage() {
             </span>
             <button
               onClick={() => setPage(page + 1)}
-              disabled={products.length < 50}
+              disabled={productsWithPhotos.length < 50}
               className="px-4 py-2 bg-mm-secondary text-mm-text hover:bg-mm-secondary/80 rounded disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Вперёд
