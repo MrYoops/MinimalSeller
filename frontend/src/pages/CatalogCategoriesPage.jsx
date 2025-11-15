@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { FiPlus, FiEdit, FiTrash2, FiArrowLeft } from 'react-icons/fi'
-import api from '../api'
+import { useAuth } from '../context/AuthContext'
 
 export default function CatalogCategoriesPage() {
+  const { api } = useAuth()
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
