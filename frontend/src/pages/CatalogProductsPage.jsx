@@ -209,7 +209,7 @@ export default function CatalogProductsPage() {
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-mm-cyan"></div>
           <p className="text-mm-text-secondary mt-4">Загрузка товаров...</p>
         </div>
-      ) : products.length === 0 ? (
+      ) : productsWithPhotos.length === 0 ? (
         <div className="text-center py-12 bg-mm-secondary rounded-lg">
           <FiPackage className="mx-auto text-6xl text-mm-text-secondary mb-4" />
           <p className="text-mm-text-secondary text-lg">Нет товаров</p>
