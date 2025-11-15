@@ -4085,11 +4085,17 @@ async def get_marketplace_categories(
     """Получить категории с маркетплейса"""
     logger.info(f"📂 Fetching categories from {marketplace}")
     
-    # Получить интеграции пользователя для этого маркетплейса
-    api_keys = await db.api_keys.find({
-        "user_id": str(current_user["_id"]),
-        "marketplace": marketplace
-    }).to_list(length=100)
+    # Получить seller profile с API ключами
+    seller_profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    
+    if not seller_profile or not seller_profile.get("api_keys"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Нет активных интеграций. Добавьте API ключи в разделе ИНТЕГРАЦИИ."
+        )
+    
+    # Найти ключи для этого маркетплейса
+    api_keys = [k for k in seller_profile.get("api_keys", []) if k.get("marketplace") == marketplace]
     
     if not api_keys:
         raise HTTPException(
@@ -4114,13 +4120,13 @@ async def get_marketplace_categories(
             
             # Добавить integration_id и integration_name
             for cat in categories:
-                cat["integration_id"] = str(api_key["_id"])
+                cat["integration_id"] = api_key.get("id", "")
                 cat["integration_name"] = api_key.get("name", "")
             
             all_categories.extend(categories)
             
         except Exception as e:
-            logger.error(f"Failed to fetch categories from integration {api_key['_id']}: {str(e)}")
+            logger.error(f"Failed to fetch categories from integration {api_key.get('id')}: {str(e)}")
             continue
     
     logger.info(f"✅ Fetched {len(all_categories)} categories from {marketplace}")
