@@ -4200,15 +4200,17 @@ async def import_from_marketplace(
     """Импортировать товары с маркетплейса"""
     logger.info(f"📦 Importing products from {marketplace}")
     
-    # Получить интеграции
-    query = {
-        "user_id": str(current_user["_id"]),
-        "marketplace": marketplace
-    }
-    if integration_id:
-        query["_id"] = integration_id
+    # Получить seller profile с API ключами
+    seller_profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
     
-    api_keys = await db.api_keys.find(query).to_list(length=100)
+    if not seller_profile or not seller_profile.get("api_keys"):
+        raise HTTPException(status_code=400, detail=f"Нет активных интеграций")
+    
+    # Найти ключи для этого маркетплейса
+    api_keys = [k for k in seller_profile.get("api_keys", []) if k.get("marketplace") == marketplace]
+    
+    if integration_id:
+        api_keys = [k for k in api_keys if k.get("id") == integration_id]
     
     if not api_keys:
         raise HTTPException(status_code=400, detail=f"Нет активных интеграций с {marketplace.upper()}")
