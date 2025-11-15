@@ -4236,7 +4236,7 @@ async def import_from_marketplace(
             
             # Получить товары с маркетплейса
             products = await connector.get_products()
-            logger.info(f"[{marketplace}] Fetched {len(products)} products from integration {api_key['_id']}")
+            logger.info(f"[{marketplace}] Fetched {len(products)} products from integration {api_key.get('id', 'unknown')}")
             
             # Импортировать каждый товар
             for mp_product in products:
