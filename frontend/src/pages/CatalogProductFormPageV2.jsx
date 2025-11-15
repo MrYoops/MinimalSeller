@@ -684,6 +684,30 @@ export default function CatalogProductFormPageV2() {
           </div>
         )}
 
+        {/* Характеристики товара (только если товар уже создан) */}
+        {id && product.characteristics && Object.keys(product.characteristics).length > 0 && (
+          <div className="bg-mm-secondary p-6 rounded-lg space-y-4">
+            <h2 className="text-xl font-bold text-mm-text border-b border-mm-border pb-2">
+              ХАРАКТЕРИСТИКИ ТОВАРА
+            </h2>
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded p-3 mb-4">
+              <p className="text-xs text-blue-300">
+                💡 Характеристики импортированы с маркетплейса. Всего: {Object.keys(product.characteristics).length}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {Object.entries(product.characteristics).map(([key, value]) => (
+                <div key={key} className="bg-mm-dark p-3 rounded">
+                  <div className="text-xs text-mm-text-secondary mb-1">{key}</div>
+                  <div className="text-sm text-mm-text font-medium">
+                    {Array.isArray(value) ? value.join(', ') : value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Информация */}
         {!id && step === 1 && (
           <div className="bg-blue-500/10 border border-blue-500/30 rounded p-4">
