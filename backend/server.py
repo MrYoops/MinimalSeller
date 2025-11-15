@@ -4345,8 +4345,8 @@ async def import_from_marketplace(
         
         except Exception as integration_error:
             errors += 1
-            error_messages.append(f"Ошибка интеграции {api_key['_id']}: {str(integration_error)}")
-            logger.error(f"Failed integration {api_key['_id']}: {str(integration_error)}")
+            error_messages.append(f"Ошибка интеграции {api_key.get('id', 'unknown')}: {str(integration_error)}")
+            logger.error(f"Failed integration {api_key.get('id', 'unknown')}: {str(integration_error)}")
             continue
     
     logger.info(f"✅ Import complete: created={created}, updated={updated}, errors={errors}")
