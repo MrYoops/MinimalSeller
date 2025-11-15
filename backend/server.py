@@ -4255,6 +4255,14 @@ async def import_from_marketplace(
                     
                     now = datetime.utcnow()
                     
+                    # Преобразовать характеристики из массива в словарь
+                    characteristics_dict = {}
+                    for char in mp_product.get('characteristics', []):
+                        char_name = char.get('name', '')
+                        char_value = char.get('value', '')
+                        if char_name:
+                            characteristics_dict[char_name] = char_value
+                    
                     product_data = {
                         "seller_id": str(current_user["_id"]),
                         "article": article,
@@ -4266,6 +4274,9 @@ async def import_from_marketplace(
                         "is_grouped": False,  # Пока простые карточки
                         "group_by_color": False,
                         "group_by_size": False,
+                        "characteristics": characteristics_dict,  # Сохраняем характеристики
+                        "marketplace_category_id": mp_product.get('category', ''),
+                        "marketplace": marketplace,
                         "updated_at": now
                     }
                     
@@ -4285,28 +4296,29 @@ async def import_from_marketplace(
                         await db.product_catalog.insert_one(product_data)
                         created += 1
                     
-                    # Создать/обновить фото
-                    if mp_product.get('images'):
+                    # Создать/обновить фото (проверяем оба поля: photos и images)
+                    photos_list = mp_product.get('photos', mp_product.get('images', []))
+                    if photos_list:
                         # Удалить старые фото
                         await db.product_photos.delete_many({"product_id": product_id})
                         
                         # Добавить новые фото
-                        for idx, img_url in enumerate(mp_product.get('images', [])[:10]):
-                            photo_id = str(uuid.uuid4())
-                            await db.product_photos.insert_one({
-                                "_id": photo_id,
-                                "product_id": product_id,
-                                "variant_id": None,
-                                "url": img_url,
-                                "order": idx + 1,
-                                "marketplaces": {
-                                    marketplace: True,
-                                    "wb": marketplace == "wb",
-                                    "ozon": marketplace == "ozon",
-                                    "yandex": marketplace == "yandex"
-                                },
-                                "created_at": now
-                            })
+                        for idx, img_url in enumerate(photos_list[:10]):
+                            if img_url:  # Проверка что URL не пустой
+                                photo_id = str(uuid.uuid4())
+                                await db.product_photos.insert_one({
+                                    "_id": photo_id,
+                                    "product_id": product_id,
+                                    "variant_id": None,
+                                    "url": img_url,
+                                    "order": idx + 1,
+                                    "marketplaces": {
+                                        "wb": marketplace == "wb",
+                                        "ozon": marketplace == "ozon",
+                                        "yandex": marketplace == "yandex"
+                                    },
+                                    "created_at": now
+                                })
                     
                     # Создать/обновить цену
                     if mp_product.get('price', 0) > 0:
