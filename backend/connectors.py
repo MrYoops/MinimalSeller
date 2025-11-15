@@ -500,6 +500,54 @@ class WildberriesConnector(BaseConnector):
         except Exception as e:
             logger.error(f"[WB] Unexpected error: {str(e)}")
             raise MarketplaceError(f"Failed to fetch WB warehouses: {str(e)}", 500)
+    
+    async def get_categories(self) -> List[Dict[str, Any]]:
+        """Get parent categories (subjects) from Wildberries"""
+        logger.info("[WB] Fetching parent categories (subjects)")
+        
+        url = f"{self.content_api_url}/content/v2/object/parent/all"
+        headers = self._get_headers()
+        
+        try:
+            response_data = await self._make_request("GET", url, headers)
+            
+            parents = response_data.get('data', [])
+            logger.info(f"[WB] Received {len(parents)} parent categories")
+            
+            formatted_categories = []
+            for parent in parents:
+                formatted_categories.append({
+                    "id": str(parent.get('id', '')),
+                    "name": parent.get('name', 'Unnamed'),
+                    "is_visible": parent.get('isVisible', True),
+                    "marketplace": "wb"
+                })
+            
+            logger.info(f"[WB] Formatted {len(formatted_categories)} categories")
+            return formatted_categories
+            
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to fetch categories: {e.message}")
+            raise
+    
+    async def get_category_characteristics(self, subject_id: int) -> List[Dict[str, Any]]:
+        """Get characteristics/attributes for a specific subject (category)"""
+        logger.info(f"[WB] Fetching characteristics for subject {subject_id}")
+        
+        url = f"{self.content_api_url}/content/v2/object/charcs/{subject_id}"
+        headers = self._get_headers()
+        
+        try:
+            response_data = await self._make_request("GET", url, headers)
+            
+            characteristics = response_data.get('data', [])
+            logger.info(f"[WB] Received {len(characteristics)} characteristics")
+            
+            return characteristics
+            
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to fetch characteristics: {e.message}")
+            raise
 
 class YandexMarketConnector(BaseConnector):
     """Yandex.Market connector - REAL API with full headers"""
