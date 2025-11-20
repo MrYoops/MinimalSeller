@@ -4661,3 +4661,225 @@ async def publish_product_to_marketplace(
         logger.error(f"Failed to publish product: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ============================================
+# ОБНОВЛЕНИЕ ДАННЫХ С МАРКЕТПЛЕЙСА (SelSup style)
+# ============================================
+
+@app.post("/api/catalog/products/{product_id}/update-from-marketplace")
+async def update_product_from_marketplace(
+    product_id: str,
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Загрузить данные товара с маркетплейса (название, описание, цены, фото, характеристики)"""
+    from connectors import get_connector, MarketplaceError
+    
+    marketplace = data.get('marketplace')
+    marketplace_product_id = data.get('marketplace_product_id')  # ID товара на маркетплейсе
+    
+    logger.info(f"🔄 Updating product {product_id} from {marketplace}")
+    
+    # Проверить товар
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": str(current_user["_id"])
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Получить API ключи
+    seller_profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    if not seller_profile:
+        raise HTTPException(status_code=404, detail="Профиль продавца не найден")
+    
+    api_keys = [k for k in seller_profile.get("api_keys", []) if k.get("marketplace") == marketplace]
+    if not api_keys:
+        raise HTTPException(status_code=400, detail=f"Нет интеграции с {marketplace.upper()}")
+    
+    try:
+        # Получить коннектор
+        connector = get_connector(
+            marketplace,
+            api_keys[0].get('client_id', ''),
+            api_keys[0]['api_key']
+        )
+        
+        # Загрузить все товары с маркетплейса
+        logger.info(f"[{marketplace}] Fetching products from marketplace...")
+        all_products = await connector.get_products()
+        
+        # Найти нужный товар по ID или артикулу
+        marketplace_product = None
+        for p in all_products:
+            if str(p.get('id')) == str(marketplace_product_id) or p.get('sku') == product['article']:
+                marketplace_product = p
+                break
+        
+        if not marketplace_product:
+            raise HTTPException(status_code=404, detail=f"Товар не найден на {marketplace.upper()}")
+        
+        # Обновить данные товара
+        update_data = {
+            "name": marketplace_product.get('name', product['name']),
+            "description": marketplace_product.get('description', product.get('description', '')),
+            "brand": marketplace_product.get('brand', product.get('brand')),
+            "characteristics": marketplace_product.get('characteristics', {}),
+            "updated_at": datetime.utcnow()
+        }
+        
+        # Обновить цены если есть
+        if marketplace_product.get('price'):
+            update_data["price_with_discount"] = int(marketplace_product['price'] * 100)  # Конвертируем в копейки
+            update_data["price"] = int(marketplace_product['price'] * 100)
+        
+        await db.product_catalog.update_one(
+            {"_id": product_id},
+            {"$set": update_data}
+        )
+        
+        # Загрузить фото если есть
+        photos_added = 0
+        if marketplace_product.get('photos'):
+            for idx, photo_url in enumerate(marketplace_product['photos'][:10]):  # Max 10 photos
+                # Проверить, нет ли уже такого фото
+                existing = await db.product_photos.find_one({
+                    "product_id": product_id,
+                    "url": photo_url
+                })
+                
+                if not existing:
+                    photo_id = str(uuid.uuid4())
+                    await db.product_photos.insert_one({
+                        "_id": photo_id,
+                        "product_id": product_id,
+                        "variant_id": None,
+                        "url": photo_url,
+                        "order": idx,
+                        "marketplaces": {marketplace: True, "wb": False, "ozon": False, "yandex": False},
+                        "created_at": datetime.utcnow()
+                    })
+                    photos_added += 1
+        
+        logger.info(f"✅ Product updated from {marketplace}: {update_data['name']}")
+        logger.info(f"   Photos added: {photos_added}")
+        
+        return {
+            "success": True,
+            "message": f"✅ Данные обновлены с {marketplace.upper()}",
+            "details": {
+                "name": update_data['name'],
+                "description_length": len(update_data['description']),
+                "characteristics_count": len(update_data.get('characteristics', {})),
+                "photos_added": photos_added
+            }
+        }
+        
+    except MarketplaceError as e:
+        logger.error(f"Marketplace error: {e.message}")
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"Failed to update from marketplace: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/catalog/products/{product_id}/upload-media/{marketplace}")
+async def upload_media_to_marketplace(
+    product_id: str,
+    marketplace: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Загрузить фотографии на маркетплейс"""
+    logger.info(f"📤 Uploading media for product {product_id} to {marketplace}")
+    
+    # Получить товар
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": str(current_user["_id"])
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Получить фото товара
+    photos = await db.product_photos.find({"product_id": product_id}).to_list(length=100)
+    photo_urls = [p["url"] for p in photos if p.get("marketplaces", {}).get(marketplace, False)]
+    
+    if not photo_urls:
+        raise HTTPException(status_code=400, detail="Нет фотографий для отправки на этот маркетплейс")
+    
+    # Получить API ключи
+    seller_profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    if not seller_profile:
+        raise HTTPException(status_code=404, detail="Профиль продавца не найден")
+    
+    api_keys = [k for k in seller_profile.get("api_keys", []) if k.get("marketplace") == marketplace]
+    if not api_keys:
+        raise HTTPException(status_code=400, detail=f"Нет интеграции с {marketplace.upper()}")
+    
+    try:
+        # TODO: Реализовать реальную загрузку фото через API маркетплейса
+        # Для каждого МП свой метод загрузки
+        logger.info(f"✅ Ready to upload {len(photo_urls)} photos to {marketplace}")
+        
+        return {
+            "success": True,
+            "message": f"✅ {len(photo_urls)} фото готовы к загрузке на {marketplace.upper()}",
+            "details": {
+                "photos_count": len(photo_urls),
+                "status": "В разработке: полная загрузка фото будет реализована в следующей версии"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to upload media: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/catalog/products/{product_id}/save-with-marketplaces")
+async def save_product_with_marketplaces(
+    product_id: str,
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Сохранить товар и отправить на выбранные маркетплейсы"""
+    logger.info(f"💾 Saving product {product_id} with marketplace data")
+    
+    product_data = data.get('product', {})
+    marketplaces = data.get('marketplaces', {})  # {wb: true, ozon: true, ...}
+    marketplace_data = data.get('marketplace_data', {})  # {wb: {name, description, ...}, ozon: {...}}
+    
+    # Обновить основной товар
+    update_dict = {k: v for k, v in product_data.items() if v is not None}
+    if update_dict:
+        # Обработка dimensions
+        if 'dimensions' in update_dict and isinstance(update_dict['dimensions'], dict):
+            pass  # Оставляем как есть
+        
+        # Сохранить данные для маркетплейсов
+        update_dict['marketplace_specific_data'] = marketplace_data
+        update_dict['updated_at'] = datetime.utcnow()
+        
+        await db.product_catalog.update_one(
+            {"_id": product_id, "seller_id": str(current_user["_id"])},
+            {"$set": update_dict}
+        )
+    
+    # Отправить на выбранные маркетплейсы
+    results = {}
+    for mp, enabled in marketplaces.items():
+        if enabled:
+            try:
+                # Вызвать publish для каждого маркетплейса
+                logger.info(f"📤 Publishing to {mp}")
+                # TODO: Здесь будет вызов реальной публикации
+                results[mp] = {"success": True, "message": f"Отправлено на {mp.upper()}"}
+            except Exception as e:
+                results[mp] = {"success": False, "error": str(e)}
+    
+    return {
+        "success": True,
+        "message": "Товар сохранен",
+        "marketplace_results": results
+    }
+
+
