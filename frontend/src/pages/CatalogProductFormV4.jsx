@@ -182,22 +182,39 @@ export default function CatalogProductFormV4() {
       
       if (hasSelectedMarketplaces && id) {
         // Сохранить с отправкой на маркетплейсы
-        await api.post(`/api/catalog/products/${id}/save-with-marketplaces`, {
+        const response = await api.post(`/api/catalog/products/${id}/save-with-marketplaces`, {
           product: productData,
           marketplaces: selectedMarketplaces,
           marketplace_data: marketplaceData
         })
         
-        alert('✅ Товар сохранен и отправлен на маркетплейсы!')
+        // Показать детальный результат
+        let message = response.data.message + '\n\n'
+        const results = response.data.marketplace_results || {}
+        
+        Object.keys(results).forEach(mp => {
+          const result = results[mp]
+          if (result.success) {
+            message += `✅ ${mp.toUpperCase()}: ${result.message}\n`
+          } else {
+            message += `❌ ${mp.toUpperCase()}: ${result.error}\n`
+          }
+        })
+        
+        alert(message)
+        
+        // Перезагрузить данные
+        loadProduct()
       } else {
         // Обычное сохранение
         if (id) {
           await api.put(`/api/catalog/products/${id}`, productData)
           alert('✅ Товар сохранен!')
+          loadProduct()
         } else {
           const response = await api.post('/api/catalog/products', productData)
           alert('✅ Товар создан!')
-          navigate(`/catalog/products/${response.data.id}/edit`)
+          navigate(`/api/catalog/products/${response.data.id}/edit`)
         }
       }
     } catch (error) {
