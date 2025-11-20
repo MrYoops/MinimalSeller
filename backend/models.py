@@ -439,6 +439,13 @@ class ProductCatalogResponse(BaseModel):
     photos_count: int = 0
     created_at: datetime
     updated_at: datetime
+    # Коммерческие атрибуты
+    price: int = 0  # Розничная цена в копейках
+    price_discounted: Optional[int] = None  # Цена со скидкой в копейках
+    cost_price: int = 0  # Себестоимость в копейках
+    barcode: Optional[str] = None  # Штрих-код
+    weight: int = 0  # Вес в граммах
+    dimensions: ProductDimensions = Field(default_factory=ProductDimensions)  # Габариты
 
 
 # ---------- ВАРИАЦИИ ТОВАРОВ (ЦВЕТ + РАЗМЕР) ----------
