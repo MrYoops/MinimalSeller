@@ -483,13 +483,35 @@ class ProductCatalogResponse(BaseModel):
     photos_count: int = 0
     created_at: datetime
     updated_at: datetime
-    # Коммерческие атрибуты
+    
+    # Дополнительные поля (как в SelSup)
+    manufacturer: Optional[str] = None
+    country_of_origin: Optional[str] = None
+    label_name: Optional[str] = None
+    
+    # Цены (на уровне товара, как в SelSup)
+    price_with_discount: int = 0
+    price_without_discount: int = 0
+    price_coefficient: float = 1.0
+    purchase_price: int = 0
+    additional_expenses: int = 0
+    cost_price: int = 0
+    vat: int = 0
+    
+    # Коммерческие атрибуты (старые поля для совместимости)
     price: int = 0  # Розничная цена в копейках
     price_discounted: Optional[int] = None  # Цена со скидкой в копейках
-    cost_price: int = 0  # Себестоимость в копейках
     barcode: Optional[str] = None  # Штрих-код
     weight: int = 0  # Вес в граммах
     dimensions: ProductDimensions = Field(default_factory=ProductDimensions)  # Габариты
+    
+    # Дополнительная информация
+    gender: Optional[str] = None
+    season: Optional[str] = None
+    composition: Optional[str] = None
+    care_instructions: Optional[str] = None
+    additional_info: Optional[str] = None
+    website_link: Optional[str] = None
 
 
 # ---------- ВАРИАЦИИ ТОВАРОВ (ЦВЕТ + РАЗМЕР) ----------
