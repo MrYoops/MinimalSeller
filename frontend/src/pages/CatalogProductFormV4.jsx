@@ -214,7 +214,7 @@ export default function CatalogProductFormV4() {
         } else {
           const response = await api.post('/api/catalog/products', productData)
           alert('✅ Товар создан!')
-          navigate(`/api/catalog/products/${response.data.id}/edit`)
+          navigate(`/catalog/products/${response.data.id}/edit`)
         }
       }
     } catch (error) {
