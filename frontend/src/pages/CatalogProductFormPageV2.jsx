@@ -261,13 +261,41 @@ export default function CatalogProductFormPageV2() {
             {id ? 'Изменение данных товара' : 'Шаг за шагом создайте карточку как в SelsUp'}
           </p>
         </div>
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="px-6 py-2 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded flex items-center gap-2 disabled:opacity-50"
-        >
-          <FiSave /> СОХРАНИТЬ
-        </button>
+        <div className="flex gap-2">
+          {/* Кнопки маркетплейсов (только при редактировании) */}
+          {id && (
+            <>
+              <button
+                onClick={() => handlePublishToMarketplace('wb')}
+                className="px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded flex items-center gap-2"
+                title="Отправить на Wildberries"
+              >
+                🟣 WB
+              </button>
+              <button
+                onClick={() => handlePublishToMarketplace('ozon')}
+                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded flex items-center gap-2"
+                title="Отправить на Ozon"
+              >
+                🔵 OZON
+              </button>
+              <button
+                onClick={() => handlePublishToMarketplace('yandex')}
+                className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded flex items-center gap-2"
+                title="Отправить на Яндекс.Маркет"
+              >
+                🔴 YM
+              </button>
+            </>
+          )}
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="px-6 py-2 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded flex items-center gap-2 disabled:opacity-50"
+          >
+            <FiSave /> СОХРАНИТЬ
+          </button>
+        </div>
       </div>
 
       {/* Steps for new product */}
