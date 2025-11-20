@@ -309,7 +309,7 @@ export default function CatalogProductsPage() {
                       <button
                         onClick={() => handleDelete(product.id)}
                         className="p-2 text-red-400 hover:bg-red-400/10 rounded transition"
-                        title="Архивировать"
+                        title="Удалить навсегда"
                       >
                         <FiTrash2 />
                       </button>
