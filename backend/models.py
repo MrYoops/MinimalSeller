@@ -388,13 +388,35 @@ class ProductCatalogCreate(BaseModel):
     characteristics: Dict[str, Any] = {}  # Характеристики товара (название: значение)
     marketplace_category_id: Optional[str] = None  # ID категории на маркетплейсе
     marketplace: Optional[str] = None  # Маркетплейс источник
-    # Коммерческие атрибуты
-    price: int = 0  # Розничная цена в копейках
-    price_discounted: Optional[int] = None  # Цена со скидкой в копейках
-    cost_price: int = 0  # Себестоимость в копейках
+    
+    # Дополнительные поля (как в SelSup)
+    manufacturer: Optional[str] = None  # Производитель
+    country_of_origin: Optional[str] = "Вьетнам"  # Страна производства
+    label_name: Optional[str] = None  # Название для этикетки
+    
+    # Цены (на уровне товара, как в SelSup, в копейках)
+    price_with_discount: int = 0  # Цена со скидкой
+    price_without_discount: int = 0  # Цена без скидки
+    price_coefficient: float = 1.0  # Поправочный коэффициент
+    purchase_price: int = 0  # Закупочная цена
+    additional_expenses: int = 0  # Доп. расходы
+    cost_price: int = 0  # Себестоимость (авто-расчет)
+    vat: int = 0  # НДС (процент)
+    
+    # Коммерческие атрибуты (старые поля для совместимости)
+    price: int = 0  # Розничная цена в копейках (дубль price_with_discount)
+    price_discounted: Optional[int] = None  # Цена со скидкой в копейках (дубль)
     barcode: Optional[str] = None  # Штрих-код
     weight: int = 0  # Вес в граммах
     dimensions: ProductDimensions = Field(default_factory=ProductDimensions)  # Габариты
+    
+    # Дополнительная информация (как в SelSup)
+    gender: Optional[str] = None  # Пол (МУЖСКОЙ, ЖЕНСКИЙ и т.д.)
+    season: Optional[str] = None  # Сезон
+    composition: Optional[str] = None  # Состав
+    care_instructions: Optional[str] = None  # Уход за вещами
+    additional_info: Optional[str] = None  # Доп. информация (внутренняя)
+    website_link: Optional[str] = None  # Ссылка на сайт
 
 class ProductCatalogUpdate(BaseModel):
     """Обновление товара"""
