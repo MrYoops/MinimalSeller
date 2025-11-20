@@ -3134,6 +3134,17 @@ async def update_catalog_product(
         if duplicate:
             raise HTTPException(status_code=400, detail="Товар с таким артикулом уже существует")
     
+    # Подготовить обновление
+    update_data = {}
+    for k, v in product.dict(exclude_unset=True).items():
+        if v is not None:
+            if k == "dimensions" and isinstance(v, dict):
+                update_data[k] = v
+            elif k == "dimensions":
+                update_data[k] = v.dict()
+            else:
+                update_data[k] = v
+    
     # Авто-расчет себестоимости при обновлении
     if product.purchase_price is not None or product.additional_expenses is not None:
         purchase = product.purchase_price if product.purchase_price is not None else existing.get("purchase_price", 0)
@@ -3156,17 +3167,6 @@ async def update_catalog_product(
     if product.price_with_discount is not None:
         update_data["price"] = product.price_with_discount
         update_data["price_discounted"] = product.price_with_discount if product.price_with_discount < final_price_without else None
-    
-    # Подготовить обновление
-    update_data = {}
-    for k, v in product.dict(exclude_unset=True).items():
-        if v is not None:
-            if k == "dimensions" and isinstance(v, dict):
-                update_data[k] = v
-            elif k == "dimensions":
-                update_data[k] = v.dict()
-            else:
-                update_data[k] = v
     
     # Пересчитать себестоимость
     if "purchase_price" in update_data or "additional_expenses" in update_data:
