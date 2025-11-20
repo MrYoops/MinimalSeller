@@ -3128,20 +3128,28 @@ async def update_catalog_product(
         if duplicate:
             raise HTTPException(status_code=400, detail="Товар с таким артикулом уже существует")
     
+    # Авто-расчет себестоимости при обновлении
+    if product.purchase_price is not None or product.additional_expenses is not None:
+        purchase = product.purchase_price if product.purchase_price is not None else existing.get("purchase_price", 0)
+        expenses = product.additional_expenses if product.additional_expenses is not None else existing.get("additional_expenses", 0)
+        update_data["cost_price"] = purchase + expenses
+    
     # Валидация цен (если переданы)
-    if product.price is not None and product.price < 0:
-        raise HTTPException(status_code=400, detail="Цена не может быть отрицательной")
-    
-    if product.cost_price is not None and product.cost_price < 0:
-        raise HTTPException(status_code=400, detail="Себестоимость не может быть отрицательной")
-    
-    if product.price_discounted is not None and product.price_discounted < 0:
+    if product.price_with_discount is not None and product.price_with_discount < 0:
         raise HTTPException(status_code=400, detail="Цена со скидкой не может быть отрицательной")
     
-    # Проверка скидочной цены относительно обычной
-    final_price = product.price if product.price is not None else existing.get("price", 0)
-    if product.price_discounted is not None and product.price_discounted >= final_price:
-        raise HTTPException(status_code=400, detail="Цена со скидкой должна быть меньше обычной цены")
+    if product.price_without_discount is not None and product.price_without_discount < 0:
+        raise HTTPException(status_code=400, detail="Цена без скидки не может быть отрицательной")
+    
+    final_price_with = product.price_with_discount if product.price_with_discount is not None else existing.get("price_with_discount", 0)
+    final_price_without = product.price_without_discount if product.price_without_discount is not None else existing.get("price_without_discount", 0)
+    if final_price_with > final_price_without:
+        raise HTTPException(status_code=400, detail="Цена со скидкой должна быть меньше или равна цене без скидки")
+    
+    # Обратная совместимость со старыми полями
+    if product.price_with_discount is not None:
+        update_data["price"] = product.price_with_discount
+        update_data["price_discounted"] = product.price_with_discount if product.price_with_discount < final_price_without else None
     
     # Подготовить обновление
     update_data = {}
@@ -3153,6 +3161,12 @@ async def update_catalog_product(
                 update_data[k] = v.dict()
             else:
                 update_data[k] = v
+    
+    # Пересчитать себестоимость
+    if "purchase_price" in update_data or "additional_expenses" in update_data:
+        purchase = update_data.get("purchase_price", existing.get("purchase_price", 0))
+        expenses = update_data.get("additional_expenses", existing.get("additional_expenses", 0))
+        update_data["cost_price"] = purchase + expenses
     
     if update_data:
         update_data["updated_at"] = datetime.utcnow()
@@ -3197,13 +3211,35 @@ async def update_catalog_product(
         photos_count=photos_count,
         created_at=updated.get("created_at", datetime.utcnow()),
         updated_at=updated.get("updated_at", datetime.utcnow()),
-        # Коммерческие атрибуты
+        
+        # Дополнительные поля (SelSup)
+        manufacturer=updated.get("manufacturer"),
+        country_of_origin=updated.get("country_of_origin"),
+        label_name=updated.get("label_name"),
+        
+        # Цены (SelSup style)
+        price_with_discount=updated.get("price_with_discount", updated.get("price", 0)),
+        price_without_discount=updated.get("price_without_discount", updated.get("price", 0)),
+        price_coefficient=updated.get("price_coefficient", 1.0),
+        purchase_price=updated.get("purchase_price", 0),
+        additional_expenses=updated.get("additional_expenses", 0),
+        cost_price=updated.get("cost_price", 0),
+        vat=updated.get("vat", 0),
+        
+        # Коммерческие атрибуты (обратная совместимость)
         price=updated.get("price", 0),
         price_discounted=updated.get("price_discounted"),
-        cost_price=updated.get("cost_price", 0),
         barcode=updated.get("barcode"),
         weight=updated.get("weight", 0),
-        dimensions=ProductDimensions(**updated.get("dimensions", {})) if updated.get("dimensions") else ProductDimensions()
+        dimensions=ProductDimensions(**updated.get("dimensions", {})) if updated.get("dimensions") else ProductDimensions(),
+        
+        # Дополнительная информация
+        gender=updated.get("gender"),
+        season=updated.get("season"),
+        composition=updated.get("composition"),
+        care_instructions=updated.get("care_instructions"),
+        additional_info=updated.get("additional_info"),
+        website_link=updated.get("website_link")
     )
 
 
