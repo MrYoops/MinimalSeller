@@ -1,90 +1,170 @@
-<analysis>
-The trajectory chronicles an intense, iterative development and debugging cycle focused on replicating the warehouse management functionality of a competitor's application, , into the MinimalMod project. The work began with the user's directive to perform a deep analysis of  and implement its logic modularly, starting with the Warehouse () section.
+<analysis>**original_problem_statement:**
+The user wants to replicate the Products () module from a competitor application, , into the existing MinimalMod application. The user provided login credentials and URLs for a deep analysis of the target application.
 
-The AI engineer's initial implementation of warehouse linking was a three-step process (Marketplace -> Integration -> Warehouse). However, user feedback, including screenshots and direct links, revealed this was incorrect. The core of the trajectory became a series of deep-dive debugging and refactoring sprints to align the application with 's more nuanced logic.
+The core requirements are:
+1.  **Full Analysis**: Analyze the Товары (Products), Импорт Товаров (Product Import), Фото (Photos), Категории (Categories), and Цены (Prices) sections of .
+2.  **Product Card Implementation**: Replicate the Selsup product card creation/editing flow. This includes:
+    *   Importing categories and their specific characteristics directly from marketplaces (Ozon, Wildberries).
+    *   A multi-step form for creating products, where selecting a marketplace category dynamically loads the relevant attribute fields.
+3.  **Product Import**: Implement a robust product import feature, especially from marketplaces. This must include importing product photos and all associated characteristics.
+4.  **Product List UI**: The main product list table must display the actual primary photo of the product, not a placeholder icon.
+5.  **Marketplace Actions**: The product editing page must have buttons for each marketplace (WB, Ozon, Yandex) to push/update the product data to that specific platform, just like in Selsup.
+6.  **Delete Functionality**: The Delete button for a product must perform a permanent deletion from the database, not just move it to an archive.
 
-Key challenges and resolutions included:
-1.  **Wildberries API:** Correcting the API endpoint from one that fetched all FBO warehouses to the correct  endpoint that lists only the seller's own FBS warehouses.
-2.  **Ozon API:** First, fixing a test connection error by changing the product list endpoint from  to  to resolve a payload issue. A more critical fix involved diagnosing and handling an undocumented /� compression in the warehouse list API response, which was causing parsing failures.
-3.  **Yandex.Market:** Research revealed that Yandex does not provide a warehouse-listing API, requiring the implementation of a manual ID and name entry form, conditionally displayed only when Yandex is selected.
-4.  **Backend Stability:** A recurring and critical issue was . The engineer systematically traced and fixed this bug across multiple warehouse and link-related API endpoints (, , , ) by ensuring all MongoDB  fields were converted to strings before being returned as JSON.
-5.  **Frontend UI:** Fixing a bug where the list of Active Links would not update after a new link was added. This was traced back to the aforementioned backend  errors, which caused the data refresh call to fail silently.
+**User's preferred language**: русский
 
-The trajectory concludes with a fully functional warehouse linking module that correctly handles the specifics of Ozon, Wildberries, and Yandex, and a stable UI that reflects database state changes in real-time.
-</analysis>
+**what currently exists?**
+A comprehensive Products module has been implemented, closely following the user's analysis of .
 
-<product_requirements>
-The primary goal is to enhance the MinimalMod e-commerce admin panel by replicating and improving upon the core functionalities of a competitor application, . The user's focus is on building a robust, multi-marketplace management system.
+*   **Backend**: A new Catalog backend is in place with over 27 API endpoints. It supports CRUD operations for Products, Categories, Variants (color/size), Photos, and Prices. Crucially, it includes endpoints to import categories with characteristics and products with photos/characteristics from Wildberries and Ozon APIs. The delete functionality has been changed to perform a hard delete. An endpoint exists to handle sending products to marketplaces, but the logic is not yet implemented.
+*   **Frontend**: The UI has been significantly overhauled. The Товары tab now leads to a new set of pages:
+    *   : A product list that displays real product photos, with search, filters, and pagination.
+    *   : A multi-step UI for importing products from marketplaces. This is functional for Wildberries and Ozon.
+    *   : A sophisticated, Selsup-style multi-step form for creating/editing products. It allows users to select a marketplace, load its categories, and then dynamically displays the specific characteristic fields for the selected category. It successfully displays imported photos and characteristics.
+    *   **Marketplace Buttons**: The product edit form now includes header buttons for Wildberries, Ozon, and Yandex.Market, as requested by the user.
 
-The immediate requirement was to overhaul the Warehouse management module. This involved:
-1.  **Deep Analysis:** Studying the  application to understand its logic for managing warehouses and their connections to marketplaces.
-2.  **Marketplace Integrations:** Creating a dedicated Integrations page to manage API keys for Ozon, Wildberries, and Yandex.Market.
-3.  **Warehouse Linking:** Implementing a system on the warehouse detail page to link a single internal warehouse to multiple marketplace-specific FBS (Fulfillment by Seller) warehouses.
-    *   **Ozon & Wildberries:** The system must automatically fetch a list of the user's available FBS warehouses from the respective APIs after a marketplace is selected.
-    *   **Yandex.Market:** Since its API does not support warehouse listing, the UI must provide fields for manual entry of the Warehouse ID and Name.
-4.  **UI/UX:** The UI for adding and viewing these links must be intuitive. Specifically, after adding a link, it must immediately appear in an Active Links list on the same page without requiring a manual refresh. The main warehouse list page should also display icons indicating which marketplaces a warehouse is linked to.
-</product_requirements>
+**Last working item**:
+- Last item agent was working: The agent's last actions were to:
+    1.  Change the product deletion logic from archiving to a permanent hard delete in the backend ().
+    2.  Add a new backend endpoint () as a placeholder.
+    3.  Update the frontend product edit page () to include UI buttons for sending the product to Wildberries, Ozon, and Yandex.Market.
+- Status: 
+- Agent Testing Done: 
+- Which testing method agent to use? . The backend logic for  needs to be implemented and tested. The frontend needs to be tested to ensure the delete button works as expected and the new marketplace buttons trigger the correct API call with the correct payload.
+- User Testing Done: 
 
-<key_technical_concepts>
-- **Frameworks:** FastAPI (Python backend), React (Vite frontend).
-- **Database:** MongoDB, with a critical focus on handling  to  conversion for JSON serialization.
-- **API Integration:** Using  for external REST API calls. Key work involved correcting endpoints for Wildberries () and Ozon (), and handling /� decompression for Ozon API responses.
-- **Authentication:** JWT-based system for user authentication.
-- **UI:** React components with conditional rendering (e.g., for Yandex manual entry fields).
-</key_technical_concepts>
+**All Pending/In progress Issue list**:
+-   **Issue 1: Implement Marketplace Push Functionality (P0)**
+    -   **Description**: The new marketplace buttons (WB, Ozon, YM) on the product edit page are UI-only. The backend endpoint they call () is a placeholder and does not contain any logic to actually create or update product cards on the respective marketplaces.
+    -   **Attempted fixes**: None. This is a new feature request.
+    -   **Next debug checklist**:
+        1.  Implement the logic in the  function in .
+        2.  For each marketplace (WB, Ozon, YM), call the appropriate  method in its respective connector in .
+        3.  The connector methods will need to be created/updated to handle the transformation of the internal product model to the marketplace's specific API format for product cards.
+        4.  Ensure the frontend  function in  sends the correct  parameter.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a core feature requested by the user to replicate 's functionality, allowing users to manage their product listings on marketplaces directly from the app.
+    -   **Status**: 
+    -   **Should Test frontend/backend/both after fix?**: Both.
+-   **Issue 2: Verify Hard Delete Functionality (P1)**
+    -   **Description**: The backend was changed to permanently delete products. However, it's not confirmed if the frontend UI/UX (confirmation modals, button tooltips) reflects this change or if the entire flow works correctly.
+    -   **Attempted fixes**: Backend endpoint was modified.
+    -   **Next debug checklist**:
+        1.  Click the Delete button on .
+        2.  Check the confirmation dialog text. If it says archive, change it to delete permanently.
+        3.  Confirm the product is removed from the UI and the database after deletion.
+    -   **Why fix this issue and what will be achieved with the fix?** To ensure the application behaves exactly as the user requested.
+    -   **Status**: 
+    -   **Should Test frontend/backend/both after fix?**: Frontend.
 
-<code_architecture>
-The application is a standard monorepo with a  (React) and  (FastAPI) directory. The development was heavily focused on refining the interaction between these two parts, especially for the warehouse management feature.
+**In progress Task List**:
+-   **Task 1: Implement Marketplace Push Logic (P0)**
+    -   **Description**: This task corresponds to Issue 1. The goal is to make the WB, Ozon, and YM buttons on the product edit page functional.
+    -   **Where to resume**: , within the  function. The logic needs to be built out to call the correct connector methods based on the marketplace selected.
+    -   **What will be achieved with this?** A key piece of 's functionality will be replicated, allowing users to manage marketplace listings from a central point.
+    -   **Status**: 
+    -   **Should Test frontend/backend/both after fix?**: Both.
+
+**Upcoming and Future Tasks**
+-   **Upcoming Tasks**:
+    *   **Ozon Photo Import (P1)**: The  in  needs to be updated to fetch product photos during the import process, similar to how the  was fixed.
+    *   **Mass Editing UI (P2)**: Implement a frontend interface for mass-editing products, leveraging the existing backend endpoints. This was part of the original analysis.
+    *   **Prices Module UI (P2)**: Create a dedicated Prices page that allows for bulk price updates, setting formulas, and copying prices between marketplaces.
+-   **Future Tasks**:
+    *   **Product Kits UI**: Build the frontend for creating and managing product kits.
+    *   **Product Grouping UI**: Build the frontend for grouping products.
+    *   **Dedicated Photos Module**: Create the Фотосъемки UI for mass photo management.
+    *   **Re-enable Disabled Routes**: Debug and re-enable the  and  that were commented out in  early in the project.
+
+**Completed work in this session**
+-   **Backend**:
+    -   Full backend for the Catalog module, including ~27 API endpoints () and Pydantic models ().
+    -   Product/category import from Wildberries & Ozon, including characteristics and photos (for WB) ().
+    -   Changed product deletion to be a hard delete.
+-   **Frontend**:
+    -   New Catalog section with pages for Product List, Categories, Import, and a v2 Product Form ().
+    -   Product list now displays actual product images ().
+    -   Product form dynamically loads marketplace categories and characteristics ().
+    -   Product form displays imported photos and characteristics.
+    -   Added placeholder buttons for sending products to marketplaces on the edit page.
+
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1: Ozon Connector Does Not Import Photos**
+    -   **Debug checklist**:
+        1.  Investigate the Ozon Seller API documentation for the correct endpoint to get product photos/media.
+        2.  Update the  method in the  class in  to fetch and include photo URLs in its response.
+        3.  Ensure the main import function in  correctly processes these photos.
+    -   **Why to solve this issue and what will be achieved with this?** To achieve feature parity with the Wildberries import and provide a complete import experience for Ozon users.
+    -   **Should Test frontend/backend/both after fix**: Backend (confirm via test script) and Frontend (visually confirm photos appear after import).
+    -   **Is recurring issue?**: N
+
+**Known issue recurrence from previous fork**
+-   **Issue recurrence in previous fork**: .
+-   **Recurrence count**: High. This issue appeared multiple times during the session, requiring fixes in various new endpoints to ensure all MongoDB  fields were converted to strings () before being used in database queries or returned in JSON responses.
+-   **Status**:  (in current code), but the next agent must remain vigilant.
+
+**Code Architecture**
 
 
+**Key Technical Concepts**
+-   **Frameworks**: FastAPI (Python), React (Vite).
+-   **Database**: MongoDB.
+-   **Critical Concept**: Constant need to convert MongoDB  to  for JSON serialization and API consistency. All IDs in the new catalog module are UUID strings to avoid this.
+-   **API Integration**: Dynamic data loading from external Marketplace APIs (Wildberries, Ozon) for categories and characteristics, integrated directly into the frontend UI flow. The  file serves as an abstraction layer for this.
+-   **UI**: Multi-step forms in React, conditional rendering, dynamic data fetching based on user input (e.g., loading characteristics after category selection).
 
-- ****
-  - **Importance:** The main FastAPI application file, containing all API endpoints for warehouses, links, and integrations.
-  - **Summary of changes:** This file was heavily modified to fix  serialization errors. Endpoints for creating (), fetching (), updating (), and deleting () warehouse links were refactored to correctly query by string UUIDs and convert  fields to strings in the response. A new endpoint () was added to fetch all warehouses for a given marketplace from all user integrations. The main warehouse listing endpoint () was also updated to include link information.
+**key DB schema**
+-   ****: {id, seller_id, article, name, brand, category_id, characteristics: dict, ...}
+-   ****: {id, product_id, color, size, sku, ...}
+-   ****: {id, product_id, variant_id, url, marketplaces: dict, ...}
+-   ****: {id, product_id, variant_id, purchase_price, retail_price, ...}
+-   ****: {id, product_id, variant_id, warehouse_id, quantity, ...}
+-   ****: {id, seller_id, name, group_by_color, group_by_size, ...}
+-   ****: {id, product_id, name, items: list, ...}
+-   ****: {id, product_id, marketplace, marketplace_product_id, ...}
 
-- ****
-  - **Importance:** This file is critical as it contains the logic for all external marketplace API communication. It was the source of major bugs.
-  - **Summary of changes:**
-    - **OzonConnector:** The  method was corrected to use the  endpoint instead of an incorrect FBO one. More importantly, the base  method was updated to handle  and � compressed responses from the Ozon API, which were previously causing data parsing to fail.
-    - **WildberriesConnector:** The  method was corrected to use , which correctly returns the seller's FBS warehouses, instead of a previous endpoint that was incorrectly returning all of Wildberries' FBO warehouses.
-    - **YandexMarketConnector:** Left largely untouched as the logic for Yandex shifted to manual entry on the frontend.
+**All files**
+*   **Created**:
+    *   : A Python script for testing all new catalog API endpoints.
+    *   : The main product list view.
+    *   : The UI for managing product categories.
+    *   : The UI for the product import flow.
+    *   : The new, advanced product creation/editing form.
+*   **Updated**:
+    *   : Added all Pydantic models required for the new Products module.
+    *   : Heavily updated with ~27 new API endpoints for the catalog, plus the new  endpoint and hard-delete logic.
+    *   : Updated Ozon and Wildberries connectors to fetch categories and attributes.
+    *   : Added React Router routes for all the new catalog pages.
+    *   : Updated to render the new  component within the Товары tab.
 
-- ****
-  - **Importance:** This is the core UI for managing a single warehouse and its marketplace links. It underwent the most significant refactoring.
-  - **Summary of changes:**
-    - The warehouse linking UI was simplified from a 3-dropdown system to a 2-step process (Marketplace -> Warehouse list).
-    - **Conditional Logic for Yandex:** Added logic to show manual input fields for Warehouse Name and Warehouse ID only when Yandex is the selected marketplace.
-    - **UI Update Fix:** The  function was modified to call  *before* showing a success alert, ensuring the Active Links section updates immediately. The initial issue was that the alert was blocking the re-fetch call.
-    - The display of active links was implemented, mapping over the  state to render each link with its marketplace name, warehouse name, and a delete button.
+**Critical Info for New Agent**
+*   **User Expectations**: The user is highly detail-oriented and expects a very close replication of . They provide screenshots and direct feedback. Be prepared to work on fine-grained UI/UX details.
+*   **Database IDs**: The  vs  issue is a recurring landmine in this codebase. For all new developments, ensure  fields from MongoDB are converted to strings before being sent to the frontend or used in lookups. The new  collection and related collections use UUID strings for  to mitigate this.
+*   **Marketplace Connectors**: All logic for interacting with external marketplace APIs is centralized in . Any new marketplace interactions should be added there.
 
-- ****
-  - **Importance:** A new page created to provide a centralized place for users to manage their marketplace API keys.
-  - **Summary of changes:** Created from scratch to display integration cards (Ozon, WB, Yandex) and a list of active integrations, following the design pattern observed on .
+**Last 5 User Messages and any pending user messages**
+1.  **User (Chat 337)**: Pointed out that after import, product photos are missing, and there's no system to handle characteristics tied to categories. (This was subsequently fixed).
+2.  **User (Chat 411)**: Noticed the product list table showed placeholder icons instead of actual product photos and provided a screenshot. (This was fixed).
+3.  **User (Chat 428)**: Requested two major features: 1) Change the delete button to perform a permanent delete. 2) Add marketplace-specific buttons (like in a provided Selsup screenshot) to the product edit page to push/update product data.
+4.  **User (Chat 433)**: Confirmed the agent should proceed with implementing the requested changes, stating Continue the work and set it up so that everything works....
+5.  **User (Chat 460)**: This was the agent's message confirming the UI buttons were added. The user has not responded since. The tasks from message #428 are the current priority.
 
-- ****
-  - **Importance:** The main list view for all user-created warehouses.
-  - **Summary of changes:** The component was updated to display icons (badges) for Ozon and WB in a СВЯЗИ С МП (Marketplace Links) column, indicating which marketplaces each warehouse is connected to. This required the backend  endpoint to be updated to return this link information.
-</code_architecture>
+**Project Health Check:**
+*   **Broken**:
+    *   The Send to Marketplace buttons (WB, Ozon, YM) on the product edit page are not functional. The backend logic is missing.
+    *   The  does not import product photos.
+*   **Mocked**: None.
 
-<pending_tasks>
-- **Implement Products Module Logic:** The user explicitly requested an analysis and implementation of the Products () module from , including its sub-sections and features like mass editing and filtering. This was postponed to fix the critical warehouse issues.
-- **Fix Disabled Backend Routes:** The initial analysis mentioned that several route modules (, ) were commented out in  to stabilize the app. These still need to be debugged and re-enabled.
-</pending_tasks>
+**Testing status**
+-   Testing agent used after significant changes: 
+-   Troubleshoot agent used after agent stuck in loop: 
+-   Test files created: 
+-   Known regressions: None.
 
-<current_work>
-The most recent work was a comprehensive debugging and feature-completion cycle for the warehouse management module, addressing multiple user-reported issues.
+**Credentials to test flow:**
+Login: 
+Password: 
+(These are for the competitor site  for analysis, not the local app. The local app uses  / ).
 
-1.  **UI Update Bug:** The primary issue was that after clicking Add Link, the new link would be created in the database but would not appear in the Active Links list on the frontend. This was traced to a  on the  endpoint, caused by a  from an un-serialized MongoDB  field () in the response. This was fixed by ensuring all s are converted to strings in  before being sent to the client. The frontend code was also slightly adjusted to ensure the data refresh happens before the success alert is shown.
-
-2.  **Yandex.Market Integration:** Based on analysis of , it was discovered that Yandex requires manual entry of warehouse IDs. The  component was updated with conditional UI to show input fields for Warehouse Name and Warehouse ID specifically when the Yandex marketplace is selected. The  function was also updated to handle this manual data.
-
-3.  **Warehouse List Display:** The main warehouse list page () was not showing which marketplaces each warehouse was linked to. This was fixed by modifying the backend endpoint () to aggregate and include link information for each warehouse. The frontend was then updated to display these as small marketplace badges.
-
-4.  **Create Warehouse Bug:** A bug preventing the creation of new warehouses (main warehouse can only be one) was fixed. The issue was another  serialization error in the  endpoint that caused the application to fail when checking for existing warehouses.
-
-The final state is a fully functional warehouse management system that correctly fetches and links warehouses for Ozon and Wildberries, supports manual entry for Yandex, and has a responsive, bug-free UI that accurately reflects the backend state.
-</current_work>
-
-<optional_next_step>
-Based on the user's initial, multi-phase request, the next logical step is to begin the analysis and implementation of the Products () module, as modeled on .
-</optional_next_step>
+**What agent forgot to execute**
+- The agent implemented the UI for the marketplace buttons but did not implement the backend logic to make them functional. This is the main pending task.
+- The agent noted the Ozon photo import was missing but did not implement the fix.</analysis>

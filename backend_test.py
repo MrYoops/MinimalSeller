@@ -10,7 +10,7 @@ import sys
 from typing import Dict, Any, Optional
 
 # Backend URL from frontend .env
-BACKEND_URL = "https://warehouse-hub-45.preview.emergentagent.com/api"
+BACKEND_URL = "https://product-hub-76.preview.emergentagent.com/api"
 
 # Test credentials
 TEST_SELLER_EMAIL = "seller@minimalmod.com"
