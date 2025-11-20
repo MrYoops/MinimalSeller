@@ -338,6 +338,49 @@ class OzonConnector(BaseConnector):
         except MarketplaceError as e:
             logger.error(f"[Ozon] Failed to fetch attributes: {e.message}")
             raise
+    
+    async def create_product(self, product_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Создать карточку товара на Ozon"""
+        logger.info("[Ozon] Creating product card")
+        
+        url = f"{self.base_url}/v2/product/import"
+        headers = self._get_headers()
+        
+        # Подготовить payload для Ozon
+        payload = {
+            "items": [{
+                "offer_id": product_data.get('article', ''),  # Артикул продавца
+                "name": product_data.get('name', ''),
+                "price": str(int(product_data.get('price', 0) / 100)),  # Цена в рублях
+                "old_price": str(int(product_data.get('price_without_discount', 0) / 100)),
+                "vat": str(product_data.get('vat', 0)),
+                "height": product_data.get('dimensions', {}).get('height', 0),
+                "width": product_data.get('dimensions', {}).get('width', 0),
+                "depth": product_data.get('dimensions', {}).get('length', 0),
+                "weight": product_data.get('weight', 0),
+                "images": product_data.get('photos', []),
+                "description": product_data.get('description', ''),
+                "category_id": product_data.get('ozon_category_id', 17029016),  # Default category
+                "attributes": []
+            }]
+        }
+        
+        logger.info(f"[Ozon] Creating product: {product_data.get('name')}")
+        logger.info(f"[Ozon] Article: {product_data.get('article')}")
+        logger.info(f"[Ozon] Price: {payload['items'][0]['price']}₽")
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            logger.info(f"[Ozon] Product created successfully: {response}")
+            return {
+                "success": True,
+                "task_id": response.get('result', {}).get('task_id'),
+                "message": "Карточка отправлена на модерацию Ozon"
+            }
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Failed to create product: {e.message}")
+            raise
+
 
 class WildberriesConnector(BaseConnector):
     """Wildberries marketplace connector - REAL API with full headers"""
