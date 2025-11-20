@@ -350,8 +350,12 @@ class OzonConnector(BaseConnector):
         # Проверить обязательные поля
         if not product_data.get('ozon_category_id'):
             # Используем дефолтную категорию для кроссовок
-            product_data['ozon_category_id'] = 15621  # Обувь > Кроссовки
-            logger.warning("[Ozon] No category specified, using default: 15621 (Кроссовки)")
+            product_data['ozon_category_id'] = 15621048  # Повседневная обувь
+            logger.warning("[Ozon] No category specified, using default: 15621048 (Повседневная обувь)")
+        
+        if not product_data.get('ozon_type_id'):
+            product_data['ozon_type_id'] = 91248  # Кроссовки
+            logger.warning("[Ozon] No type_id specified, using default: 91248 (Кроссовки)")
         
         # Подготовить payload для Ozon v3
         # VAT должен быть в формате 0..1 (0.2 = 20%)
