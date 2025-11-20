@@ -2836,13 +2836,35 @@ async def get_catalog_products(
             photos_count=photos_count,
             created_at=prod.get("created_at", datetime.utcnow()),
             updated_at=prod.get("updated_at", datetime.utcnow()),
-            # Коммерческие атрибуты
+            
+            # Дополнительные поля (SelSup)
+            manufacturer=prod.get("manufacturer"),
+            country_of_origin=prod.get("country_of_origin"),
+            label_name=prod.get("label_name"),
+            
+            # Цены (SelSup style)
+            price_with_discount=prod.get("price_with_discount", prod.get("price", 0)),
+            price_without_discount=prod.get("price_without_discount", prod.get("price", 0)),
+            price_coefficient=prod.get("price_coefficient", 1.0),
+            purchase_price=prod.get("purchase_price", 0),
+            additional_expenses=prod.get("additional_expenses", 0),
+            cost_price=prod.get("cost_price", 0),
+            vat=prod.get("vat", 0),
+            
+            # Коммерческие атрибуты (обратная совместимость)
             price=prod.get("price", 0),
             price_discounted=prod.get("price_discounted"),
-            cost_price=prod.get("cost_price", 0),
             barcode=prod.get("barcode"),
             weight=prod.get("weight", 0),
-            dimensions=ProductDimensions(**prod.get("dimensions", {})) if prod.get("dimensions") else ProductDimensions()
+            dimensions=ProductDimensions(**prod.get("dimensions", {})) if prod.get("dimensions") else ProductDimensions(),
+            
+            # Дополнительная информация
+            gender=prod.get("gender"),
+            season=prod.get("season"),
+            composition=prod.get("composition"),
+            care_instructions=prod.get("care_instructions"),
+            additional_info=prod.get("additional_info"),
+            website_link=prod.get("website_link")
         ))
     
     logger.info(f"✅ Found {len(result)} products (total: {total})")
