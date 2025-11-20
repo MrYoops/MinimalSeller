@@ -2934,6 +2934,16 @@ async def create_catalog_product(
         if not category:
             raise HTTPException(status_code=404, detail="Категория не найдена")
     
+    # Валидация цен (базовая)
+    if product.price < 0 or product.cost_price < 0:
+        raise HTTPException(status_code=400, detail="Цены не могут быть отрицательными")
+    
+    if product.price_discounted and product.price_discounted < 0:
+        raise HTTPException(status_code=400, detail="Цена со скидкой не может быть отрицательной")
+    
+    if product.price_discounted and product.price_discounted >= product.price:
+        raise HTTPException(status_code=400, detail="Цена со скидкой должна быть меньше обычной цены")
+    
     # Создать товар
     product_id = str(uuid.uuid4())
     now = datetime.utcnow()
@@ -2953,12 +2963,21 @@ async def create_catalog_product(
         "characteristics": product.characteristics,
         "marketplace_category_id": product.marketplace_category_id,
         "marketplace": product.marketplace,
+        # Коммерческие атрибуты
+        "price": product.price,
+        "price_discounted": product.price_discounted,
+        "cost_price": product.cost_price,
+        "barcode": product.barcode,
+        "weight": product.weight,
+        "dimensions": product.dimensions.dict(),
         "created_at": now,
         "updated_at": now
     }
     
     await db.product_catalog.insert_one(new_product)
     logger.info(f"✅ Product created: {product_id}")
+    
+    from models import ProductDimensions
     
     return ProductCatalogResponse(
         id=product_id,
@@ -2979,7 +2998,14 @@ async def create_catalog_product(
         variants_count=0,
         photos_count=0,
         created_at=now,
-        updated_at=now
+        updated_at=now,
+        # Коммерческие атрибуты
+        price=product.price,
+        price_discounted=product.price_discounted,
+        cost_price=product.cost_price,
+        barcode=product.barcode,
+        weight=product.weight,
+        dimensions=product.dimensions
     )
 
 
