@@ -346,6 +346,14 @@ class OzonConnector(BaseConnector):
         url = f"{self.base_url}/v2/product/import"
         headers = self._get_headers()
         
+        # Проверить обязательные поля
+        if not product_data.get('ozon_category_id'):
+            raise MarketplaceError(
+                marketplace="Ozon",
+                status_code=400,
+                message="Не указана категория Ozon. Выберите категорию маркетплейса в карточке товара."
+            )
+        
         # Подготовить payload для Ozon
         payload = {
             "items": [{
@@ -360,13 +368,14 @@ class OzonConnector(BaseConnector):
                 "weight": product_data.get('weight', 0),
                 "images": product_data.get('photos', []),
                 "description": product_data.get('description', ''),
-                "category_id": product_data.get('ozon_category_id', 17029016),  # Default category
-                "attributes": []
+                "category_id": product_data.get('ozon_category_id'),
+                "attributes": self._prepare_attributes(product_data.get('characteristics', {}))
             }]
         }
         
         logger.info(f"[Ozon] Creating product: {product_data.get('name')}")
         logger.info(f"[Ozon] Article: {product_data.get('article')}")
+        logger.info(f"[Ozon] Category: {product_data.get('ozon_category_id')}")
         logger.info(f"[Ozon] Price: {payload['items'][0]['price']}₽")
         
         try:
@@ -380,6 +389,17 @@ class OzonConnector(BaseConnector):
         except MarketplaceError as e:
             logger.error(f"[Ozon] Failed to create product: {e.message}")
             raise
+    
+    def _prepare_attributes(self, characteristics: Dict[str, Any]) -> List[Dict]:
+        """Преобразовать характеристики в формат Ozon"""
+        attributes = []
+        for key, value in characteristics.items():
+            attributes.append({
+                "attribute_id": 0,  # TODO: Нужно маппить на реальные ID атрибутов Ozon
+                "complex_id": 0,
+                "value": str(value)
+            })
+        return attributes
 
 
 class WildberriesConnector(BaseConnector):
