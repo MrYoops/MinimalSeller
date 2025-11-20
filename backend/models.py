@@ -410,6 +410,13 @@ class ProductCatalogUpdate(BaseModel):
     characteristics: Optional[Dict[str, Any]] = None
     marketplace_category_id: Optional[str] = None
     marketplace: Optional[str] = None
+    # Коммерческие атрибуты
+    price: Optional[int] = None  # Розничная цена в копейках
+    price_discounted: Optional[int] = None  # Цена со скидкой в копейках
+    cost_price: Optional[int] = None  # Себестоимость в копейках
+    barcode: Optional[str] = None  # Штрих-код
+    weight: Optional[int] = None  # Вес в граммах
+    dimensions: Optional[ProductDimensions] = None  # Габариты
 
 class ProductCatalogResponse(BaseModel):
     """Ответ с данными товара"""
