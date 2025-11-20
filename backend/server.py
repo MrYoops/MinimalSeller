@@ -4938,7 +4938,7 @@ async def save_product_with_marketplaces(
                             "manufacturer": product_doc.get('manufacturer', ''),
                             "photos": photo_urls,
                             "characteristics": product_doc.get('characteristics', {}),
-                            "ozon_category_id": product_doc.get('marketplace_category_id') or 15501,  # Кроссовки
+                            "ozon_category_id": product_doc.get('marketplace_category_id') or 15621,  # Обувь > Кроссовки
                             "ozon_type_id": product_doc.get('marketplace_type_id') or 970766898  # Тип: Кроссовки
                         }
                         
