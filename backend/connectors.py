@@ -592,6 +592,45 @@ class WildberriesConnector(BaseConnector):
             logger.error(f"[WB] Failed to fetch characteristics: {e.message}")
             raise
 
+    
+    async def create_product(self, product_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Создать карточку товара на Wildberries"""
+        logger.info("[WB] Creating product card")
+        
+        # Wildberries API v2 для создания карточки
+        url = f"{self.content_api_url}/content/v2/cards/upload"
+        headers = self._get_headers()
+        
+        # Подготовить payload для WB
+        payload = [{
+            "vendorCode": product_data.get('article', ''),  # Артикул
+            "countryProduction": product_data.get('country_of_origin', 'Вьетнам'),
+            "brand": product_data.get('brand', ''),
+            "title": product_data.get('name', ''),
+            "description": product_data.get('description', ''),
+            "dimensions": {
+                "length": product_data.get('dimensions', {}).get('length', 0) / 10,  # В см
+                "width": product_data.get('dimensions', {}).get('width', 0) / 10,
+                "height": product_data.get('dimensions', {}).get('height', 0) / 10
+            },
+            "characteristics": []
+        }]
+        
+        logger.info(f"[WB] Creating product: {product_data.get('name')}")
+        logger.info(f"[WB] Article: {product_data.get('article')}")
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            logger.info(f"[WB] Product created: {response}")
+            return {
+                "success": True,
+                "message": "Карточка создана на Wildberries"
+            }
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to create product: {e.message}")
+            raise
+
+
 class YandexMarketConnector(BaseConnector):
     """Yandex.Market connector - REAL API with full headers"""
     
