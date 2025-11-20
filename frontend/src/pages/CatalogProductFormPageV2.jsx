@@ -137,6 +137,38 @@ export default function CatalogProductFormPageV2() {
     }
   }
 
+  // Валидация цен с предупреждениями
+  const validatePrices = () => {
+    const warnings = []
+    const priceInRubles = product.price / 100
+    const priceDiscountedInRubles = product.price_discounted ? product.price_discounted / 100 : null
+    const costPriceInRubles = product.cost_price / 100
+    
+    // Если цена со скидкой ниже себестоимости
+    if (priceDiscountedInRubles !== null && product.price_discounted < product.cost_price) {
+      warnings.push('⚠️ Цена со скидкой ниже себестоимости. Продажа будет убыточной.')
+    }
+    
+    // Если обычная цена ниже себестоимости
+    if (product.price > 0 && product.price < product.cost_price) {
+      warnings.push('⚠️ Цена ниже себестоимости. Продажа будет убыточной.')
+    }
+    
+    setPriceWarnings(warnings)
+  }
+
+  // Обновление полей с валидацией цен
+  const handleProductChange = (field, value) => {
+    const updatedProduct = { ...product, [field]: value }
+    setProduct(updatedProduct)
+    
+    // Валидация для полей цен
+    if (['price', 'price_discounted', 'cost_price'].includes(field)) {
+      // Обновляем warnings на следующем рендере
+      setTimeout(() => validatePrices(), 0)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
