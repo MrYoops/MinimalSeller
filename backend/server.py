@@ -3045,8 +3045,8 @@ async def delete_catalog_product(
     product_id: str,
     current_user: dict = Depends(get_current_user)
 ):
-    """Архивировать товар"""
-    logger.info(f"📦 Archiving product: {product_id}")
+    """Удалить товар полностью"""
+    logger.info(f"📦 Deleting product: {product_id}")
     
     # Проверить существование
     existing = await db.product_catalog.find_one({
@@ -3056,15 +3056,19 @@ async def delete_catalog_product(
     if not existing:
         raise HTTPException(status_code=404, detail="Товар не найден")
     
-    # Архивировать вместо удаления
-    await db.product_catalog.update_one(
-        {"_id": product_id},
-        {"$set": {"status": "archived", "updated_at": datetime.utcnow()}}
-    )
+    # Удалить все связанные данные
+    await db.product_variants.delete_many({"product_id": product_id})
+    await db.product_photos.delete_many({"product_id": product_id})
+    await db.product_prices.delete_many({"product_id": product_id})
+    await db.product_stock.delete_many({"product_id": product_id})
+    await db.product_kits.delete_many({"product_id": product_id})
     
-    logger.info(f"✅ Product archived: {product_id}")
+    # Удалить сам товар
+    await db.product_catalog.delete_one({"_id": product_id})
     
-    return {"success": True, "message": "Товар успешно архивирован"}
+    logger.info(f"✅ Product deleted completely: {product_id}")
+    
+    return {"success": True, "message": "Товар и все связанные данные успешно удалены"}
 
 
 
