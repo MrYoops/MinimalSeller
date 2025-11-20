@@ -356,13 +356,16 @@ class OzonConnector(BaseConnector):
             )
         
         # Подготовить payload для Ozon v3
+        # VAT должен быть в формате 0..1 (0.2 = 20%)
+        vat_decimal = product_data.get('vat', 0) / 100 if product_data.get('vat', 0) > 1 else product_data.get('vat', 0)
+        
         payload = {
             "items": [{
                 "offer_id": product_data.get('article', ''),
                 "name": product_data.get('name', ''),
                 "price": str(int(product_data.get('price', 0) / 100)),
                 "old_price": str(int(product_data.get('price_without_discount', 0) / 100)),
-                "vat": str(product_data.get('vat', 0)),
+                "vat": str(vat_decimal),  # В формате 0.2 для 20%
                 "height": product_data.get('dimensions', {}).get('height', 0),
                 "width": product_data.get('dimensions', {}).get('width', 0),
                 "depth": product_data.get('dimensions', {}).get('length', 0),
