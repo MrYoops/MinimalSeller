@@ -3245,7 +3245,10 @@ async def update_catalog_product(
         composition=updated.get("composition"),
         care_instructions=updated.get("care_instructions"),
         additional_info=updated.get("additional_info"),
-        website_link=updated.get("website_link")
+        website_link=updated.get("website_link"),
+        
+        # Данные маркетплейсов
+        marketplace_specific_data=updated.get("marketplace_specific_data")
     )
 
 
