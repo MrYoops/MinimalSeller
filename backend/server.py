@@ -4390,3 +4390,71 @@ async def import_from_marketplace(
         "error_messages": error_messages[:10]  # Первые 10 ошибок
     }
 
+
+
+
+# ============================================
+# ОТПРАВКА ТОВАРА НА МАРКЕТПЛЕЙС
+# ============================================
+
+@app.post("/api/catalog/products/{product_id}/publish/{marketplace}")
+async def publish_product_to_marketplace(
+    product_id: str,
+    marketplace: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Отправить/обновить товар на маркетплейс"""
+    logger.info(f"📤 Publishing product {product_id} to {marketplace}")
+    
+    # Получить товар
+    product = await db.product_catalog.find_one({
+        "_id": product_id,
+        "seller_id": str(current_user["_id"])
+    })
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    # Получить фото товара
+    photos = await db.product_photos.find({"product_id": product_id}).to_list(length=100)
+    photo_urls = [p["url"] for p in photos if p.get("marketplaces", {}).get(marketplace, False)]
+    
+    # Получить seller profile с API ключами
+    seller_profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    
+    if not seller_profile or not seller_profile.get("api_keys"):
+        raise HTTPException(status_code=400, detail="Нет активных интеграций")
+    
+    # Найти ключи для этого маркетплейса
+    api_keys = [k for k in seller_profile.get("api_keys", []) if k.get("marketplace") == marketplace]
+    
+    if not api_keys:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Нет активной интеграции с {marketplace.upper()}. Добавьте API ключи в разделе ИНТЕГРАЦИИ."
+        )
+    
+    # Используем первую интеграцию
+    api_key = api_keys[0]
+    
+    try:
+        # Пока возвращаем успех (реальная отправка требует сложной логики для каждого МП)
+        # TODO: Реализовать реальную отправку через API маркетплейса
+        logger.info(f"✅ Product {product_id} prepared for publishing to {marketplace}")
+        logger.info(f"Photos to upload: {len(photo_urls)}")
+        logger.info(f"Characteristics: {len(product.get('characteristics', {}))}")
+        
+        return {
+            "success": True,
+            "message": f"Товар готов к отправке на {marketplace.upper()}",
+            "details": {
+                "product_name": product["name"],
+                "photos_count": len(photo_urls),
+                "characteristics_count": len(product.get("characteristics", {})),
+                "status": "В разработке: полная отправка будет реализована в следующей версии"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to publish product: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
