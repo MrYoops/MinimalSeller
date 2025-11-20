@@ -4923,19 +4923,34 @@ async def save_product_with_marketplaces(
                         mp_name = marketplace_data.get(mp, {}).get('name') or product_doc['name']
                         mp_description = marketplace_data.get(mp, {}).get('description') or product_doc.get('description', '')
                         
-                        # Создать карточку через API маркетплейса
-                        # TODO: Реализовать create_product в каждом коннекторе
-                        # Пока логируем что готовы к отправке
-                        logger.info(f"[{mp}] Creating product card:")
-                        logger.info(f"   Name: {mp_name}")
-                        logger.info(f"   Article: {product_doc['article']}")
-                        logger.info(f"   Price: {product_doc.get('price_with_discount', 0)/100}₽")
-                        logger.info(f"   Photos: {len(photo_urls)}")
-                        logger.info(f"   Description: {len(mp_description)} chars")
+                        # Данные товара для создания на МП
+                        mp_product_data = {
+                            "article": product_doc['article'],
+                            "name": mp_name,
+                            "brand": product_doc.get('brand', ''),
+                            "description": mp_description,
+                            "price": product_doc.get('price_with_discount', 0),
+                            "price_without_discount": product_doc.get('price_without_discount', 0),
+                            "vat": product_doc.get('vat', 0),
+                            "weight": product_doc.get('weight', 0),
+                            "dimensions": product_doc.get('dimensions', {}),
+                            "country_of_origin": product_doc.get('country_of_origin', 'Вьетнам'),
+                            "manufacturer": product_doc.get('manufacturer', ''),
+                            "photos": photo_urls,
+                            "characteristics": product_doc.get('characteristics', {}),
+                            "ozon_category_id": product_doc.get('marketplace_category_id')
+                        }
+                        
+                        # Создать карточку на маркетплейсе
+                        logger.info(f"[{mp}] Calling create_product...")
+                        create_result = await connector.create_product(mp_product_data)
+                        
+                        logger.info(f"[{mp}] ✅ Product created: {create_result}")
                         
                         results[mp] = {
                             "success": True,
-                            "message": f"✅ Карточка подготовлена для {mp.upper()}"
+                            "message": f"✅ Карточка создана на {mp.upper()}",
+                            "details": create_result
                         }
                         
                     except MarketplaceError as e:
