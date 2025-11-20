@@ -526,10 +526,10 @@ class ProductPriceCreate(BaseModel):
 
 class ProductPriceUpdate(BaseModel):
     """Обновление цены"""
-    purchase_price: Optional[float] = None
-    retail_price: Optional[float] = None
-    price_without_discount: Optional[float] = None
-    marketplace_prices: Optional[Dict[str, float]] = None
+    purchase_price: Optional[int] = None  # Закупочная цена в копейках
+    retail_price: Optional[int] = None  # Розничная цена в копейках
+    price_without_discount: Optional[int] = None  # Цена без скидки в копейках
+    marketplace_prices: Optional[Dict[str, int]] = None  # Цены по маркетплейсам в копейках
 
 class ProductPriceResponse(BaseModel):
     """Ответ с данными цены"""
