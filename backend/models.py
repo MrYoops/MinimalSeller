@@ -515,13 +515,13 @@ class ProductPhotoResponse(BaseModel):
 class ProductPriceCreate(BaseModel):
     """Создание/обновление цены"""
     variant_id: Optional[str] = None  # null = для всего товара, иначе для конкретного размера
-    purchase_price: float = 0.0  # Закупочная цена
-    retail_price: float = 0.0  # Розничная цена
-    price_without_discount: float = 0.0  # Цена без скидки
-    marketplace_prices: Dict[str, float] = {  # Цены по маркетплейсам
-        "wb": 0.0,
-        "ozon": 0.0,
-        "yandex": 0.0
+    purchase_price: int = 0  # Закупочная цена в копейках
+    retail_price: int = 0  # Розничная цена в копейках
+    price_without_discount: int = 0  # Цена без скидки в копейках
+    marketplace_prices: Dict[str, int] = {  # Цены по маркетплейсам в копейках
+        "wb": 0,
+        "ozon": 0,
+        "yandex": 0
     }
 
 class ProductPriceUpdate(BaseModel):
