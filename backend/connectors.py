@@ -376,7 +376,7 @@ class OzonConnector(BaseConnector):
                 "description": product_data.get('description', ''),
                 "description_category_id": product_data.get('ozon_category_id'),  # ИСПРАВЛЕНО: description_category_id!
                 "type_id": product_data.get('ozon_type_id') or 91248,  # Кроссовки
-                "attributes": self._prepare_attributes(product_data.get('characteristics', {}))
+                "attributes": self._prepare_ozon_attributes(product_data)
             }]
         }
         
@@ -399,15 +399,48 @@ class OzonConnector(BaseConnector):
             logger.error(f"[Ozon] Failed to create product: {e.message}")
             raise
     
-    def _prepare_attributes(self, characteristics: Dict[str, Any]) -> List[Dict]:
-        """Преобразовать характеристики в формат Ozon"""
+    def _prepare_ozon_attributes(self, product_data: Dict[str, Any]) -> List[Dict]:
+        """Подготовить обязательные атрибуты для Ozon"""
         attributes = []
-        for key, value in characteristics.items():
+        
+        # 4298 - Российский размер
+        attributes.append({
+            "attribute_id": 4298,
+            "complex_id": 0,
+            "values": [{"value": "42"}]  # Дефолтный размер
+        })
+        
+        # 10096 - Цвет товара
+        color = product_data.get('gender', 'Бежевый')  # Используем что есть или дефолт
+        attributes.append({
+            "attribute_id": 10096,
+            "complex_id": 0,
+            "values": [{"value": color}]
+        })
+        
+        # 9163 - Пол
+        gender = product_data.get('gender', 'Мужской')
+        attributes.append({
+            "attribute_id": 9163,
+            "complex_id": 0,
+            "values": [{"value": gender}]
+        })
+        
+        # 8292 - Объединить на одной карточке  
+        attributes.append({
+            "attribute_id": 8292,
+            "complex_id": 0,
+            "values": [{"value": "Да"}]
+        })
+        
+        # Добавить характеристики из product_data
+        for key, value in product_data.get('characteristics', {}).items():
             attributes.append({
                 "attribute_id": 0,
                 "complex_id": 0,
-                "value": str(value)
+                "values": [{"value": str(value)}]
             })
+        
         return attributes
 
 
