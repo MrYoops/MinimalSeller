@@ -302,38 +302,203 @@ export default function CatalogProductFormV3() {
 
         {/* Tabs (только для редактирования) */}
         {id && (
-          <div className="flex gap-2 mt-4 border-b border-mm-border">
-            <button
-              onClick={() => setActiveTab('card')}
-              className={`px-4 py-2 font-medium transition ${
-                activeTab === 'card'
-                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                  : 'text-mm-text-secondary hover:text-mm-text'
-              }`}
-            >
-              📦 Карточка
-            </button>
-            <button
-              onClick={() => setActiveTab('prices')}
-              className={`px-4 py-2 font-medium transition ${
-                activeTab === 'prices'
-                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                  : 'text-mm-text-secondary hover:text-mm-text'
-              }`}
-            >
-              💰 Цены
-            </button>
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`px-4 py-2 font-medium transition ${
-                activeTab === 'analytics'
-                  ? 'text-mm-cyan border-b-2 border-mm-cyan'
-                  : 'text-mm-text-secondary hover:text-mm-text'
-              }`}
-            >
-              📊 Аналитика
-            </button>
-          </div>
+          <>
+            {/* Панель инструментов (голубая, как в SelSup) */}
+            <div className="flex items-center gap-2 mt-3 p-2 bg-cyan-500 rounded">
+              <button
+                type="button"
+                title="Сохранить"
+                className="p-2 text-white hover:bg-white/20 rounded transition"
+              >
+                <FiSave size={18} />
+              </button>
+              <button
+                type="button"
+                title="Импорт данных"
+                className="p-2 text-white hover:bg-white/20 rounded transition"
+              >
+                📥
+              </button>
+              <button
+                type="button"
+                title="Подтвердить изменения"
+                className="p-2 text-white hover:bg-white/20 rounded transition"
+              >
+                ✓
+              </button>
+              <button
+                type="button"
+                title="Настройки отображения"
+                className="p-2 text-white hover:bg-white/20 rounded transition"
+              >
+                🏪
+              </button>
+              <button
+                type="button"
+                title="История изменений"
+                className="p-2 text-white hover:bg-white/20 rounded transition"
+              >
+                ⏱️
+              </button>
+              <button
+                type="button"
+                title="Предпросмотр"
+                className="p-2 text-white hover:bg-white/20 rounded transition"
+              >
+                <FiEye size={18} />
+              </button>
+              <button
+                type="button"
+                title="Настройки полей"
+                className="p-2 text-white hover:bg-white/20 rounded transition"
+              >
+                ☰
+              </button>
+              <button
+                type="button"
+                title="Связь с маркетплейсами"
+                className="p-2 text-white hover:bg-white/20 rounded transition"
+              >
+                🔗
+              </button>
+              <button
+                type="button"
+                title="Экспорт"
+                className="p-2 text-white hover:bg-white/20 rounded transition"
+              >
+                📤
+              </button>
+              <button
+                type="button"
+                title="Удалить товар"
+                className="p-2 text-white hover:bg-white/20 rounded transition"
+                onClick={() => {
+                  if (confirm('Удалить товар навсегда?')) {
+                    api.delete(`/api/catalog/products/${id}`)
+                      .then(() => {
+                        alert('Товар удален')
+                        navigate('/dashboard')
+                      })
+                      .catch(err => alert('Ошибка: ' + err.message))
+                  }
+                }}
+              >
+                <FiTrash2 size={18} />
+              </button>
+              <button
+                type="button"
+                title="Настройки"
+                className="p-2 text-white hover:bg-white/20 rounded transition"
+              >
+                ⚙️
+              </button>
+            </div>
+
+            {/* Вкладки (как в SelSup) */}
+            <div className="flex gap-1 mt-3 border-b border-mm-border overflow-x-auto">
+              <button
+                onClick={() => setActiveTab('card')}
+                className={`px-4 py-2 font-medium transition whitespace-nowrap ${
+                  activeTab === 'card'
+                    ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                    : 'text-mm-text-secondary hover:text-mm-text'
+                }`}
+              >
+                Карточка
+              </button>
+              <button
+                onClick={() => setActiveTab('keywords')}
+                className={`px-4 py-2 font-medium transition whitespace-nowrap ${
+                  activeTab === 'keywords'
+                    ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                    : 'text-mm-text-secondary hover:text-mm-text'
+                }`}
+              >
+                Ключевые слова
+              </button>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`px-4 py-2 font-medium transition whitespace-nowrap ${
+                  activeTab === 'analytics'
+                    ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                    : 'text-mm-text-secondary hover:text-mm-text'
+                }`}
+              >
+                Аналитика
+              </button>
+              <button
+                onClick={() => setActiveTab('prices')}
+                className={`px-4 py-2 font-medium transition whitespace-nowrap ${
+                  activeTab === 'prices'
+                    ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                    : 'text-mm-text-secondary hover:text-mm-text'
+                }`}
+              >
+                Цены
+              </button>
+              <button
+                onClick={() => setActiveTab('mass_edit')}
+                className={`px-4 py-2 font-medium transition whitespace-nowrap ${
+                  activeTab === 'mass_edit'
+                    ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                    : 'text-mm-text-secondary hover:text-mm-text'
+                }`}
+              >
+                Массовое редактирование
+              </button>
+              <button
+                onClick={() => setActiveTab('hypotheses')}
+                className={`px-4 py-2 font-medium transition whitespace-nowrap relative ${
+                  activeTab === 'hypotheses'
+                    ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                    : 'text-mm-text-secondary hover:text-mm-text'
+                }`}
+              >
+                Гипотезы
+                <span className="absolute top-1 right-1 px-1 text-xs bg-orange-500 text-white rounded">NEW</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('suppliers')}
+                className={`px-4 py-2 font-medium transition whitespace-nowrap ${
+                  activeTab === 'suppliers'
+                    ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                    : 'text-mm-text-secondary hover:text-mm-text'
+                }`}
+              >
+                Поставщики
+              </button>
+              <button
+                onClick={() => setActiveTab('stock')}
+                className={`px-4 py-2 font-medium transition whitespace-nowrap ${
+                  activeTab === 'stock'
+                    ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                    : 'text-mm-text-secondary hover:text-mm-text'
+                }`}
+              >
+                Остатки
+              </button>
+              <button
+                onClick={() => setActiveTab('documents')}
+                className={`px-4 py-2 font-medium transition whitespace-nowrap ${
+                  activeTab === 'documents'
+                    ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                    : 'text-mm-text-secondary hover:text-mm-text'
+                }`}
+              >
+                Документы
+              </button>
+              <button
+                onClick={() => setActiveTab('duplicates')}
+                className={`px-4 py-2 font-medium transition whitespace-nowrap ${
+                  activeTab === 'duplicates'
+                    ? 'text-mm-cyan border-b-2 border-mm-cyan'
+                    : 'text-mm-text-secondary hover:text-mm-text'
+                }`}
+              >
+                ДУБЛИ
+              </button>
+            </div>
+          </>
         )}
       </div>
 
