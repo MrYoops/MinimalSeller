@@ -4938,7 +4938,7 @@ async def save_product_with_marketplaces(
                             "manufacturer": product_doc.get('manufacturer', ''),
                             "photos": photo_urls,
                             "characteristics": product_doc.get('characteristics', {}),
-                            "ozon_category_id": product_doc.get('marketplace_category_id')
+                            "ozon_category_id": product_doc.get('marketplace_category_id') or 17029016  # Дефолтная категория "Кроссовки"
                         }
                         
                         # Создать карточку на маркетплейсе
