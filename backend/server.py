@@ -2864,7 +2864,10 @@ async def get_catalog_products(
             composition=prod.get("composition"),
             care_instructions=prod.get("care_instructions"),
             additional_info=prod.get("additional_info"),
-            website_link=prod.get("website_link")
+            website_link=prod.get("website_link"),
+            
+            # Данные маркетплейсов
+            marketplace_specific_data=prod.get("marketplace_specific_data")
         ))
     
     logger.info(f"✅ Found {len(result)} products (total: {total})")
