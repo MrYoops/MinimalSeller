@@ -432,13 +432,35 @@ class ProductCatalogUpdate(BaseModel):
     characteristics: Optional[Dict[str, Any]] = None
     marketplace_category_id: Optional[str] = None
     marketplace: Optional[str] = None
-    # Коммерческие атрибуты
-    price: Optional[int] = None  # Розничная цена в копейках
-    price_discounted: Optional[int] = None  # Цена со скидкой в копейках
-    cost_price: Optional[int] = None  # Себестоимость в копейках
-    barcode: Optional[str] = None  # Штрих-код
-    weight: Optional[int] = None  # Вес в граммах
-    dimensions: Optional[ProductDimensions] = None  # Габариты
+    
+    # Дополнительные поля (как в SelSup)
+    manufacturer: Optional[str] = None
+    country_of_origin: Optional[str] = None
+    label_name: Optional[str] = None
+    
+    # Цены (на уровне товара, как в SelSup)
+    price_with_discount: Optional[int] = None
+    price_without_discount: Optional[int] = None
+    price_coefficient: Optional[float] = None
+    purchase_price: Optional[int] = None
+    additional_expenses: Optional[int] = None
+    cost_price: Optional[int] = None
+    vat: Optional[int] = None
+    
+    # Коммерческие атрибуты (старые поля для совместимости)
+    price: Optional[int] = None
+    price_discounted: Optional[int] = None
+    barcode: Optional[str] = None
+    weight: Optional[int] = None
+    dimensions: Optional[ProductDimensions] = None
+    
+    # Дополнительная информация
+    gender: Optional[str] = None
+    season: Optional[str] = None
+    composition: Optional[str] = None
+    care_instructions: Optional[str] = None
+    additional_info: Optional[str] = None
+    website_link: Optional[str] = None
 
 class ProductCatalogResponse(BaseModel):
     """Ответ с данными товара"""
