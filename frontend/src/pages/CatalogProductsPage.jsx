@@ -268,6 +268,24 @@ export default function CatalogProductsPage() {
                       </div>
                     )}
                   </td>
+                  <td className="px-4 py-3">
+                    {product.price_discounted ? (
+                      <div className="flex flex-col">
+                        <span className="text-mm-cyan font-bold text-base">
+                          {(product.price_discounted / 100).toFixed(2)} ₽
+                        </span>
+                        <span className="text-mm-text-secondary text-xs line-through">
+                          {(product.price / 100).toFixed(2)} ₽
+                        </span>
+                      </div>
+                    ) : product.price > 0 ? (
+                      <span className="text-mm-text text-sm">
+                        {(product.price / 100).toFixed(2)} ₽
+                      </span>
+                    ) : (
+                      <span className="text-mm-text-secondary text-sm">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm text-mm-text">{product.brand || '-'}</td>
                   <td className="px-4 py-3 text-sm text-mm-text">{product.category_name || '-'}</td>
                   <td className="px-4 py-3 text-sm text-mm-text">
