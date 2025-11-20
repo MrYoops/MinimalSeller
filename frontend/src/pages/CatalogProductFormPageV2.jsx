@@ -492,6 +492,173 @@ export default function CatalogProductFormPageV2() {
           </div>
         )}
 
+        {/* Коммерческие атрибуты (цены, габариты) */}
+        {(step === 1 || id) && (
+          <div className="bg-mm-secondary p-6 rounded-lg space-y-4">
+            <h2 className="text-xl font-bold text-mm-text mb-4 border-b border-mm-border pb-2 flex items-center gap-2">
+              💰 ЦЕНЫ И ГАБАРИТЫ
+            </h2>
+
+            {/* Предупреждения о ценах */}
+            {priceWarnings.length > 0 && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-4 space-y-2">
+                {priceWarnings.map((warning, idx) => (
+                  <p key={idx} className="text-yellow-300 text-sm">{warning}</p>
+                ))}
+              </div>
+            )}
+
+            {/* Блок цен */}
+            <div className="space-y-4 p-4 bg-mm-dark/50 rounded-lg">
+              <h3 className="text-md font-semibold text-mm-cyan mb-3">Цены (в рублях)</h3>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm text-mm-text-secondary mb-1">
+                    Розничная цена ₽ <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={product.price / 100}
+                    onChange={(e) => handleProductChange('price', Math.round(parseFloat(e.target.value || 0) * 100))}
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
+                    placeholder="1500.00"
+                  />
+                  <p className="text-xs text-mm-text-secondary mt-1">Основная цена товара</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-mm-text-secondary mb-1">
+                    Цена со скидкой ₽
+                  </label>
+                  <input
+                    type="number"
+                    value={product.price_discounted ? product.price_discounted / 100 : ''}
+                    onChange={(e) => {
+                      const value = e.target.value ? Math.round(parseFloat(e.target.value) * 100) : null
+                      handleProductChange('price_discounted', value)
+                    }}
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
+                    placeholder="1299.00"
+                  />
+                  <p className="text-xs text-mm-text-secondary mt-1">Опционально (перечеркнутая цена)</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-mm-text-secondary mb-1">
+                    Себестоимость ₽
+                  </label>
+                  <input
+                    type="number"
+                    value={product.cost_price / 100}
+                    onChange={(e) => handleProductChange('cost_price', Math.round(parseFloat(e.target.value || 0) * 100))}
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
+                    placeholder="800.00"
+                  />
+                  <p className="text-xs text-mm-text-secondary mt-1">Закупочная цена</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Блок габаритов */}
+            <div className="space-y-4 p-4 bg-mm-dark/50 rounded-lg">
+              <h3 className="text-md font-semibold text-mm-cyan mb-3">Габариты и вес</h3>
+              
+              <div className="grid grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm text-mm-text-secondary mb-1">
+                    Длина (мм)
+                  </label>
+                  <input
+                    type="number"
+                    value={product.dimensions.length}
+                    onChange={(e) => setProduct({ 
+                      ...product, 
+                      dimensions: { ...product.dimensions, length: parseInt(e.target.value) || 0 }
+                    })}
+                    min="0"
+                    className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
+                    placeholder="300"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-mm-text-secondary mb-1">
+                    Ширина (мм)
+                  </label>
+                  <input
+                    type="number"
+                    value={product.dimensions.width}
+                    onChange={(e) => setProduct({ 
+                      ...product, 
+                      dimensions: { ...product.dimensions, width: parseInt(e.target.value) || 0 }
+                    })}
+                    min="0"
+                    className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
+                    placeholder="200"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-mm-text-secondary mb-1">
+                    Высота (мм)
+                  </label>
+                  <input
+                    type="number"
+                    value={product.dimensions.height}
+                    onChange={(e) => setProduct({ 
+                      ...product, 
+                      dimensions: { ...product.dimensions, height: parseInt(e.target.value) || 0 }
+                    })}
+                    min="0"
+                    className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
+                    placeholder="50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-mm-text-secondary mb-1">
+                    Вес (граммы)
+                  </label>
+                  <input
+                    type="number"
+                    value={product.weight}
+                    onChange={(e) => setProduct({ ...product, weight: parseInt(e.target.value) || 0 })}
+                    min="0"
+                    className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
+                    placeholder="250"
+                  />
+                </div>
+              </div>
+              
+              <p className="text-xs text-mm-text-secondary">
+                💡 Габариты нужны для расчета стоимости доставки
+              </p>
+            </div>
+
+            {/* Штрих-код */}
+            <div>
+              <label className="block text-sm text-mm-text-secondary mb-1">
+                Штрих-код (Barcode)
+              </label>
+              <input
+                type="text"
+                value={product.barcode}
+                onChange={(e) => setProduct({ ...product, barcode: e.target.value })}
+                className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
+                placeholder="4607012345678"
+              />
+              <p className="text-xs text-mm-text-secondary mt-1">EAN-13 или другой формат штрих-кода</p>
+            </div>
+          </div>
+        )}
+
         {/* Шаг 2: Категория маркетплейса и характеристики */}
         {step === 2 && !id && (
           <div className="bg-mm-secondary p-6 rounded-lg space-y-6">
