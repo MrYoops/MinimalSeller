@@ -223,6 +223,17 @@ export default function CatalogProductFormPageV2() {
     }
   }
 
+  const handlePublishToMarketplace = async (marketplace) => {
+    if (!confirm(`Отправить товар на ${marketplace.toUpperCase()}?`)) return
+    
+    try {
+      const response = await api.post(`/api/catalog/products/${id}/publish/${marketplace}`)
+      alert(`✅ ${response.data.message}\n\nФото: ${response.data.details.photos_count}\nХарактеристик: ${response.data.details.characteristics_count}\n\n${response.data.details.status}`)
+    } catch (error) {
+      alert('Ошибка: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+
   if (loading && id) {
     return (
       <div className="text-center py-12">
