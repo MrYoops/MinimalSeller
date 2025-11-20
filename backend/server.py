@@ -3036,8 +3036,32 @@ async def update_catalog_product(
         if duplicate:
             raise HTTPException(status_code=400, detail="Товар с таким артикулом уже существует")
     
+    # Валидация цен (если переданы)
+    if product.price is not None and product.price < 0:
+        raise HTTPException(status_code=400, detail="Цена не может быть отрицательной")
+    
+    if product.cost_price is not None and product.cost_price < 0:
+        raise HTTPException(status_code=400, detail="Себестоимость не может быть отрицательной")
+    
+    if product.price_discounted is not None and product.price_discounted < 0:
+        raise HTTPException(status_code=400, detail="Цена со скидкой не может быть отрицательной")
+    
+    # Проверка скидочной цены относительно обычной
+    final_price = product.price if product.price is not None else existing.get("price", 0)
+    if product.price_discounted is not None and product.price_discounted >= final_price:
+        raise HTTPException(status_code=400, detail="Цена со скидкой должна быть меньше обычной цены")
+    
     # Подготовить обновление
-    update_data = {k: v for k, v in product.dict(exclude_unset=True).items() if v is not None}
+    update_data = {}
+    for k, v in product.dict(exclude_unset=True).items():
+        if v is not None:
+            if k == "dimensions" and isinstance(v, dict):
+                update_data[k] = v
+            elif k == "dimensions":
+                update_data[k] = v.dict()
+            else:
+                update_data[k] = v
+    
     if update_data:
         update_data["updated_at"] = datetime.utcnow()
         await db.product_catalog.update_one(
@@ -3061,6 +3085,8 @@ async def update_catalog_product(
     
     logger.info(f"✅ Product updated: {product_id}")
     
+    from models import ProductDimensions
+    
     return ProductCatalogResponse(
         id=str(updated["_id"]),
         seller_id=str(updated["seller_id"]),
@@ -3080,7 +3106,14 @@ async def update_catalog_product(
         variants_count=variants_count,
         photos_count=photos_count,
         created_at=updated.get("created_at", datetime.utcnow()),
-        updated_at=updated.get("updated_at", datetime.utcnow())
+        updated_at=updated.get("updated_at", datetime.utcnow()),
+        # Коммерческие атрибуты
+        price=updated.get("price", 0),
+        price_discounted=updated.get("price_discounted"),
+        cost_price=updated.get("cost_price", 0),
+        barcode=updated.get("barcode"),
+        weight=updated.get("weight", 0),
+        dimensions=ProductDimensions(**updated.get("dimensions", {})) if updated.get("dimensions") else ProductDimensions()
     )
 
 
