@@ -349,11 +349,9 @@ class OzonConnector(BaseConnector):
         
         # Проверить обязательные поля
         if not product_data.get('ozon_category_id'):
-            raise MarketplaceError(
-                marketplace="Ozon",
-                status_code=400,
-                message="Не указана категория Ozon. Выберите категорию маркетплейса в карточке товара."
-            )
+            # Используем дефолтную категорию для кроссовок
+            product_data['ozon_category_id'] = 15501
+            logger.warning("[Ozon] No category specified, using default: 15501 (Кроссовки)")
         
         # Подготовить payload для Ozon v3
         # VAT должен быть в формате 0..1 (0.2 = 20%)
