@@ -3590,10 +3590,10 @@ async def get_product_prices(
             variant_id=price.get("variant_id"),
             variant_color=variant_color,
             variant_size=variant_size,
-            purchase_price=price.get("purchase_price", 0.0),
-            retail_price=price.get("retail_price", 0.0),
-            price_without_discount=price.get("price_without_discount", 0.0),
-            marketplace_prices=price.get("marketplace_prices", {"wb": 0.0, "ozon": 0.0, "yandex": 0.0}),
+            purchase_price=int(price.get("purchase_price", 0)),
+            retail_price=int(price.get("retail_price", 0)),
+            price_without_discount=int(price.get("price_without_discount", 0)),
+            marketplace_prices={k: int(v) for k, v in price.get("marketplace_prices", {"wb": 0, "ozon": 0, "yandex": 0}).items()},
             created_at=price.get("created_at", datetime.utcnow()),
             updated_at=price.get("updated_at", datetime.utcnow())
         ))
