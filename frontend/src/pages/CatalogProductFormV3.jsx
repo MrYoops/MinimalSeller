@@ -1090,6 +1090,164 @@ export default function CatalogProductFormV3() {
               <p className="text-mm-text-secondary text-sm mt-2">Раздел в разработке</p>
             </div>
           )}
+
+          {/* ВКЛАДКА: КЛЮЧЕВЫЕ СЛОВА */}
+          {activeTab === 'keywords' && (
+            <div className="bg-mm-secondary p-6 rounded-lg">
+              <h2 className="text-xl font-bold text-mm-text mb-6">КЛЮЧЕВЫЕ СЛОВА</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-mm-text-secondary mb-2">
+                    Ключевые слова для SEO
+                  </label>
+                  <textarea
+                    rows="5"
+                    className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none resize-none"
+                    placeholder="Введите ключевые слова через запятую: кроссовки, Nike, спортивная обувь..."
+                  />
+                  <p className="text-xs text-mm-text-secondary mt-2">
+                    💡 Используются для генерации SEO-описаний и оптимизации поиска
+                  </p>
+                </div>
+                
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded"
+                >
+                  🤖 Сгенерировать описание с ключевыми словами
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ВКЛАДКА: МАССОВОЕ РЕДАКТИРОВАНИЕ */}
+          {activeTab === 'mass_edit' && (
+            <div className="bg-mm-secondary p-6 rounded-lg">
+              <h2 className="text-xl font-bold text-mm-text mb-6">МАССОВОЕ РЕДАКТИРОВАНИЕ</h2>
+              
+              <div className="bg-mm-dark p-6 rounded-lg">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-mm-secondary">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs text-mm-text-secondary">ID</th>
+                        <th className="px-3 py-2 text-left text-xs text-mm-text-secondary">Название модели</th>
+                        <th className="px-3 py-2 text-left text-xs text-mm-text-secondary">Фото</th>
+                        <th className="px-3 py-2 text-left text-xs text-mm-text-secondary">Категория</th>
+                        <th className="px-3 py-2 text-left text-xs text-mm-text-secondary">Ссылка</th>
+                        <th className="px-3 py-2 text-left text-xs text-mm-text-secondary">Организация</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="px-3 py-3 text-sm text-mm-text">1</td>
+                        <td className="px-3 py-3 text-sm text-mm-text">{product.name}</td>
+                        <td className="px-3 py-3">
+                          {photos.length > 0 ? (
+                            <img src={photos[0].url} alt="" className="w-12 h-12 object-cover rounded" />
+                          ) : (
+                            <div className="w-12 h-12 bg-mm-dark rounded flex items-center justify-center">
+                              <FiImage className="text-mm-text-secondary" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-sm text-mm-text">
+                          {categories.find(c => c.id === product.category_id)?.name || '-'}
+                        </td>
+                        <td className="px-3 py-3 text-sm text-mm-cyan">
+                          {product.website_link || '-'}
+                        </td>
+                        <td className="px-3 py-3 text-sm text-mm-text">Моя организация</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <p className="text-sm text-mm-text-secondary text-center py-4 mt-6">
+                  💡 Для массового редактирования нескольких товаров используйте список товаров
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ВКЛАДКА: ГИПОТЕЗЫ */}
+          {activeTab === 'hypotheses' && (
+            <div className="bg-mm-secondary p-6 rounded-lg text-center py-12">
+              <p className="text-mm-text-secondary text-lg">💡 Гипотезы по товару</p>
+              <p className="text-mm-text-secondary text-sm mt-2">Раздел в разработке</p>
+              <p className="text-xs text-mm-text-secondary mt-4">
+                Здесь можно будет создавать гипотезы для тестирования (например, изменение цены, описания)
+              </p>
+            </div>
+          )}
+
+          {/* ВКЛАДКА: ПОСТАВЩИКИ */}
+          {activeTab === 'suppliers' && (
+            <div className="bg-mm-secondary p-6 rounded-lg">
+              <h2 className="text-xl font-bold text-mm-text mb-6">ПОСТАВЩИКИ</h2>
+              
+              <div className="bg-mm-dark p-6 rounded-lg text-center">
+                <p className="text-mm-text-secondary">Нет привязанных поставщиков</p>
+                <button
+                  type="button"
+                  className="mt-4 px-4 py-2 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded"
+                >
+                  + Добавить поставщика
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ВКЛАДКА: ОСТАТКИ */}
+          {activeTab === 'stock' && (
+            <div className="bg-mm-secondary p-6 rounded-lg">
+              <h2 className="text-xl font-bold text-mm-text mb-6">ОСТАТКИ ПО FBS</h2>
+              
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="p-4 bg-mm-dark rounded-lg">
+                  <p className="text-xs text-mm-text-secondary mb-1">Всего на складе</p>
+                  <p className="text-2xl font-bold text-mm-cyan">0 шт.</p>
+                </div>
+                <div className="p-4 bg-mm-dark rounded-lg">
+                  <p className="text-xs text-mm-text-secondary mb-1">Зарезервировано</p>
+                  <p className="text-2xl font-bold text-yellow-400">0 шт.</p>
+                </div>
+                <div className="p-4 bg-mm-dark rounded-lg">
+                  <p className="text-xs text-mm-text-secondary mb-1">Доступно</p>
+                  <p className="text-2xl font-bold text-green-400">0 шт.</p>
+                </div>
+              </div>
+              
+              <p className="text-sm text-mm-text-secondary text-center py-4">
+                💡 Подробное управление остатками будет реализовано в отдельном модуле "Склад"
+              </p>
+            </div>
+          )}
+
+          {/* ВКЛАДКА: ДОКУМЕНТЫ */}
+          {activeTab === 'documents' && (
+            <div className="bg-mm-secondary p-6 rounded-lg">
+              <h2 className="text-xl font-bold text-mm-text mb-6">ДОКУМЕНТЫ И ЗАКАЗЫ</h2>
+              
+              <div className="bg-mm-dark p-6 rounded-lg text-center">
+                <p className="text-mm-text-secondary">Нет связанных документов</p>
+                <p className="text-xs text-mm-text-secondary mt-2">
+                  Здесь будут отображаться заказы и документы, связанные с этим товаром
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ВКЛАДКА: ДУБЛИ */}
+          {activeTab === 'duplicates' && (
+            <div className="bg-mm-secondary p-6 rounded-lg text-center py-12">
+              <p className="text-mm-text-secondary text-lg">🔍 Поиск дублей</p>
+              <p className="text-mm-text-secondary text-sm mt-2">Раздел в разработке</p>
+              <p className="text-xs text-mm-text-secondary mt-4">
+                Функция для поиска и объединения дублированных карточек товаров
+              </p>
+            </div>
+          )}
         </form>
       </div>
 
