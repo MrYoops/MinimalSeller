@@ -343,7 +343,8 @@ class OzonConnector(BaseConnector):
         """Создать карточку товара на Ozon"""
         logger.info("[Ozon] Creating product card")
         
-        url = f"{self.base_url}/v2/product/import"
+        # ПРАВИЛЬНЫЙ endpoint v3
+        url = f"{self.base_url}/v3/product/import"
         headers = self._get_headers()
         
         # Проверить обязательные поля
@@ -354,19 +355,19 @@ class OzonConnector(BaseConnector):
                 message="Не указана категория Ozon. Выберите категорию маркетплейса в карточке товара."
             )
         
-        # Подготовить payload для Ozon
+        # Подготовить payload для Ozon v3
         payload = {
             "items": [{
-                "offer_id": product_data.get('article', ''),  # Артикул продавца
+                "offer_id": product_data.get('article', ''),
                 "name": product_data.get('name', ''),
-                "price": str(int(product_data.get('price', 0) / 100)),  # Цена в рублях
+                "price": str(int(product_data.get('price', 0) / 100)),
                 "old_price": str(int(product_data.get('price_without_discount', 0) / 100)),
                 "vat": str(product_data.get('vat', 0)),
                 "height": product_data.get('dimensions', {}).get('height', 0),
                 "width": product_data.get('dimensions', {}).get('width', 0),
                 "depth": product_data.get('dimensions', {}).get('length', 0),
                 "weight": product_data.get('weight', 0),
-                "images": product_data.get('photos', []),
+                "images": product_data.get('photos', [])[:10],  # Максимум 10 фото
                 "description": product_data.get('description', ''),
                 "category_id": product_data.get('ozon_category_id'),
                 "attributes": self._prepare_attributes(product_data.get('characteristics', {}))
@@ -380,11 +381,13 @@ class OzonConnector(BaseConnector):
         
         try:
             response = await self._make_request("POST", url, headers, json_data=payload)
-            logger.info(f"[Ozon] Product created successfully: {response}")
+            logger.info(f"[Ozon] ✅ Product created: {response}")
+            
+            task_id = response.get('result', {}).get('task_id')
             return {
                 "success": True,
-                "task_id": response.get('result', {}).get('task_id'),
-                "message": "Карточка отправлена на модерацию Ozon"
+                "task_id": task_id,
+                "message": f"✅ Карточка отправлена на Ozon (task_id: {task_id})"
             }
         except MarketplaceError as e:
             logger.error(f"[Ozon] Failed to create product: {e.message}")
@@ -395,7 +398,7 @@ class OzonConnector(BaseConnector):
         attributes = []
         for key, value in characteristics.items():
             attributes.append({
-                "attribute_id": 0,  # TODO: Нужно маппить на реальные ID атрибутов Ozon
+                "attribute_id": 0,
                 "complex_id": 0,
                 "value": str(value)
             })
