@@ -26,8 +26,22 @@ export default function CatalogProductFormPageV2() {
     status: 'draft',
     is_grouped: false,
     group_by_color: false,
-    group_by_size: false
+    group_by_size: false,
+    // Коммерческие атрибуты
+    price: 0,
+    price_discounted: null,
+    cost_price: 0,
+    barcode: '',
+    weight: 0,
+    dimensions: {
+      width: 0,
+      height: 0,
+      length: 0
+    }
   })
+  
+  // Состояние для предупреждений о ценах
+  const [priceWarnings, setPriceWarnings] = useState([])
   
   const [attributes, setAttributes] = useState({})
   const [variants, setVariants] = useState([])
