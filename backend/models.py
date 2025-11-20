@@ -538,10 +538,10 @@ class ProductPriceResponse(BaseModel):
     variant_id: Optional[str]
     variant_color: Optional[str] = None  # Для удобства отображения
     variant_size: Optional[str] = None
-    purchase_price: float
-    retail_price: float
-    price_without_discount: float
-    marketplace_prices: Dict[str, float]
+    purchase_price: int  # Закупочная цена в копейках
+    retail_price: int  # Розничная цена в копейках
+    price_without_discount: int  # Цена без скидки в копейках
+    marketplace_prices: Dict[str, int]  # Цены по маркетплейсам в копейках
     created_at: datetime
     updated_at: datetime
 
