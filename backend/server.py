@@ -2949,7 +2949,10 @@ async def get_catalog_product(
         composition=product.get("composition"),
         care_instructions=product.get("care_instructions"),
         additional_info=product.get("additional_info"),
-        website_link=product.get("website_link")
+        website_link=product.get("website_link"),
+        
+        # Данные маркетплейсов
+        marketplace_specific_data=product.get("marketplace_specific_data")
     )
 
 
