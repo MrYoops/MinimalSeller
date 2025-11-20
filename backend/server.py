@@ -2931,15 +2931,23 @@ async def create_catalog_product(
         if not category:
             raise HTTPException(status_code=404, detail="Категория не найдена")
     
+    # Авто-расчет себестоимости
+    calculated_cost_price = product.purchase_price + product.additional_expenses
+    if product.cost_price == 0:
+        product.cost_price = calculated_cost_price
+    
     # Валидация цен (базовая)
-    if product.price < 0 or product.cost_price < 0:
+    if product.price_with_discount < 0 or product.price_without_discount < 0:
         raise HTTPException(status_code=400, detail="Цены не могут быть отрицательными")
     
-    if product.price_discounted and product.price_discounted < 0:
-        raise HTTPException(status_code=400, detail="Цена со скидкой не может быть отрицательной")
+    if product.price_with_discount > product.price_without_discount:
+        raise HTTPException(status_code=400, detail="Цена со скидкой должна быть меньше или равна цене без скидки")
     
-    if product.price_discounted and product.price_discounted >= product.price:
-        raise HTTPException(status_code=400, detail="Цена со скидкой должна быть меньше обычной цены")
+    # Обратная совместимость
+    if product.price == 0:
+        product.price = product.price_with_discount
+    if not product.price_discounted:
+        product.price_discounted = product.price_with_discount if product.price_with_discount < product.price_without_discount else None
     
     # Создать товар
     product_id = str(uuid.uuid4())
@@ -2960,13 +2968,36 @@ async def create_catalog_product(
         "characteristics": product.characteristics,
         "marketplace_category_id": product.marketplace_category_id,
         "marketplace": product.marketplace,
-        # Коммерческие атрибуты
+        
+        # Дополнительные поля (SelSup)
+        "manufacturer": product.manufacturer,
+        "country_of_origin": product.country_of_origin,
+        "label_name": product.label_name or product.name,
+        
+        # Цены (SelSup style)
+        "price_with_discount": product.price_with_discount,
+        "price_without_discount": product.price_without_discount,
+        "price_coefficient": product.price_coefficient,
+        "purchase_price": product.purchase_price,
+        "additional_expenses": product.additional_expenses,
+        "cost_price": product.cost_price,
+        "vat": product.vat,
+        
+        # Коммерческие атрибуты (обратная совместимость)
         "price": product.price,
         "price_discounted": product.price_discounted,
-        "cost_price": product.cost_price,
         "barcode": product.barcode,
         "weight": product.weight,
         "dimensions": product.dimensions.dict(),
+        
+        # Дополнительная информация
+        "gender": product.gender,
+        "season": product.season,
+        "composition": product.composition,
+        "care_instructions": product.care_instructions,
+        "additional_info": product.additional_info,
+        "website_link": product.website_link,
+        
         "created_at": now,
         "updated_at": now
     }
@@ -2994,13 +3025,35 @@ async def create_catalog_product(
         photos_count=0,
         created_at=now,
         updated_at=now,
-        # Коммерческие атрибуты
+        
+        # Дополнительные поля
+        manufacturer=product.manufacturer,
+        country_of_origin=product.country_of_origin,
+        label_name=product.label_name or product.name,
+        
+        # Цены (SelSup style)
+        price_with_discount=product.price_with_discount,
+        price_without_discount=product.price_without_discount,
+        price_coefficient=product.price_coefficient,
+        purchase_price=product.purchase_price,
+        additional_expenses=product.additional_expenses,
+        cost_price=product.cost_price,
+        vat=product.vat,
+        
+        # Коммерческие атрибуты (обратная совместимость)
         price=product.price,
         price_discounted=product.price_discounted,
-        cost_price=product.cost_price,
         barcode=product.barcode,
         weight=product.weight,
-        dimensions=product.dimensions
+        dimensions=product.dimensions,
+        
+        # Дополнительная информация
+        gender=product.gender,
+        season=product.season,
+        composition=product.composition,
+        care_instructions=product.care_instructions,
+        additional_info=product.additional_info,
+        website_link=product.website_link
     )
 
 
