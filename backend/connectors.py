@@ -375,7 +375,7 @@ class OzonConnector(BaseConnector):
                 "images": product_data.get('photos', [])[:10],  # Максимум 10 фото
                 "description": product_data.get('description', ''),
                 "category_id": product_data.get('ozon_category_id'),
-                "type_id": product_data.get('ozon_type_id') or 970766898,  # Дефолтный type_id для кроссовок
+                "type_id": product_data.get('ozon_type_id') or 91248,  # Кроссовки
                 "attributes": self._prepare_attributes(product_data.get('characteristics', {}))
             }]
         }
