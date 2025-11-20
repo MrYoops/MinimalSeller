@@ -2815,6 +2815,8 @@ async def get_catalog_products(
         variants_count = await db.product_variants.count_documents({"product_id": str(prod["_id"])})
         photos_count = await db.product_photos.count_documents({"product_id": str(prod["_id"])})
         
+        from models import ProductDimensions
+        
         result.append(ProductCatalogResponse(
             id=str(prod["_id"]),
             seller_id=str(prod["seller_id"]),
@@ -2834,7 +2836,14 @@ async def get_catalog_products(
             variants_count=variants_count,
             photos_count=photos_count,
             created_at=prod.get("created_at", datetime.utcnow()),
-            updated_at=prod.get("updated_at", datetime.utcnow())
+            updated_at=prod.get("updated_at", datetime.utcnow()),
+            # Коммерческие атрибуты
+            price=prod.get("price", 0),
+            price_discounted=prod.get("price_discounted"),
+            cost_price=prod.get("cost_price", 0),
+            barcode=prod.get("barcode"),
+            weight=prod.get("weight", 0),
+            dimensions=ProductDimensions(**prod.get("dimensions", {})) if prod.get("dimensions") else ProductDimensions()
         ))
     
     logger.info(f"✅ Found {len(result)} products (total: {total})")
