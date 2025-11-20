@@ -2876,8 +2876,6 @@ async def get_catalog_product(
     variants_count = await db.product_variants.count_documents({"product_id": product_id})
     photos_count = await db.product_photos.count_documents({"product_id": product_id})
     
-    from models import ProductDimensions
-    
     return ProductCatalogResponse(
         id=str(product["_id"]),
         seller_id=str(product["seller_id"]),
@@ -2975,8 +2973,6 @@ async def create_catalog_product(
     
     await db.product_catalog.insert_one(new_product)
     logger.info(f"✅ Product created: {product_id}")
-    
-    from models import ProductDimensions
     
     return ProductCatalogResponse(
         id=product_id,
@@ -3083,8 +3079,6 @@ async def update_catalog_product(
     photos_count = await db.product_photos.count_documents({"product_id": product_id})
     
     logger.info(f"✅ Product updated: {product_id}")
-    
-    from models import ProductDimensions
     
     return ProductCatalogResponse(
         id=str(updated["_id"]),
