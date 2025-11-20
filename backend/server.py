@@ -3687,10 +3687,10 @@ async def create_product_price(
         variant_id=updated.get("variant_id"),
         variant_color=variant_color,
         variant_size=variant_size,
-        purchase_price=updated.get("purchase_price", 0.0),
-        retail_price=updated.get("retail_price", 0.0),
-        price_without_discount=updated.get("price_without_discount", 0.0),
-        marketplace_prices=updated.get("marketplace_prices", {"wb": 0.0, "ozon": 0.0, "yandex": 0.0}),
+        purchase_price=int(updated.get("purchase_price", 0)),
+        retail_price=int(updated.get("retail_price", 0)),
+        price_without_discount=int(updated.get("price_without_discount", 0)),
+        marketplace_prices={k: int(v) for k, v in updated.get("marketplace_prices", {"wb": 0, "ozon": 0, "yandex": 0}).items()},
         created_at=updated.get("created_at", datetime.utcnow()),
         updated_at=updated.get("updated_at", datetime.utcnow())
     )
