@@ -368,6 +368,12 @@ class ProductCategoryResponse(BaseModel):
 
 # ---------- ТОВАРЫ (ОСНОВНАЯ КАРТОЧКА) ----------
 
+class ProductDimensions(BaseModel):
+    """Габариты товара"""
+    width: int = 0  # Ширина в мм
+    height: int = 0  # Высота в мм
+    length: int = 0  # Длина в мм
+
 class ProductCatalogCreate(BaseModel):
     """Создание товара (новая структура для каталога)"""
     article: str  # Артикул (уникальный в рамках продавца)
@@ -382,6 +388,13 @@ class ProductCatalogCreate(BaseModel):
     characteristics: Dict[str, Any] = {}  # Характеристики товара (название: значение)
     marketplace_category_id: Optional[str] = None  # ID категории на маркетплейсе
     marketplace: Optional[str] = None  # Маркетплейс источник
+    # Коммерческие атрибуты
+    price: int = 0  # Розничная цена в копейках
+    price_discounted: Optional[int] = None  # Цена со скидкой в копейках
+    cost_price: int = 0  # Себестоимость в копейках
+    barcode: Optional[str] = None  # Штрих-код
+    weight: int = 0  # Вес в граммах
+    dimensions: ProductDimensions = Field(default_factory=ProductDimensions)  # Габариты
 
 class ProductCatalogUpdate(BaseModel):
     """Обновление товара"""
