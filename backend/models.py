@@ -512,6 +512,9 @@ class ProductCatalogResponse(BaseModel):
     care_instructions: Optional[str] = None
     additional_info: Optional[str] = None
     website_link: Optional[str] = None
+    
+    # Данные специфичные для маркетплейсов
+    marketplace_specific_data: Optional[Dict[str, Any]] = None
 
 
 # ---------- ВАРИАЦИИ ТОВАРОВ (ЦВЕТ + РАЗМЕР) ----------
