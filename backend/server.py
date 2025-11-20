@@ -2815,7 +2815,6 @@ async def get_catalog_products(
         variants_count = await db.product_variants.count_documents({"product_id": str(prod["_id"])})
         photos_count = await db.product_photos.count_documents({"product_id": str(prod["_id"])})
         
-        from models import ProductDimensions
         
         result.append(ProductCatalogResponse(
             id=str(prod["_id"]),
