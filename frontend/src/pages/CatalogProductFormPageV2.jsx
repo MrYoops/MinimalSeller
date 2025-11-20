@@ -250,16 +250,33 @@ export default function CatalogProductFormPageV2() {
     try {
       const existingPrice = prices.find(p => p.variant_id === variantId)
       
-      const priceData = existingPrice ? {
-        ...existingPrice,
-        [field]: parseFloat(value) || 0
-      } : {
-        variant_id: variantId,
-        purchase_price: 0,
-        retail_price: 0,
-        price_without_discount: 0,
-        marketplace_prices: { wb: 0, ozon: 0, yandex: 0 },
-        [field]: parseFloat(value) || 0
+      let priceData
+      if (field === 'marketplace_prices') {
+        // value уже объект с ценами в копейках
+        priceData = existingPrice ? {
+          ...existingPrice,
+          marketplace_prices: value
+        } : {
+          variant_id: variantId,
+          purchase_price: 0,
+          retail_price: 0,
+          price_without_discount: 0,
+          marketplace_prices: value
+        }
+      } else {
+        // Конвертируем рубли в копейки для других полей
+        const valueInKopecks = Math.round(parseFloat(value || 0) * 100)
+        priceData = existingPrice ? {
+          ...existingPrice,
+          [field]: valueInKopecks
+        } : {
+          variant_id: variantId,
+          purchase_price: 0,
+          retail_price: 0,
+          price_without_discount: 0,
+          marketplace_prices: { wb: 0, ozon: 0, yandex: 0 },
+          [field]: valueInKopecks
+        }
       }
       
       await api.post(`/api/catalog/products/${id}/prices`, priceData)
