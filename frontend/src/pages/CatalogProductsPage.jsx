@@ -75,13 +75,13 @@ export default function CatalogProductsPage() {
   }
 
   const handleDelete = async (productId) => {
-    if (!window.confirm('Вы уверены, что хотите архивировать этот товар?')) return
+    if (!window.confirm('Вы уверены, что хотите НАВСЕГДА удалить этот товар? Это действие нельзя отменить.')) return
     
     try {
       await api.delete(`/api/catalog/products/${productId}`)
       loadProducts()
     } catch (error) {
-      alert('Ошибка при архивировании товара: ' + error.message)
+      alert('Ошибка при удалении товара: ' + error.message)
     }
   }
 
