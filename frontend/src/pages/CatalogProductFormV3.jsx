@@ -8,7 +8,7 @@ export default function CatalogProductFormV3() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState('card') // card, prices, analytics
+  const [activeTab, setActiveTab] = useState('card') // card, keywords, analytics, prices, mass_edit, hypotheses, suppliers, stock, documents, duplicates
   
   // Categories and data
   const [categories, setCategories] = useState([])
