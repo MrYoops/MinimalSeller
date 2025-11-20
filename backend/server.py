@@ -2569,7 +2569,7 @@ async def update_warehouse_link(
 # Import new models
 from models import (
     ProductCategoryCreate, ProductCategoryUpdate, ProductCategoryResponse,
-    ProductCatalogCreate, ProductCatalogUpdate, ProductCatalogResponse,
+    ProductCatalogCreate, ProductCatalogUpdate, ProductCatalogResponse, ProductDimensions,
     ProductVariantCreate, ProductVariantUpdate, ProductVariantResponse,
     ProductPhotoCreate, ProductPhotoUpdate, ProductPhotoResponse,
     ProductPriceCreate, ProductPriceUpdate, ProductPriceResponse, BulkPriceUpdate,
