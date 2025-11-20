@@ -855,38 +855,50 @@ export default function CatalogProductFormPageV2() {
                           <td className="px-3 py-2">
                             <input
                               type="number"
-                              value={variantPrice?.purchase_price || 0}
+                              value={(variantPrice?.purchase_price || 0) / 100}
                               onChange={(e) => handleSetPrice(variant.id, 'purchase_price', e.target.value)}
+                              step="0.01"
                               className="w-20 px-2 py-1 text-sm bg-mm-dark border border-mm-border rounded text-mm-text"
                             />
                           </td>
                           <td className="px-3 py-2">
                             <input
                               type="number"
-                              value={variantPrice?.retail_price || 0}
+                              value={(variantPrice?.retail_price || 0) / 100}
                               onChange={(e) => handleSetPrice(variant.id, 'retail_price', e.target.value)}
+                              step="0.01"
                               className="w-20 px-2 py-1 text-sm bg-mm-dark border border-mm-border rounded text-mm-text"
                             />
                           </td>
                           <td className="px-3 py-2">
                             <input
                               type="number"
-                              value={variantPrice?.marketplace_prices?.wb || 0}
+                              value={(variantPrice?.marketplace_prices?.wb || 0) / 100}
                               onChange={(e) => {
-                                const newPrice = { ...variantPrice, marketplace_prices: { ...variantPrice?.marketplace_prices, wb: parseFloat(e.target.value) || 0 }}
-                                handleSetPrice(variant.id, 'marketplace_prices', newPrice.marketplace_prices)
+                                const priceInKopecks = Math.round(parseFloat(e.target.value || 0) * 100)
+                                const newPrices = { 
+                                  ...variantPrice?.marketplace_prices, 
+                                  wb: priceInKopecks
+                                }
+                                handleSetPrice(variant.id, 'marketplace_prices', newPrices)
                               }}
+                              step="0.01"
                               className="w-20 px-2 py-1 text-sm bg-mm-dark border border-mm-border rounded text-mm-text"
                             />
                           </td>
                           <td className="px-3 py-2">
                             <input
                               type="number"
-                              value={variantPrice?.marketplace_prices?.ozon || 0}
+                              value={(variantPrice?.marketplace_prices?.ozon || 0) / 100}
                               onChange={(e) => {
-                                const newPrice = { ...variantPrice, marketplace_prices: { ...variantPrice?.marketplace_prices, ozon: parseFloat(e.target.value) || 0 }}
-                                handleSetPrice(variant.id, 'marketplace_prices', newPrice.marketplace_prices)
+                                const priceInKopecks = Math.round(parseFloat(e.target.value || 0) * 100)
+                                const newPrices = { 
+                                  ...variantPrice?.marketplace_prices, 
+                                  ozon: priceInKopecks
+                                }
+                                handleSetPrice(variant.id, 'marketplace_prices', newPrices)
                               }}
+                              step="0.01"
                               className="w-20 px-2 py-1 text-sm bg-mm-dark border border-mm-border rounded text-mm-text"
                             />
                           </td>
