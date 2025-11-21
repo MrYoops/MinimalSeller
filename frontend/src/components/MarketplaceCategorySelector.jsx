@@ -117,7 +117,7 @@ export default function MarketplaceCategorySelector({
   // Загрузить возможные значения для dictionary-атрибута
   const loadAttributeValues = async (categoryId, attributeId, typeId = null) => {
     try {
-      let url = `/categories/${marketplace}/${categoryId}/attribute-values?attribute_id=${attributeId}`
+      let url = `/api/categories/${marketplace}/${categoryId}/attribute-values?attribute_id=${attributeId}`
       if (typeId) {
         url += `&type_id=${typeId}`
       }
