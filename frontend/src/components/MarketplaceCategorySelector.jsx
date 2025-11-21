@@ -37,6 +37,15 @@ export default function MarketplaceCategorySelector({
       loadCategoryAttributes(value.category_id, value.type_id)
     }
   }, [value])
+  
+  // Автоопределение категории по названию товара
+  useEffect(() => {
+    if (productName && productName.length > 3 && !selectedCategory && !autoSuggestDone) {
+      console.log(`[CategorySelector] Auto-suggesting category for: "${productName}"`)
+      setSearchQuery(productName)
+      setAutoSuggestDone(true)
+    }
+  }, [productName, selectedCategory, autoSuggestDone])
 
   // Поиск категорий с debounce
   const searchCategories = async (query) => {
