@@ -127,7 +127,7 @@ async def get_category_attributes(
             }
     
     # Получить API ключи
-    profile = await db.seller_profiles.find_one({'user_id': current_user['_id']})
+    profile = await server.db.seller_profiles.find_one({'user_id': current_user['_id']})
     if not profile:
         raise HTTPException(status_code=404, detail="Seller profile not found")
     
@@ -234,7 +234,7 @@ async def get_attribute_values(
             }
     
     # Получить API ключи
-    profile = await db.seller_profiles.find_one({'user_id': current_user['_id']})
+    profile = await server.db.seller_profiles.find_one({'user_id': current_user['_id']})
     if not profile:
         raise HTTPException(status_code=404, detail="Seller profile not found")
     
