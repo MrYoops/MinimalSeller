@@ -318,7 +318,7 @@ async def get_attribute_values(
             "cached_at": datetime.utcnow()
         }
         
-        await db.attribute_values_cache.replace_one(
+        await server.db.attribute_values_cache.replace_one(
             {"cache_key": cache_key},
             cache_doc,
             upsert=True
