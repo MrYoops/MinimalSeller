@@ -1436,36 +1436,31 @@ Verify the new marketplace category system functionality in the product form:
 3. Required attributes load after category selection
 4. Dictionary attributes display as dropdowns with proper values
 
-### Test Results: ✅ FRONTEND WORKING, ❌ BACKEND API ISSUES
+### Test Results: ✅ BACKEND API WORKING, ❌ FRONTEND INTEGRATION ISSUES
 
-#### Step 1: Login and Navigation ✅
-- ✅ Successfully logged in with testuser@test.com / password
-- ✅ Navigated to product creation form (/catalog/products/new)
-- ✅ Product form loaded correctly
+#### Step 1: Authentication Testing ✅
+- ✅ Successfully authenticated with seller@test.com / password123
+- ✅ JWT token obtained: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+- ✅ User profile retrieved: Test Seller (seller role)
 
-#### Step 2: Marketplace Checkboxes ✅
-- ✅ Found marketplace checkboxes at bottom of form
-- ✅ Located OZON checkbox (labeled "O")
-- ✅ Successfully clicked OZON checkbox
-- ✅ OZON-specific section appeared with blue border
+#### Step 2: Backend API Endpoint Testing ✅
+- ✅ **CRITICAL**: Backend API endpoint `/api/categories/search/ozon` is WORKING
+- ✅ API returns proper JSON response: `{"marketplace":"ozon","query":"test","categories":[]}`
+- ✅ URL encoding for Cyrillic characters working correctly
+- ✅ Authentication with Bearer token working
+- ✅ API keys configured for seller: Ozon (Client ID: 3152566) and WB
 
-#### Step 3: MarketplaceCategorySelector Component ✅
-- ✅ **CRITICAL**: MarketplaceCategorySelector component rendered correctly
-- ✅ Blue section "OZON - СПЕЦИФИЧНЫЕ ПОЛЯ" appeared
-- ✅ Category search input found with placeholder "Начните вводить название категории..."
-- ✅ Component structure matches SelSup design
+#### Step 3: Frontend Access Issues ❌
+- ❌ **CRITICAL**: Cannot access product creation form `/catalog/products/new`
+- ❌ Redirected to login page even after successful authentication
+- ❌ Session/token not persisting for frontend navigation
+- ❌ Unable to test UI components due to authentication issues
 
-#### Step 4: Category Search Functionality ✅
-- ✅ Successfully typed "кроссовки" in category search field
-- ✅ **CRITICAL**: API calls are being made correctly
-- ✅ Frontend makes requests to `/categories/search/ozon?query=кроссовки`
-- ✅ Search input responds to user input with proper debouncing
-
-#### Step 5: Backend API Issues ❌
-- ❌ **CRITICAL**: Backend API endpoint `/categories/search/ozon` returns 404 Not Found
-- ❌ API calls fail with "Failed to search categories: AxiosError"
-- ❌ No search results displayed due to backend issues
-- ❌ Unable to test category selection and attributes loading
+#### Step 4: API Integration Analysis ❌
+- ❌ **CRITICAL**: Frontend making calls to `/categories/search/ozon` (without `/api` prefix)
+- ❌ Backend logs show 404 errors for calls without `/api` prefix
+- ❌ Nginx proxy configuration not handling category routes properly
+- ❌ CORS or proxy configuration preventing proper API communication
 
 ### Technical Analysis
 
