@@ -255,7 +255,7 @@ async def get_attribute_values(
         if marketplace == 'ozon':
             import httpx
             
-            url = f"{get_connector(marketplace, marketplace_key.get('client_id', ''), marketplace_key['api_key']).base_url}/v2/category/attribute/values"
+            url = f"{get_connector(marketplace, marketplace_key.get('client_id', ''), marketplace_key['api_key']).base_url}/v1/description-category/attribute/values"
             
             headers = {
                 "Client-Id": marketplace_key.get('client_id', ''),
