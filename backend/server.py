@@ -1709,11 +1709,11 @@ except Exception as e:
     logger.error(f"Failed to include admin_routes: {e}")
 
 try:
-    from category_routes import router as category_router
-    app.include_router(category_router)
-    logger.info("Category routes included")
+    from category_routes_v2 import router as category_router_v2
+    app.include_router(category_router_v2)
+    logger.info("Category routes V2 included")
 except Exception as e:
-    logger.error(f"Failed to include category_routes: {e}")
+    logger.error(f"Failed to include category_routes_v2: {e}")
 
 # Skip marketplace_warehouse_routes for now (requires proper get_current_user setup)
 # try:
