@@ -1739,8 +1739,9 @@ async def import_product_from_marketplace(
     data: Dict[str, Any],
     current_user: dict = Depends(get_current_user)
 ):
-    """Import product from marketplace with full data and auto-mapping"""
+    """Import product from marketplace with full data, auto-mapping, and auto-category"""
     import uuid
+    from category_system import CategorySystem
     
     marketplace_product = data.get('product')
     if not marketplace_product:
@@ -1755,97 +1756,133 @@ async def import_product_from_marketplace(
     logger.info(f"📦 Importing product from {marketplace}: SKU={sku}, Name={marketplace_product.get('name', 'N/A')}")
     
     # Check if product with this SKU already exists
-    existing_product = await db.products.find_one({"sku": sku, "seller_id": current_user["_id"]})
+    existing_product = await db.product_catalog.find_one({"article": sku, "seller_id": current_user["_id"]}, {"_id": 0})
     
     if existing_product:
         logger.info(f"✅ Product already exists: {existing_product.get('name')}")
         
         # Update marketplace_data for existing product
         marketplace_data = existing_product.get("marketplace_data", {})
+        
+        # Prepare characteristics dict
+        characteristics_dict = {}
+        for char in marketplace_product.get('characteristics', []):
+            char_name = char.get('name', '')
+            char_value = char.get('value', '')
+            if char_name and char_value:
+                characteristics_dict[char_name] = char_value
+        
         marketplace_data[marketplace] = {
             "id": marketplace_product.get('id'),
             "barcode": marketplace_product.get('barcode', ''),
-            "characteristics": marketplace_product.get('characteristics', []),
+            "characteristics": characteristics_dict,
             "category": marketplace_product.get('category', ''),
+            "category_id": marketplace_product.get('category_id', ''),
             "brand": marketplace_product.get('brand', ''),
+            "size": marketplace_product.get('size', ''),
             "mapped_at": datetime.utcnow().isoformat()
         }
         
-        await db.products.update_one(
-            {"_id": existing_product["_id"]},
+        product_id = existing_product.get("_id")
+        
+        await db.product_catalog.update_one(
+            {"_id": product_id},
             {"$set": {"marketplace_data": marketplace_data, "updated_at": datetime.utcnow().isoformat()}}
         )
         
         return {
             "message": "Product already exists, mapping updated",
-            "product_id": str(existing_product.get("_id")),
+            "product_id": product_id,
             "action": "mapped"
         }
     
     # Create new product from marketplace data
     product_id = str(uuid.uuid4())
     
-    # Prepare attributes from characteristics
-    attributes = {}
+    # Prepare characteristics from marketplace data
+    characteristics_dict = {}
     for char in marketplace_product.get('characteristics', []):
         char_name = char.get('name', '')
         char_value = char.get('value', '')
         if char_name and char_value:
-            attributes[char_name] = char_value
+            characteristics_dict[char_name] = char_value
     
-    # Prepare tags
-    tags = []
-    tag_from_request = data.get('tag', '').strip()
-    if tag_from_request:
-        tags.append(tag_from_request)
+    # Auto-detect category from marketplace category name
+    category_name = marketplace_product.get('category', '')
+    category_system = CategorySystem(db)
+    
+    # Try to find or create category mapping
+    mapping_id = None
+    if category_name:
+        try:
+            mapping_id = await category_system.create_or_update_mapping(
+                internal_name=category_name,
+                ozon_category_id=marketplace_product.get('category_id') if marketplace == 'ozon' else None,
+                wb_category_id=marketplace_product.get('category_id') if marketplace == 'wb' else None,
+                yandex_category_id=marketplace_product.get('category_id') if marketplace == 'yandex' else None
+            )
+            logger.info(f"✅ Auto-created category mapping: {mapping_id}")
+        except Exception as e:
+            logger.warning(f"Failed to create category mapping: {str(e)}")
     
     new_product = {
         "_id": product_id,
-        "sku": sku,
+        "article": sku,  # article is the SKU
         "name": marketplace_product.get('name', 'Imported product'),
         "description": marketplace_product.get('description', ''),
-        "price": marketplace_product.get('price', 0),
-        "images": marketplace_product.get('photos', [])[:5],  # Max 5 photos
-        "category_id": None,  # User can set later
-        "tags": tags,  # Tags from import
+        "brand": marketplace_product.get('brand', ''),
         "status": "draft",
         "seller_id": current_user["_id"],
         "created_at": datetime.utcnow().isoformat(),
         "updated_at": datetime.utcnow().isoformat(),
         
-        # Attributes from characteristics
-        "attributes": attributes,
+        # Category mapping
+        "category_mapping_id": mapping_id,
+        
+        # Characteristics from marketplace
+        "characteristics": characteristics_dict,
         
         # Marketplace specific data with auto-mapping
         "marketplace_data": {
             marketplace: {
                 "id": marketplace_product.get('id'),
                 "barcode": marketplace_product.get('barcode', ''),
-                "characteristics": marketplace_product.get('characteristics', []),
-                "category": marketplace_product.get('category', ''),
+                "characteristics": characteristics_dict,
+                "category": category_name,
+                "category_id": marketplace_product.get('category_id', ''),
                 "brand": marketplace_product.get('brand', ''),
                 "size": marketplace_product.get('size', ''),
                 "mapped_at": datetime.utcnow().isoformat()
             }
-        }
+        },
+        
+        # Photos
+        "photos": marketplace_product.get('photos', [])[:10],
+        
+        # Prices (in kopeks)
+        "price_with_discount": int(marketplace_product.get('price', 0) * 100) if marketplace_product.get('price') else 0,
+        "price_without_discount": int(marketplace_product.get('price', 0) * 100) if marketplace_product.get('price') else 0,
     }
     
     # Insert product
-    await db.products.insert_one(new_product)
+    await db.product_catalog.insert_one(new_product)
     
-    logger.info(f"✅ Product imported and auto-mapped: {new_product['name']} (SKU: {sku})")
-    logger.info(f"   Photos: {len(new_product['images'])}, Characteristics: {len(new_product.get('characteristics', []))}")
+    logger.info(f"✅ Product imported with auto-category: {new_product['name']} (SKU: {sku})")
+    logger.info(f"   Photos: {len(new_product.get('photos', []))}, Characteristics: {len(characteristics_dict)}")
+    logger.info(f"   Category: {category_name}, Mapping ID: {mapping_id}")
     
     return {
-        "message": "Product imported successfully",
+        "message": "Product imported successfully with auto-category",
         "product_id": product_id,
         "action": "created",
         "product": {
             "id": product_id,
             "sku": sku,
             "name": new_product['name'],
-            "photos_count": len(new_product['images']),
-            "characteristics_count": len(attributes)
+            "photos_count": len(new_product.get('photos', [])),
+            "characteristics_count": len(characteristics_dict),
+            "category": category_name,
+            "category_mapping_id": mapping_id
         }
     }
 
