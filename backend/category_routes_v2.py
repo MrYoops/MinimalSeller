@@ -109,7 +109,7 @@ async def search_marketplace_categories(
     
     try:
         category_system = get_category_system()
-        categories = await category_system.search_categories(marketplace, query, limit=50)
+        categories = category_system = get_category_system(); await category_system.search_categories(marketplace, query, limit=50)
         
         return {
             "marketplace": marketplace,
@@ -134,7 +134,7 @@ async def get_category_details(
     """
     try:
         category_system = get_category_system()
-        category = await category_system.get_category_by_id(marketplace, category_id)
+        category = category_system = get_category_system(); await category_system.get_category_by_id(marketplace, category_id)
         
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
@@ -165,7 +165,7 @@ async def get_category_attributes(
     logger.info(f"[Attributes] Getting attributes for {marketplace} category {category_id}")
     
     # Проверить кэш
-    cached_attrs = await category_system.get_cached_attributes(marketplace, category_id, type_id)
+    cached_attrs = category_system = get_category_system(); await category_system.get_cached_attributes(marketplace, category_id, type_id)
     
     if cached_attrs:
         logger.info(f"[Attributes] Returning {len(cached_attrs)} cached attributes")
@@ -224,7 +224,7 @@ async def get_category_attributes(
             attributes = []
         
         # Кэшировать
-        await category_system.cache_category_attributes(
+        category_system = get_category_system(); await category_system.cache_category_attributes(
             marketplace, category_id, type_id, attributes
         )
         
@@ -270,7 +270,7 @@ async def create_category_mapping(
         if not internal_name:
             raise HTTPException(status_code=400, detail="internal_name required")
         
-        mapping_id = await category_system.create_or_update_mapping(
+        mapping_id = category_system = get_category_system(); await category_system.create_or_update_mapping(
             internal_name=internal_name,
             ozon_category_id=data.get('ozon_category_id'),
             wb_category_id=data.get('wb_category_id'),
@@ -296,7 +296,7 @@ async def search_category_mappings(
     Поиск сопоставлений категорий
     """
     try:
-        mappings = await category_system.search_mappings(query, limit=50)
+        mappings = category_system = get_category_system(); await category_system.search_mappings(query, limit=50)
         
         return {
             "query": query,
@@ -318,7 +318,7 @@ async def get_category_mapping(
     Получить сопоставление по ID
     """
     try:
-        mapping = await category_system.get_mapping_by_id(mapping_id)
+        mapping = category_system = get_category_system(); await category_system.get_mapping_by_id(mapping_id)
         
         if not mapping:
             raise HTTPException(status_code=404, detail="Mapping not found")
