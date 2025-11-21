@@ -112,7 +112,7 @@ async def get_category_attributes(
     if type_id:
         cache_key += f"_{type_id}"
     
-    cached = await db.category_attributes_cache.find_one({"cache_key": cache_key})
+    cached = await server.db.category_attributes_cache.find_one({"cache_key": cache_key})
     
     # Если кэш свежий (менее 7 дней), вернуть из кэша
     if cached:
