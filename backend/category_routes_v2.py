@@ -54,7 +54,7 @@ async def preload_categories(
     
     # Запустить предзагрузку в фоне
     background_tasks.add_task(
-        category_system.preload_all_categories,
+        get_category_system().preload_all_categories,
         marketplace_key.get('client_id', ''),
         marketplace_key['api_key'],
         marketplace
