@@ -85,7 +85,7 @@ export default function MarketplaceCategorySelector({
     setError(null)
 
     try {
-      let url = `/categories/${marketplace}/${categoryId}/attributes`
+      let url = `/api/categories/${marketplace}/${categoryId}/attributes`
       if (typeId) {
         url += `?type_id=${typeId}`
       }
