@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiImage, FiEdit, FiEye, FiDownload, FiUpload, FiSettings, FiClock, FiCheck } from 'react-icons/fi'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import MarketplaceCategorySelector from '../components/MarketplaceCategorySelector'
 
 export default function CatalogProductFormV4() {
   const { api } = useAuth()
