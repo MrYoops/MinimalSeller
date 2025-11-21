@@ -1439,28 +1439,30 @@ Verify the new marketplace category system functionality in the product form:
 ### Test Results: ✅ BACKEND API WORKING, ❌ FRONTEND INTEGRATION ISSUES
 
 #### Step 1: Authentication Testing ✅
-- ✅ Successfully authenticated with seller@test.com / password123
-- ✅ JWT token obtained: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
-- ✅ User profile retrieved: Test Seller (seller role)
-
-#### Step 2: Backend API Endpoint Testing ✅
-- ✅ **CRITICAL**: Backend API endpoint `/api/categories/search/ozon` is WORKING
-- ✅ API returns proper JSON response: `{"marketplace":"ozon","query":"test","categories":[]}`
-- ✅ URL encoding for Cyrillic characters working correctly
-- ✅ Authentication with Bearer token working
+- ✅ Successfully authenticated with testuser@test.com / password
+- ✅ JWT token obtained and working for API calls
+- ✅ User profile retrieved: Test User (seller role)
 - ✅ API keys configured for seller: Ozon (Client ID: 3152566) and WB
 
-#### Step 3: Frontend Access Issues ❌
-- ❌ **CRITICAL**: Cannot access product creation form `/catalog/products/new`
-- ❌ Redirected to login page even after successful authentication
-- ❌ Session/token not persisting for frontend navigation
-- ❌ Unable to test UI components due to authentication issues
+#### Step 2: Backend API Endpoint Testing ✅ **CRITICAL SUCCESS**
+- ✅ **CRITICAL**: Backend API endpoint `/api/categories/search/ozon` is FULLY WORKING
+- ✅ API returns 47 categories for query "обувь" (shoes)
+- ✅ URL encoding for Cyrillic characters working correctly when properly encoded
+- ✅ Authentication with Bearer token working perfectly
+- ✅ Real Ozon API integration working (not mocked)
+- ✅ Categories include: "Обувь / Повседневная обувь / Кеды", "Обувь / Спортивная и рабочая обувь / Бутсы", etc.
 
-#### Step 4: API Integration Analysis ❌
-- ❌ **CRITICAL**: Frontend making calls to `/categories/search/ozon` (without `/api` prefix)
-- ❌ Backend logs show 404 errors for calls without `/api` prefix
-- ❌ Nginx proxy configuration not handling category routes properly
-- ❌ CORS or proxy configuration preventing proper API communication
+#### Step 3: Frontend Access Issues ❌ **CRITICAL PROBLEMS**
+- ❌ **CRITICAL**: Cannot access product edit form for specific product ID: 3a0b06cf-c5ed-4fde-9084-2802867a3ada
+- ❌ Product form URLs redirect back to products list page
+- ❌ Session/token not persisting properly for product form navigation
+- ❌ Unable to test UI components due to routing/access issues
+
+#### Step 4: Frontend Integration Analysis ❌
+- ❌ **CRITICAL**: Frontend not making API calls to category search endpoint
+- ❌ No requests to `/api/categories/search/ozon` visible in backend logs during UI testing
+- ❌ MarketplaceCategorySelector component not triggering API calls
+- ❌ OZON checkbox functionality not properly connected to category selector
 
 ### Technical Analysis
 
