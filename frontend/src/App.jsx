@@ -12,7 +12,7 @@ import StockBalancesPage from './pages/StockBalancesPage'
 import WarehouseDetailNew from './pages/WarehouseDetailNew'
 import IntegrationsPage from './pages/IntegrationsPage'
 import CatalogProductsPage from './pages/CatalogProductsPage'
-import CatalogCategoriesPage from './pages/CatalogCategoriesPage'
+import CatalogCategoriesPageV2 from './pages/CatalogCategoriesPageV2'
 import CatalogProductFormV4 from './pages/CatalogProductFormV4'
 import CatalogProductFormPage from './pages/CatalogProductFormPage' // Старая форма
 import CatalogImportPage from './pages/CatalogImportPage'
