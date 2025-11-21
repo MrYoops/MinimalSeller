@@ -378,7 +378,7 @@ async def save_category_mappings(
         }
     }
     
-    await db.product_catalog.update_one(
+    await server.db.product_catalog.update_one(
         {"_id": product_id},
         {
             "$set": {
