@@ -76,6 +76,9 @@ function AppRoutes() {
       <Route path="/catalog/import" element={
         <ProtectedRoute><CatalogImportPage /></ProtectedRoute>
       } />
+      <Route path="/admin/categories" element={
+        <ProtectedRoute requiredRole="admin"><AdminCategoriesPage /></ProtectedRoute>
+      } />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
