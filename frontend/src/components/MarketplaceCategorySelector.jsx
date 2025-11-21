@@ -11,7 +11,8 @@ export default function MarketplaceCategorySelector({
   value, 
   onChange, 
   onAttributesChange,
-  requiredAttributes = {}
+  requiredAttributes = {},
+  productName = '' // Название товара для автоопределения категории
 }) {
   const { api } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
@@ -21,6 +22,7 @@ export default function MarketplaceCategorySelector({
   const [attributeValues, setAttributeValues] = useState({}) // Кэш для значений атрибутов
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [autoSuggestDone, setAutoSuggestDone] = useState(false)
 
   // Загрузить категорию если уже выбрана
   useEffect(() => {
