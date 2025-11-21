@@ -108,6 +108,7 @@ async def search_marketplace_categories(
     logger.info(f"[CategorySearch] Searching {marketplace} categories: '{query}'")
     
     try:
+        category_system = get_category_system()
         categories = await category_system.search_categories(marketplace, query, limit=50)
         
         return {
