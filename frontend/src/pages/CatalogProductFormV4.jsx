@@ -1034,6 +1034,7 @@ export default function CatalogProductFormV4() {
                       onChange={(mapping) => setCategoryMappings({ ...categoryMappings, ozon: mapping })}
                       onAttributesChange={(attrs) => setRequiredAttributes({ ...requiredAttributes, ozon: attrs })}
                       requiredAttributes={requiredAttributes.ozon}
+                      productName={product.name}
                     />
                     
                     <div>
