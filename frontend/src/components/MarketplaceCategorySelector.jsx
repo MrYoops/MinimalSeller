@@ -120,10 +120,10 @@ export default function MarketplaceCategorySelector({
       const response = await api.get(url)
       const attrs = response.data.attributes || []
       
-      // Фильтровать только обязательные и dictionary-атрибуты
-      const requiredAttrs = attrs.filter(attr => 
-        attr.is_required || attr.dictionary_id > 0
-      )
+      // Фильтровать ТОЛЬКО обязательные атрибуты (без которых карточка не отправится)
+      const requiredAttrs = attrs.filter(attr => attr.is_required === true)
+      
+      console.log(`[CategorySelector] Loaded ${requiredAttrs.length} REQUIRED attributes (total: ${attrs.length})`)
       
       setAttributes(requiredAttrs)
 
