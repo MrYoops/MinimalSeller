@@ -284,7 +284,7 @@ class OzonConnector(BaseConnector):
             raise MarketplaceError(f"Failed to fetch Ozon warehouses: {str(e)}", 500)
     
     async def get_categories(self) -> List[Dict[str, Any]]:
-        """Get category tree from Ozon with attributes"""
+        """Get category tree from Ozon with attributes (recursively flattens tree)"""
         logger.info("[Ozon] Fetching category tree")
         
         url = f"{self.base_url}/v1/description-category/tree"
@@ -295,20 +295,35 @@ class OzonConnector(BaseConnector):
             response_data = await self._make_request("POST", url, headers, json_data=payload)
             
             categories = response_data.get('result', [])
-            logger.info(f"[Ozon] Received {len(categories)} categories")
+            logger.info(f"[Ozon] Received {len(categories)} top-level categories")
             
-            formatted_categories = []
-            for cat in categories:
-                formatted_categories.append({
-                    "id": str(cat.get('category_id', cat.get('description_category_id', ''))),
-                    "name": cat.get('category_name', 'Unnamed'),
-                    "type_id": cat.get('type_id', 0),
-                    "type_name": cat.get('type_name', ''),
-                    "disabled": cat.get('disabled', False),
-                    "marketplace": "ozon"
-                })
+            # Рекурсивно развернуть дерево категорий
+            def flatten_categories(cats, parent_name=''):
+                result = []
+                for cat in cats:
+                    cat_id = cat.get('category_id', cat.get('description_category_id', ''))
+                    cat_name = cat.get('category_name', 'Unnamed')
+                    full_name = f"{parent_name} / {cat_name}" if parent_name else cat_name
+                    
+                    result.append({
+                        "id": str(cat_id),
+                        "name": full_name,
+                        "type_id": cat.get('type_id', 0),
+                        "type_name": cat.get('type_name', ''),
+                        "disabled": cat.get('disabled', False),
+                        "marketplace": "ozon"
+                    })
+                    
+                    # Рекурсивно обработать дочерние категории
+                    children = cat.get('children', [])
+                    if children:
+                        result.extend(flatten_categories(children, full_name))
+                
+                return result
             
-            logger.info(f"[Ozon] Formatted {len(formatted_categories)} categories")
+            formatted_categories = flatten_categories(categories)
+            
+            logger.info(f"[Ozon] Formatted {len(formatted_categories)} categories (including nested)")
             return formatted_categories
             
         except MarketplaceError as e:
