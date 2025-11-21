@@ -7,15 +7,18 @@ from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
-from server import get_current_user, db
+from server import get_current_user
+import server
 from category_system import CategorySystem
 from connectors import get_connector, MarketplaceError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Инициализация системы категорий
-category_system = CategorySystem(db)
+
+def get_category_system():
+    """Получить инстанс CategorySystem с актуальным db"""
+    return CategorySystem(server.db)
 
 
 # ========== ПРЕДЗАГРУЗКА КАТЕГОРИЙ ==========
