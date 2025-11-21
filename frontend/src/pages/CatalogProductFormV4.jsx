@@ -1037,13 +1037,21 @@ export default function CatalogProductFormV4() {
                     </h2>
                     
                     {/* Выбор категории и обязательные характеристики */}
-                    <MarketplaceCategorySelector
+                    <MarketplaceCategorySelectorV2
                       marketplace="ozon"
-                      value={categoryMappings.ozon}
-                      onChange={(mapping) => setCategoryMappings({ ...categoryMappings, ozon: mapping })}
-                      onAttributesChange={(attrs) => setRequiredAttributes({ ...requiredAttributes, ozon: attrs })}
-                      requiredAttributes={requiredAttributes.ozon}
                       productName={product.name}
+                      selectedMarketplaces={Object.keys(selectedMarketplaces).filter(mp => selectedMarketplaces[mp])}
+                      allMarketplaceCategories={categoryMappings}
+                      onCategoryChange={(mp, category) => setCategoryMappings({ ...categoryMappings, [mp]: category })}
+                      onAttributesChange={(mp, attrId, value) => {
+                        setRequiredAttributes(prev => ({
+                          ...prev,
+                          [mp]: {
+                            ...prev[mp],
+                            [attrId]: value
+                          }
+                        }))
+                      }}
                     />
                     
                     <div>
