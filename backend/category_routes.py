@@ -220,7 +220,7 @@ async def get_attribute_values(
     if type_id:
         cache_key += f"_{type_id}"
     
-    cached = await db.attribute_values_cache.find_one({"cache_key": cache_key})
+    cached = await server.db.attribute_values_cache.find_one({"cache_key": cache_key})
     
     if cached:
         cache_age = datetime.utcnow() - cached.get('cached_at', datetime.utcnow())
