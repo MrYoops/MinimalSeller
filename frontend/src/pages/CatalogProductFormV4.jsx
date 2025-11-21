@@ -200,7 +200,9 @@ export default function CatalogProductFormV4() {
         const response = await api.post(`/api/catalog/products/${id}/save-with-marketplaces`, {
           product: productData,
           marketplaces: selectedMarketplaces,
-          marketplace_data: marketplaceData
+          marketplace_data: marketplaceData,
+          category_mappings: categoryMappings,
+          required_attributes: requiredAttributes
         })
         
         // Показать детальный результат
