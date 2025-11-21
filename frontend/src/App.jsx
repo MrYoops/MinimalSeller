@@ -65,7 +65,7 @@ function AppRoutes() {
         <ProtectedRoute><StockBalancesPage /></ProtectedRoute>
       } />
       <Route path="/catalog/categories" element={
-        <ProtectedRoute><CatalogCategoriesPage /></ProtectedRoute>
+        <ProtectedRoute><CatalogCategoriesPageV2 /></ProtectedRoute>
       } />
       <Route path="/catalog/products/new" element={
         <ProtectedRoute><CatalogProductFormV4 /></ProtectedRoute>
