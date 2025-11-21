@@ -232,13 +232,16 @@ export default function MarketplaceCategorySelector({
 
       {/* Обязательные характеристики */}
       {attributes.length > 0 && (
-        <div className="border-t border-gray-200 pt-4 mt-4">
+        <div className="border-t border-red-200 bg-red-50 p-4 rounded-lg mt-4">
           <div className="flex items-center gap-2 mb-3">
-            <FiAlertCircle className="text-orange-500" />
-            <h4 className="font-medium text-gray-900">
-              Обязательные характеристики ({attributes.length})
+            <FiAlertCircle className="text-red-600" />
+            <h4 className="font-bold text-red-900">
+              ⚠️ Обязательные характеристики ({attributes.length})
             </h4>
           </div>
+          <p className="text-sm text-red-700 mb-3">
+            Без этих полей карточка НЕ отправится на маркетплейс
+          </p>
 
           <div className="space-y-3">
             {attributes.map((attr) => {
