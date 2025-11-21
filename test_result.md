@@ -1564,34 +1564,37 @@ Frontend cannot be properly tested due to:
 
 ### Root Cause Analysis
 
-1. **Primary Issue**: Frontend authentication/session management
-   - JWT tokens work for direct API calls
-   - But frontend routes are not properly authenticated
-   - Possible middleware or routing configuration issue
+1. **Primary Issue**: Product form routing/access
+   - Cannot access specific product edit forms (URLs redirect to products list)
+   - Product ID 3a0b06cf-c5ed-4fde-9084-2802867a3ada may not exist or have access restrictions
+   - Frontend routing configuration may have issues with product form access
 
-2. **Secondary Issue**: API proxy configuration
-   - Some frontend calls going to `/categories/search/ozon` instead of `/api/categories/search/ozon`
-   - Nginx proxy not handling all category routes consistently
-   - Backend logs show 404s for calls without `/api` prefix
+2. **Secondary Issue**: Component integration testing blocked
+   - Cannot test MarketplaceCategorySelector component due to form access issues
+   - OZON checkbox and category search functionality cannot be verified in UI
+   - Debounce functionality cannot be tested without proper form access
 
 ### Next Steps Required
 
-1. **Fix Frontend Authentication**:
-   - Investigate why product form route redirects to login after successful authentication
-   - Check JWT token persistence and validation in frontend routes
-   - Verify middleware configuration for protected routes
+1. **Fix Product Form Access**:
+   - Investigate why specific product edit forms are not accessible
+   - Check if product ID 3a0b06cf-c5ed-4fde-9084-2802867a3ada exists in database
+   - Verify product form routing configuration
+   - Test with existing product IDs or create new product for testing
 
-2. **Fix API Proxy Configuration**:
-   - Ensure all frontend API calls use proper `/api` prefix
-   - Update nginx configuration to handle category routes consistently
-   - Test API integration after proxy fixes
+2. **Complete E2E Testing**:
+   - Once product form access is resolved, test full category selection flow
+   - Verify OZON checkbox triggers MarketplaceCategorySelector component
+   - Test category search with "обувь" and verify debounce (1 second)
+   - Verify dropdown appears with ~47 category results
+   - Test category selection and required attributes loading
 
-3. **Complete E2E Testing**:
-   - Once authentication issues are resolved, test full category selection flow
-   - Verify OZON checkbox triggers category selector
-   - Test category search, selection, and required attributes loading
+3. **Verify Frontend API Integration**:
+   - Ensure MarketplaceCategorySelector properly URL-encodes Cyrillic characters
+   - Test that frontend makes correct API calls to `/api/categories/search/ozon`
+   - Verify proper error handling and loading states
 
-**Current Status**: Backend ready for production, frontend integration blocked by authentication and proxy issues.
+**Current Status**: Backend API fully functional and production-ready, frontend integration blocked by product form access issues.
 
 
 ---
