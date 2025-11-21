@@ -39,8 +39,8 @@ export default function CatalogCategoriesPageV2() {
     setLoadingCategories({ ...loadingCategories, [marketplace]: true })
     
     try {
-      // Загружаем категории с API напрямую (fallback на прямой вызов)
-      const response = await api.get(`/api/categories/marketplace/${marketplace}/search?query=`)
+      // Загружаем ВСЕ категории с нового endpoint
+      const response = await api.get(`/api/categories/marketplace/${marketplace}/all?limit=1000`)
       const cats = response.data.categories || []
       
       setCategories(prev => ({
@@ -48,9 +48,10 @@ export default function CatalogCategoriesPageV2() {
         [marketplace]: cats
       }))
       
-      console.log(`Loaded ${cats.length} categories for ${marketplace}`)
+      console.log(`✅ Loaded ${cats.length} categories for ${marketplace}`)
     } catch (error) {
-      console.error(`Failed to load ${marketplace} categories:`, error)
+      console.error(`❌ Failed to load ${marketplace} categories:`, error)
+      alert(`Ошибка загрузки категорий ${marketplace}: ${error.response?.data?.detail || error.message}`)
     } finally {
       setLoadingCategories({ ...loadingCategories, [marketplace]: false })
     }
