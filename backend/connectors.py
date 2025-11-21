@@ -302,17 +302,19 @@ class OzonConnector(BaseConnector):
                 result = []
                 for cat in cats:
                     cat_id = cat.get('category_id', cat.get('description_category_id', ''))
-                    cat_name = cat.get('category_name', 'Unnamed')
+                    cat_name = cat.get('category_name', '')
                     type_id = cat.get('type_id', 0)
-                    full_name = f"{parent_name} / {cat_name}" if parent_name else cat_name
+                    type_name = cat.get('type_name', '')
                     
                     # Если есть category_id, это родительская категория
                     if cat_id:
+                        full_name = f"{parent_name} / {cat_name}" if parent_name else cat_name
+                        
                         result.append({
                             "id": str(cat_id),
                             "name": full_name,
                             "type_id": type_id,
-                            "type_name": cat.get('type_name', ''),
+                            "type_name": type_name,
                             "disabled": cat.get('disabled', False),
                             "marketplace": "ozon"
                         })
@@ -323,12 +325,15 @@ class OzonConnector(BaseConnector):
                             result.extend(flatten_categories(children, full_name, str(cat_id)))
                     
                     # Если нет category_id но есть type_id, это тип товара (конечная категория)
-                    elif type_id:
+                    elif type_id and type_name:
+                        # Используем type_name как название
+                        full_name = f"{parent_name} / {type_name}" if parent_name else type_name
+                        
                         result.append({
                             "id": parent_cat_id,  # Используем ID родителя
                             "name": full_name,
                             "type_id": type_id,
-                            "type_name": cat_name,  # Имя типа
+                            "type_name": type_name,
                             "disabled": cat.get('disabled', False),
                             "marketplace": "ozon"
                         })
