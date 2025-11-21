@@ -29,6 +29,20 @@ export default function CatalogProductFormV4() {
     yandex: { name: '', description: '', characteristics: {} }
   })
   
+  // Категории маркетплейсов (как в SelSup)
+  const [categoryMappings, setCategoryMappings] = useState({
+    ozon: { category_id: null, category_name: '', type_id: null },
+    wb: { category_id: null, category_name: '' },
+    yandex: { category_id: null, category_name: '' }
+  })
+  
+  // Обязательные атрибуты для каждого маркетплейса
+  const [requiredAttributes, setRequiredAttributes] = useState({
+    ozon: {},
+    wb: {},
+    yandex: {}
+  })
+  
   // Основные данные товара
   const [product, setProduct] = useState({
     article: '',
