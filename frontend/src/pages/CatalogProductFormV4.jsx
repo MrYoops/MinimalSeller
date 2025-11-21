@@ -992,6 +992,7 @@ export default function CatalogProductFormV4() {
                       onChange={(mapping) => setCategoryMappings({ ...categoryMappings, wb: mapping })}
                       onAttributesChange={(attrs) => setRequiredAttributes({ ...requiredAttributes, wb: attrs })}
                       requiredAttributes={requiredAttributes.wb}
+                      productName={product.name}
                     />
                     
                     <div>
