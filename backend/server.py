@@ -4933,6 +4933,10 @@ async def save_product_with_marketplaces(
                         mp_name = marketplace_data.get(mp, {}).get('name') or product_doc['name']
                         mp_description = marketplace_data.get(mp, {}).get('description') or product_doc.get('description', '')
                         
+                        # Получить категории и атрибуты для этого маркетплейса
+                        mp_category = category_mappings.get(mp, {})
+                        mp_required_attrs = required_attributes.get(mp, {})
+                        
                         # Данные товара для создания на МП
                         mp_product_data = {
                             "article": product_doc['article'],
@@ -4948,8 +4952,9 @@ async def save_product_with_marketplaces(
                             "manufacturer": product_doc.get('manufacturer', ''),
                             "photos": photo_urls,
                             "characteristics": product_doc.get('characteristics', {}),
-                            "ozon_category_id": product_doc.get('marketplace_category_id') or 15621048,  # Повседневная обувь
-                            "ozon_type_id": product_doc.get('marketplace_type_id') or 91248  # Кроссовки
+                            "ozon_category_id": mp_category.get('category_id') or product_doc.get('marketplace_category_id') or 15621048,
+                            "ozon_type_id": mp_category.get('type_id') or product_doc.get('marketplace_type_id') or 91248,
+                            "required_attributes": mp_required_attrs  # Передаём обязательные атрибуты!
                         }
                         
                         # Создать карточку на маркетплейсе
