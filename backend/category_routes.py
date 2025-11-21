@@ -353,7 +353,7 @@ async def save_category_mappings(
     logger.info(f"[CategoryMapping] Saving mappings for product {product_id}")
     
     # Проверить товар
-    product = await db.product_catalog.find_one({
+    product = await server.db.product_catalog.find_one({
         "_id": product_id,
         "seller_id": current_user['_id']
     }, {"_id": 0})
