@@ -47,7 +47,7 @@ export default function MarketplaceCategorySelector({
     setError(null)
 
     try {
-      const response = await api.get(`/categories/search/${marketplace}?query=${encodeURIComponent(query)}`)
+      const response = await api.get(`/api/categories/search/${marketplace}?query=${encodeURIComponent(query)}`)
       setSearchResults(response.data.categories || [])
     } catch (err) {
       console.error('Failed to search categories:', err)
