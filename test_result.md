@@ -1420,12 +1420,12 @@ The "Активные связи:" section is working perfectly:
 ## Marketplace Category System Testing Results (COMPREHENSIVE E2E TEST)
 **Test Date**: 2025-11-21
 **Tester**: Testing Agent (E2)
-**Test User**: seller@test.com / password123
+**Test User**: testuser@test.com / password
 **Test Type**: End-to-End UI Testing + Backend API Testing
 
-### Test Summary: ✅ BACKEND API WORKING, ❌ FRONTEND API CALLS FAILING
+### Test Summary: ✅ BACKEND API WORKING, ❌ FRONTEND INTEGRATION ISSUES
 
-The marketplace category system has been comprehensively tested. The backend API endpoints are working correctly, but there are issues with the frontend API integration.
+The marketplace category system has been comprehensively tested. The backend API endpoints are working correctly, but there are critical issues with the frontend integration and product form access.
 
 ---
 
