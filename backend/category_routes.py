@@ -8,7 +8,8 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from bson import ObjectId
 import logging
-from server import get_current_user, db
+from server import get_current_user
+import server
 from connectors import get_connector, MarketplaceError
 
 router = APIRouter()
