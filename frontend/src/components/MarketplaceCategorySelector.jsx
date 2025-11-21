@@ -36,7 +36,7 @@ export default function MarketplaceCategorySelector({
     }
   }, [value])
 
-  // Поиск категорий
+  // Поиск категорий с debounce
   const searchCategories = async (query) => {
     if (!query || query.length < 2) {
       setSearchResults([])
@@ -48,7 +48,9 @@ export default function MarketplaceCategorySelector({
 
     try {
       const response = await api.get(`/api/categories/search/${marketplace}?query=${encodeURIComponent(query)}`)
-      setSearchResults(response.data.categories || [])
+      const categories = response.data.categories || []
+      console.log(`[CategorySelector] Found ${categories.length} categories for "${query}"`)
+      setSearchResults(categories)
     } catch (err) {
       console.error('Failed to search categories:', err)
       setError(err.response?.data?.detail || 'Ошибка поиска категорий')
@@ -57,6 +59,20 @@ export default function MarketplaceCategorySelector({
       setLoading(false)
     }
   }
+  
+  // Debounce для поиска
+  useEffect(() => {
+    if (!searchQuery || searchQuery.length < 2) {
+      setSearchResults([])
+      return
+    }
+    
+    const timeoutId = setTimeout(() => {
+      searchCategories(searchQuery)
+    }, 500)
+    
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery])
 
   // Выбор категории
   const selectCategory = async (category) => {
