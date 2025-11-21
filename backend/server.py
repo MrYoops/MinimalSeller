@@ -4863,6 +4863,8 @@ async def save_product_with_marketplaces(
     product_data = data.get('product', {})
     marketplaces = data.get('marketplaces', {})  # {wb: true, ozon: true, ...}
     marketplace_data = data.get('marketplace_data', {})  # {wb: {name, description, ...}, ozon: {...}}
+    category_mappings = data.get('category_mappings', {})  # {ozon: {category_id, type_id, ...}, wb: {...}}
+    required_attributes = data.get('required_attributes', {})  # {ozon: {attr_id: {value, value_id}, ...}, wb: {...}}
     
     # Обновить основной товар
     update_dict = {k: v for k, v in product_data.items() if v is not None}
@@ -4873,6 +4875,7 @@ async def save_product_with_marketplaces(
         
         # Сохранить данные для маркетплейсов
         update_dict['marketplace_specific_data'] = marketplace_data
+        update_dict['category_mappings'] = category_mappings  # Сохраняем категории
         update_dict['updated_at'] = datetime.utcnow()
         
         await db.product_catalog.update_one(
