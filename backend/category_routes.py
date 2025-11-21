@@ -176,7 +176,7 @@ async def get_category_attributes(
             "cached_at": datetime.utcnow()
         }
         
-        await db.category_attributes_cache.replace_one(
+        await server.db.category_attributes_cache.replace_one(
             {"cache_key": cache_key},
             cache_doc,
             upsert=True
