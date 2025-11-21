@@ -1011,24 +1011,6 @@ export default function CatalogProductFormV4() {
                       OZON - Специфичные поля
                     </h2>
                     
-                    {/* Выбор категории и обязательные характеристики */}
-                    <MarketplaceCategorySelectorV2
-                      marketplace="ozon"
-                      productName={product.name}
-                      selectedMarketplaces={Object.keys(selectedMarketplaces).filter(mp => selectedMarketplaces[mp])}
-                      allMarketplaceCategories={categoryMappings}
-                      onCategoryChange={(mp, category) => setCategoryMappings({ ...categoryMappings, [mp]: category })}
-                      onAttributesChange={(mp, attrId, value) => {
-                        setRequiredAttributes(prev => ({
-                          ...prev,
-                          [mp]: {
-                            ...prev[mp],
-                            [attrId]: value
-                          }
-                        }))
-                      }}
-                    />
-                    
                     <div>
                       <label className="block text-sm text-blue-300 mb-1">Название для Ozon</label>
                       <input
