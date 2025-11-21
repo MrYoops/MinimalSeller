@@ -133,6 +133,7 @@ async def get_category_details(
     Получить детали категории по ID
     """
     try:
+        category_system = get_category_system()
         category = await category_system.get_category_by_id(marketplace, category_id)
         
         if not category:
