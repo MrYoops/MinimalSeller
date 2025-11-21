@@ -177,10 +177,14 @@ export default function MarketplaceCategorySelector({
       <div className="relative">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Категория {marketplace.toUpperCase()}
-          {selectedCategory && (
+          {selectedCategory ? (
             <span className="ml-2 text-xs text-green-600">
               <FiCheck className="inline mr-1" />
               Выбрана: {selectedCategory.name}
+            </span>
+          ) : (
+            <span className="ml-2 text-xs text-blue-600">
+              💡 Система автоматически предложит категорию по названию товара
             </span>
           )}
         </label>
