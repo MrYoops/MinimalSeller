@@ -978,24 +978,6 @@ export default function CatalogProductFormV4() {
                       WILDBERRIES - Специфичные поля
                     </h2>
                     
-                    {/* Выбор категории и обязательные характеристики */}
-                    <MarketplaceCategorySelectorV2
-                      marketplace="wb"
-                      productName={product.name}
-                      selectedMarketplaces={Object.keys(selectedMarketplaces).filter(mp => selectedMarketplaces[mp])}
-                      allMarketplaceCategories={categoryMappings}
-                      onCategoryChange={(mp, category) => setCategoryMappings({ ...categoryMappings, [mp]: category })}
-                      onAttributesChange={(mp, attrId, value) => {
-                        setRequiredAttributes(prev => ({
-                          ...prev,
-                          [mp]: {
-                            ...prev[mp],
-                            [attrId]: value
-                          }
-                        }))
-                      }}
-                    />
-                    
                     <div>
                       <label className="block text-sm text-purple-300 mb-1">Название для WB</label>
                       <input
