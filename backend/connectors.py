@@ -298,26 +298,40 @@ class OzonConnector(BaseConnector):
             logger.info(f"[Ozon] Received {len(categories)} top-level categories")
             
             # Рекурсивно развернуть дерево категорий
-            def flatten_categories(cats, parent_name=''):
+            def flatten_categories(cats, parent_name='', parent_cat_id=''):
                 result = []
                 for cat in cats:
                     cat_id = cat.get('category_id', cat.get('description_category_id', ''))
                     cat_name = cat.get('category_name', 'Unnamed')
+                    type_id = cat.get('type_id', 0)
                     full_name = f"{parent_name} / {cat_name}" if parent_name else cat_name
                     
-                    result.append({
-                        "id": str(cat_id),
-                        "name": full_name,
-                        "type_id": cat.get('type_id', 0),
-                        "type_name": cat.get('type_name', ''),
-                        "disabled": cat.get('disabled', False),
-                        "marketplace": "ozon"
-                    })
+                    # Если есть category_id, это родительская категория
+                    if cat_id:
+                        result.append({
+                            "id": str(cat_id),
+                            "name": full_name,
+                            "type_id": type_id,
+                            "type_name": cat.get('type_name', ''),
+                            "disabled": cat.get('disabled', False),
+                            "marketplace": "ozon"
+                        })
+                        
+                        # Рекурсивно обработать дочерние категории с этим cat_id
+                        children = cat.get('children', [])
+                        if children:
+                            result.extend(flatten_categories(children, full_name, str(cat_id)))
                     
-                    # Рекурсивно обработать дочерние категории
-                    children = cat.get('children', [])
-                    if children:
-                        result.extend(flatten_categories(children, full_name))
+                    # Если нет category_id но есть type_id, это тип товара (конечная категория)
+                    elif type_id:
+                        result.append({
+                            "id": parent_cat_id,  # Используем ID родителя
+                            "name": full_name,
+                            "type_id": type_id,
+                            "type_name": cat_name,  # Имя типа
+                            "disabled": cat.get('disabled', False),
+                            "marketplace": "ozon"
+                        })
                 
                 return result
             
