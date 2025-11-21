@@ -12,9 +12,9 @@ from typing import Dict, Any, Optional
 # Backend URL from frontend .env
 BACKEND_URL = "https://marketbridge-8.preview.emergentagent.com/api"
 
-# Test credentials
-TEST_SELLER_EMAIL = "seller@minimalmod.com"
-TEST_SELLER_PASSWORD = "seller123"
+# Test credentials from review request
+TEST_SELLER_EMAIL = "testuser@test.com"
+TEST_SELLER_PASSWORD = "password"
 
 # Colors for output
 class Colors:
