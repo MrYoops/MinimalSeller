@@ -1265,7 +1265,9 @@ class BackendTester:
             return False
         
         # Use the attribute ID from review request or from previous test
-        attribute_id = getattr(self, 'test_attribute_id', 9163)  # 9163 is "Пол" attribute
+        attribute_id = getattr(self, 'test_attribute_id', None)
+        if not attribute_id:
+            attribute_id = 9163  # 9163 is "Пол" attribute from review request
         category_id = getattr(self, 'test_category_id', "15621048")
         type_id = getattr(self, 'test_type_id', 91248)
         
