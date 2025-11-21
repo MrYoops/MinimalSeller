@@ -41,7 +41,7 @@ async def search_marketplace_categories(
     logger.info(f"[Categories] Searching {marketplace} categories: '{query}'")
     
     # Получить API ключи продавца
-    profile = await db.seller_profiles.find_one({'user_id': current_user['_id']})
+    profile = await server.db.seller_profiles.find_one({'user_id': current_user['_id']})
     if not profile:
         raise HTTPException(status_code=404, detail="Seller profile not found")
     
