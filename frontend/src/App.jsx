@@ -66,10 +66,10 @@ function AppRoutes() {
         <ProtectedRoute><CatalogCategoriesPage /></ProtectedRoute>
       } />
       <Route path="/catalog/products/new" element={
-        <ProtectedRoute><CatalogProductFormPage /></ProtectedRoute>
+        <ProtectedRoute><CatalogProductFormV4 /></ProtectedRoute>
       } />
       <Route path="/catalog/products/:id/edit" element={
-        <ProtectedRoute><CatalogProductFormPage /></ProtectedRoute>
+        <ProtectedRoute><CatalogProductFormV4 /></ProtectedRoute>
       } />
       <Route path="/catalog/import" element={
         <ProtectedRoute><CatalogImportPage /></ProtectedRoute>
