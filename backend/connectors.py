@@ -400,47 +400,76 @@ class OzonConnector(BaseConnector):
             raise
     
     def _prepare_ozon_attributes(self, product_data: Dict[str, Any]) -> List[Dict]:
-        """Подготовить обязательные атрибуты для Ozon"""
+        """Подготовить атрибуты для Ozon из обязательных полей"""
         attributes = []
         
-        # 4298 - Российский размер
-        attributes.append({
-            "attribute_id": 4298,
-            "complex_id": 0,
-            "values": [{"value": "42"}]  # Дефолтный размер
-        })
+        # Получить обязательные атрибуты из product_data.required_attributes
+        required_attrs = product_data.get('required_attributes', {})
         
-        # 10096 - Цвет товара
-        color = product_data.get('gender', 'Бежевый')  # Используем что есть или дефолт
-        attributes.append({
-            "attribute_id": 10096,
-            "complex_id": 0,
-            "values": [{"value": color}]
-        })
+        # Если есть заполненные обязательные атрибуты, используем их
+        for attr_id_str, attr_data in required_attrs.items():
+            attr_id = int(attr_id_str)
+            
+            # Проверить формат значения
+            if isinstance(attr_data, dict):
+                value_id = attr_data.get('value_id')
+                value = attr_data.get('value')
+                
+                if value_id:
+                    # Dictionary-атрибут с value_id
+                    attributes.append({
+                        "attribute_id": attr_id,
+                        "complex_id": 0,
+                        "values": [{"id": value_id}]
+                    })
+                elif value:
+                    # Текстовый атрибут
+                    attributes.append({
+                        "attribute_id": attr_id,
+                        "complex_id": 0,
+                        "values": [{"value": str(value)}]
+                    })
+            elif attr_data:
+                # Простое значение
+                attributes.append({
+                    "attribute_id": attr_id,
+                    "complex_id": 0,
+                    "values": [{"value": str(attr_data)}]
+                })
         
-        # 9163 - Пол
-        gender = product_data.get('gender', 'Мужской')
-        attributes.append({
-            "attribute_id": 9163,
-            "complex_id": 0,
-            "values": [{"value": gender}]
-        })
-        
-        # 8292 - Объединить на одной карточке  
-        attributes.append({
-            "attribute_id": 8292,
-            "complex_id": 0,
-            "values": [{"value": "Да"}]
-        })
-        
-        # Добавить характеристики из product_data
-        for key, value in product_data.get('characteristics', {}).items():
+        # Если нет обязательных атрибутов, используем старую логику (для совместимости)
+        if not attributes:
+            logger.warning("[Ozon] No required_attributes provided, using defaults")
+            
+            # 4298 - Российский размер
             attributes.append({
-                "attribute_id": 0,
+                "attribute_id": 4298,
                 "complex_id": 0,
-                "values": [{"value": str(value)}]
+                "values": [{"value": "42"}]
+            })
+            
+            # 10096 - Цвет товара
+            attributes.append({
+                "attribute_id": 10096,
+                "complex_id": 0,
+                "values": [{"value": "Бежевый"}]
+            })
+            
+            # 9163 - Пол
+            attributes.append({
+                "attribute_id": 9163,
+                "complex_id": 0,
+                "values": [{"value": "Мужской"}]
+            })
+            
+            # 8292 - Объединить на одной карточке
+            attributes.append({
+                "attribute_id": 8292,
+                "complex_id": 0,
+                "values": [{"value": "Да"}]
             })
         
+        logger.info(f"[Ozon] Prepared {len(attributes)} attributes for product")
         return attributes
 
 
