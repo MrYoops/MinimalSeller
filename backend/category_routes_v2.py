@@ -97,6 +97,74 @@ async def get_preload_status(
 
 @router.get("/api/categories/marketplace/{marketplace}/search")
 async def search_marketplace_categories(
+    marketplace: str,
+    query: str = Query(..., min_length=1),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Поиск категорий - сначала в предзагруженных, если пусто - напрямую с API
+    Автопоиск по названию товара
+    """
+    logger.info(f"[CategorySearch] Searching {marketplace} categories: '{query}'")
+    
+    try:
+        category_system = get_category_system()
+        
+        # Сначала попробуем поискать в предзагруженных
+        categories = await category_system.search_categories(marketplace, query, limit=50)
+        
+        # Если в БД пусто - загружаем напрямую с API
+        if not categories:
+            logger.info(f"[CategorySearch] No cached categories, fetching from API...")
+            
+            # Получить API ключи
+            profile = await server.db.seller_profiles.find_one({'user_id': current_user['_id']})
+            if not profile:
+                raise HTTPException(status_code=404, detail="Seller profile not found")
+            
+            api_keys = profile.get('api_keys', [])
+            marketplace_key = next(
+                (k for k in api_keys if k['marketplace'] == marketplace),
+                None
+            )
+            
+            if not marketplace_key:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"No API key found for {marketplace}. Please add integration first."
+                )
+            
+            # Получить категории напрямую с API
+            connector = get_connector(
+                marketplace,
+                marketplace_key.get('client_id', ''),
+                marketplace_key['api_key']
+            )
+            
+            all_categories = await connector.get_categories()
+            
+            # Фильтровать по запросу
+            query_lower = query.lower()
+            categories = [
+                cat for cat in all_categories
+                if query_lower in cat.get('name', '').lower()
+            ][:50]
+            
+            logger.info(f"[CategorySearch] Loaded {len(categories)} categories from API")
+        
+        return {
+            "marketplace": marketplace,
+            "query": query,
+            "total": len(categories),
+            "categories": categories
+        }
+        
+    except MarketplaceError as e:
+        logger.error(f"[CategorySearch] Marketplace error: {e.message}")
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"[CategorySearch] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/api/categories/marketplace/{marketplace}/all")
