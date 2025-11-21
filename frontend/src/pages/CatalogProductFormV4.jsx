@@ -683,34 +683,27 @@ export default function CatalogProductFormV4() {
 
                 {/* ОСНОВНАЯ ИНФОРМАЦИЯ */}
                 <div className="bg-mm-secondary p-6 rounded-lg space-y-4">
-                  <div>
-                    <label className="block text-sm text-mm-text-secondary mb-1 uppercase">
-                      Категория <span className="text-red-400">*</span>
-                    </label>
-                    <div className="flex gap-2">
-                      <select
-                        value={product.category_id}
-                        onChange={(e) => handleProductChange('category_id', e.target.value)}
-                        required
-                        className="flex-1 px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
-                      >
-                        <option value="">Выберите категорию</option>
-                        {categories.map(cat => (
-                          <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => navigate('/catalog/categories')}
-                        className="px-4 py-2 bg-cyan-500 text-white hover:bg-cyan-600 rounded text-sm font-semibold"
-                      >
-                        СОЗДАТЬ
-                      </button>
-                      <button type="button" className="p-2 text-mm-cyan hover:bg-mm-cyan/10 rounded">
-                        <FiEdit size={18} />
-                      </button>
-                    </div>
-                  </div>
+                  {/* ЕДИНЫЙ СЕЛЕКТОР КАТЕГОРИИ */}
+                  <UnifiedCategorySelector
+                    productName={product.name}
+                    selectedMarketplaces={Object.keys(selectedMarketplaces).filter(mp => selectedMarketplaces[mp])}
+                    onCategorySelected={(mapping) => {
+                      console.log('[ProductForm] Category selected:', mapping)
+                      setProduct(prev => ({ ...prev, category_mapping_id: mapping.id }))
+                    }}
+                    onAttributesLoaded={(attributes) => {
+                      console.log('[ProductForm] Attributes loaded:', attributes)
+                      // Сохранить атрибуты для каждого МП
+                      setMarketplaceData(prev => {
+                        const updated = { ...prev }
+                        Object.keys(attributes).forEach(mp => {
+                          if (!updated[mp]) updated[mp] = {}
+                          updated[mp].attributes = attributes[mp]
+                        })
+                        return updated
+                      })
+                    }}
+                  />
 
                   <div>
                     <label className="block text-sm text-mm-text-secondary mb-1 uppercase">
