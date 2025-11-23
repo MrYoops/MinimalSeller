@@ -104,10 +104,8 @@ export default function UnifiedCategorySelector({
         // Для Ozon нужен type_id
         let url = `/api/categories/marketplace/${mp}/${categoryId}/attributes`
         
-        // Для Ozon попробуем найти type_id в mapping
-        if (mp === 'ozon') {
-          // Type ID можно получить из дополнительных данных маппинга
-          // Пока оставим без type_id, API сам разберется
+        if (mp === 'ozon' && mapping.marketplace_type_ids?.ozon) {
+          url += `?type_id=${mapping.marketplace_type_ids.ozon}`
         }
 
         const response = await api.get(url)
@@ -120,7 +118,8 @@ export default function UnifiedCategorySelector({
         for (const attr of attrs) {
           if (attr.dictionary_id > 0 || attr.type === 'Dictionary') {
             const attrId = attr.attribute_id || attr.id
-            await loadAttributeValues(mp, categoryId, attrId)
+            const typeId = mp === 'ozon' ? mapping.marketplace_type_ids?.ozon : null
+            await loadAttributeValues(mp, categoryId, attrId, typeId)
           }
         }
       } catch (err) {
