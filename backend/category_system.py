@@ -184,7 +184,7 @@ class CategorySystem:
             {
                 "internal_name": {"$regex": query, "$options": "i"}
             },
-            {"_id": 1, "internal_name": 1, "marketplace_categories": 1}
+            {"_id": 1, "internal_name": 1, "marketplace_categories": 1, "marketplace_type_ids": 1}
         ).limit(limit).to_list(length=limit)
         
         # Преобразовать _id в строку
