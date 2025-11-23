@@ -132,9 +132,13 @@ export default function UnifiedCategorySelector({
     setLoading(false)
   }
 
-  const loadAttributeValues = async (marketplace, categoryId, attributeId) => {
+  const loadAttributeValues = async (marketplace, categoryId, attributeId, typeId = null) => {
     try {
-      const url = `/api/categories/marketplace/${marketplace}/${categoryId}/attribute-values?attribute_id=${attributeId}`
+      let url = `/api/categories/marketplace/${marketplace}/${categoryId}/attribute-values?attribute_id=${attributeId}`
+      if (typeId) {
+        url += `&type_id=${typeId}`
+      }
+      
       const response = await api.get(url)
       const values = response.data.values || []
 
