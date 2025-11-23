@@ -4538,21 +4538,55 @@ async def import_from_marketplace(
                         if char_name:
                             characteristics_dict[char_name] = char_value
                     
+                    # АВТОМАТИЧЕСКОЕ СОЗДАНИЕ CATEGORY MAPPING
+                    category_name = mp_product.get('category', '')
+                    mapping_id = None
+                    
+                    if category_name:
+                        try:
+                            from category_system import CategorySystem
+                            category_system = CategorySystem(db)
+                            
+                            mapping_id = await category_system.create_or_update_mapping(
+                                internal_name=category_name,
+                                ozon_category_id=mp_product.get('category_id') if marketplace == 'ozon' else None,
+                                wb_category_id=mp_product.get('category_id') if marketplace == 'wb' else None,
+                                yandex_category_id=mp_product.get('category_id') if marketplace == 'yandex' else None
+                            )
+                            logger.info(f"✅ Auto-created category mapping: {mapping_id} for {category_name}")
+                        except Exception as e:
+                            logger.warning(f"Failed to create category mapping: {str(e)}")
+                    
                     product_data = {
                         "seller_id": str(current_user["_id"]),
                         "article": article,
                         "name": mp_product.get('name', article),
                         "brand": mp_product.get('brand', ''),
-                        "category_id": None,  # Категория устанавливается позже
+                        "category_id": None,
+                        "category_mapping_id": mapping_id,  # АВТОМАТИЧЕСКИ ЗАПОЛНЕНО
                         "description": mp_product.get('description', ''),
                         "status": mp_product.get('status', 'active'),
-                        "is_grouped": False,  # Пока простые карточки
+                        "is_grouped": False,
                         "group_by_color": False,
                         "group_by_size": False,
-                        "characteristics": characteristics_dict,  # Сохраняем характеристики
+                        "characteristics": characteristics_dict,
                         "marketplace_category_id": mp_product.get('category', ''),
                         "marketplace": marketplace,
-                        "updated_at": now
+                        "updated_at": now,
+                        
+                        # MARKETPLACE DATA С АВТОЗАПОЛНЕНИЕМ
+                        "marketplace_data": {
+                            marketplace: {
+                                "id": mp_product.get('id'),
+                                "barcode": mp_product.get('barcode', ''),
+                                "characteristics": characteristics_dict,
+                                "category": category_name,
+                                "category_id": mp_product.get('category_id', ''),
+                                "brand": mp_product.get('brand', ''),
+                                "size": mp_product.get('size', ''),
+                                "mapped_at": now.isoformat()
+                            }
+                        }
                     }
                     
                     if existing:
