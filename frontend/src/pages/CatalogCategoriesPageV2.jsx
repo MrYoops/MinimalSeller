@@ -20,6 +20,19 @@ export default function CatalogCategoriesPageV2() {
     wb_category_id: '',
     yandex_category_id: ''
   })
+  
+  // Search in modal
+  const [modalSearch, setModalSearch] = useState({
+    ozon: '',
+    wb: '',
+    yandex: ''
+  })
+  const [searchResults, setSearchResults] = useState({
+    ozon: [],
+    wb: [],
+    yandex: []
+  })
+  const [searching, setSearching] = useState({})
 
   useEffect(() => {
     loadAllCategories()
