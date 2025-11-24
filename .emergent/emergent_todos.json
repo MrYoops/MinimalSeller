@@ -1,15 +1,11 @@
 [
   {
-    "content": "Phase 1 POC: Backend - Create test script to verify suggestion → attributes → values flow",
+    "content": "Phase 1 POC: Test and fix core flow until fully working",
     "status": "completed"
   },
   {
-    "content": "Phase 1 POC: Test and fix core flow until fully working",
-    "status": "in_progress"
-  },
-  {
     "content": "Phase 2: Backend - Create internal_categories schema and CRUD API",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "content": "Phase 2: Backend - Implement merged attributes API",
