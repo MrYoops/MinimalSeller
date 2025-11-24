@@ -80,6 +80,9 @@ function AppRoutes() {
       <Route path="/admin/categories" element={
         <ProtectedRoute requiredRole="admin"><AdminCategoriesPage /></ProtectedRoute>
       } />
+      <Route path="/admin/internal-categories" element={
+        <ProtectedRoute requiredRole="admin"><InternalCategoriesPage /></ProtectedRoute>
+      } />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
