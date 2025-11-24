@@ -1,7 +1,7 @@
 [
   {
     "content": "Phase 1 POC: Backend - Add attribute-values endpoint to category_routes_v2",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "content": "Phase 1 POC: Backend - Implement category suggestion by product title (GET /api/categories/suggest)",
