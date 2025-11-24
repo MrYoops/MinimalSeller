@@ -1,0 +1,42 @@
+[
+  {
+    "content": "Phase 1 POC: Backend - Add attribute-values endpoint to category_routes_v2",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 1 POC: Backend - Implement category suggestion by product title (GET /api/categories/suggest)",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 1 POC: Backend - Create test script to verify suggestion → attributes → values flow",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 1 POC: Test and fix core flow until fully working",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: Backend - Create internal_categories schema and CRUD API",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: Backend - Implement merged attributes API",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: Frontend - Admin Categories Management Page",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: Frontend - Enhanced Product Form with auto-suggest and dynamic attributes",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: End-to-End Testing with testing_agent_v3",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: All user stories covered in Development and testing",
+    "status": "pending"
+  }
+]
