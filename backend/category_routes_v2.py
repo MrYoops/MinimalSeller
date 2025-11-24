@@ -457,10 +457,10 @@ async def suggest_category(
         category_system = get_category_system()
         suggestions = []
         
-        if matched_categories:
+        if matched_keywords:
             # Поиск по найденным ключевым словам
-            for cat_key in matched_categories:
-                mappings = await category_system.search_mappings(cat_key, limit=10)
+            for keyword in matched_keywords:
+                mappings = await category_system.search_mappings(keyword, limit=10)
                 suggestions.extend(mappings)
         else:
             # Общий поиск по всему названию (первые 3 слова)
