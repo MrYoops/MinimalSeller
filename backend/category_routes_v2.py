@@ -270,3 +270,223 @@ async def search_mappings(
         return {"query": query, "total": len(mappings), "mappings": mappings}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== ЗНАЧЕНИЯ АТРИБУТОВ (СЛОВАРИ) ==========
+
+@router.get("/api/categories/marketplace/{marketplace}/{category_id}/attribute-values")
+async def get_attribute_values(
+    marketplace: str,
+    category_id: str,
+    attribute_id: int,
+    type_id: Optional[int] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Получить словарь возможных значений для dictionary-атрибута
+    Например, для атрибута "Цвет товара" вернёт список цветов с value_id
+    """
+    logger.info(f"[AttributeValues] Getting values for {marketplace} attribute {attribute_id}")
+    
+    # Проверить кэш
+    cache_key = f"{marketplace}_{category_id}_{attribute_id}"
+    if type_id:
+        cache_key += f"_{type_id}"
+    
+    cached = await server.db.attribute_values_cache.find_one({"cache_key": cache_key})
+    
+    if cached:
+        cache_age = datetime.utcnow() - cached.get('cached_at', datetime.utcnow())
+        if cache_age.days < 7:
+            logger.info(f"[AttributeValues] Returning cached values (age: {cache_age.days} days)")
+            return {
+                "marketplace": marketplace,
+                "attribute_id": attribute_id,
+                "values": cached.get('values', []),
+                "cached": True
+            }
+    
+    # Получить API ключи
+    profile = await server.db.seller_profiles.find_one({'user_id': current_user['_id']})
+    if not profile:
+        raise HTTPException(status_code=404, detail="Seller profile not found")
+    
+    api_keys = profile.get('api_keys', [])
+    marketplace_key = next(
+        (k for k in api_keys if k['marketplace'] == marketplace),
+        None
+    )
+    
+    if not marketplace_key:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No API key found for {marketplace}"
+        )
+    
+    try:
+        values = []
+        
+        # Для Ozon используем /v1/description-category/attribute/values
+        if marketplace == 'ozon':
+            import httpx
+            
+            connector = get_connector(marketplace, marketplace_key.get('client_id', ''), marketplace_key['api_key'])
+            url = f"{connector.base_url}/v1/description-category/attribute/values"
+            
+            headers = {
+                "Client-Id": marketplace_key.get('client_id', ''),
+                "Api-Key": marketplace_key['api_key'],
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "description_category_id": int(category_id),
+                "type_id": type_id or 0,
+                "attribute_id": attribute_id,
+                "language": "DEFAULT",
+                "last_value_id": 0,
+                "limit": 1000
+            }
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(url, headers=headers, json=payload)
+                
+                if response.status_code != 200:
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"Ozon API error: {response.text}"
+                    )
+                
+                data = response.json()
+                values = data.get('result', [])
+        
+        elif marketplace == 'wb':
+            # Wildberries возвращает возможные значения в get_category_characteristics
+            connector = get_connector(
+                marketplace,
+                marketplace_key.get('client_id', ''),
+                marketplace_key['api_key']
+            )
+            
+            characteristics = await connector.get_category_characteristics(int(category_id))
+            
+            # Найти нужный атрибут
+            target_char = next(
+                (c for c in characteristics if c.get('id') == attribute_id),
+                None
+            )
+            
+            if target_char:
+                values = target_char.get('values', [])
+        
+        # Сохранить в кэш
+        cache_doc = {
+            "cache_key": cache_key,
+            "marketplace": marketplace,
+            "category_id": category_id,
+            "attribute_id": attribute_id,
+            "type_id": type_id,
+            "values": values,
+            "cached_at": datetime.utcnow()
+        }
+        
+        await server.db.attribute_values_cache.replace_one(
+            {"cache_key": cache_key},
+            cache_doc,
+            upsert=True
+        )
+        
+        logger.info(f"[AttributeValues] Cached {len(values)} values for attribute {attribute_id}")
+        
+        return {
+            "marketplace": marketplace,
+            "attribute_id": attribute_id,
+            "values": values,
+            "cached": False
+        }
+        
+    except Exception as e:
+        logger.error(f"[AttributeValues] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== ПОДБОР КАТЕГОРИИ ПО НАЗВАНИЮ ==========
+
+@router.get("/api/categories/suggest")
+async def suggest_category(
+    title: str = Query(..., min_length=2),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Предложить категорию на основе названия товара
+    Анализирует ключевые слова и возвращает релевантные категории
+    """
+    logger.info(f"[CategorySuggest] Analyzing title: '{title}'")
+    
+    try:
+        # Простой анализ: токенизация и поиск по ключевым словам
+        title_lower = title.lower()
+        
+        # Словарь синонимов для популярных категорий
+        keywords_map = {
+            'мышка': ['мышь', 'mouse', 'мышка', 'мышки'],
+            'клавиатура': ['клавиатура', 'keyboard', 'клава'],
+            'наушники': ['наушники', 'наушник', 'headphones', 'earphones', 'беспроводные наушники'],
+            'телефон': ['телефон', 'phone', 'смартфон', 'smartphone'],
+            'чехол': ['чехол', 'case', 'обложка'],
+            'зарядка': ['зарядка', 'charger', 'зарядное', 'блок питания'],
+            'кабель': ['кабель', 'cable', 'провод'],
+            'монитор': ['монитор', 'monitor', 'дисплей', 'экран'],
+            'ноутбук': ['ноутбук', 'laptop', 'notebook'],
+            'планшет': ['планшет', 'tablet', 'ipad'],
+            'часы': ['часы', 'watch', 'смарт-часы', 'smartwatch'],
+            'колонка': ['колонка', 'speaker', 'портативная колонка'],
+            'обувь': ['обувь', 'shoes', 'кроссовки', 'ботинки', 'туфли'],
+            'одежда': ['одежда', 'clothes', 'футболка', 'рубашка', 'куртка'],
+        }
+        
+        # Найти подходящие ключевые слова
+        matched_categories = []
+        for category_key, keywords in keywords_map.items():
+            for keyword in keywords:
+                if keyword in title_lower:
+                    matched_categories.append(category_key)
+                    break
+        
+        # Поиск в сопоставлениях (mappings)
+        category_system = get_category_system()
+        suggestions = []
+        
+        if matched_categories:
+            # Поиск по найденным ключевым словам
+            for cat_key in matched_categories:
+                mappings = await category_system.search_mappings(cat_key, limit=10)
+                suggestions.extend(mappings)
+        else:
+            # Общий поиск по всему названию (первые 3 слова)
+            words = title_lower.split()[:3]
+            for word in words:
+                if len(word) > 2:
+                    mappings = await category_system.search_mappings(word, limit=5)
+                    suggestions.extend(mappings)
+        
+        # Убрать дубликаты
+        seen = set()
+        unique_suggestions = []
+        for sugg in suggestions:
+            sugg_id = sugg.get('id')
+            if sugg_id not in seen:
+                seen.add(sugg_id)
+                unique_suggestions.append(sugg)
+        
+        logger.info(f"[CategorySuggest] Found {len(unique_suggestions)} suggestions")
+        
+        return {
+            "title": title,
+            "suggestions": unique_suggestions[:10],  # Топ 10
+            "total": len(unique_suggestions)
+        }
+        
+    except Exception as e:
+        logger.error(f"[CategorySuggest] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
