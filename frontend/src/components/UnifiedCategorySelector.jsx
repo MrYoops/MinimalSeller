@@ -265,7 +265,24 @@ export default function UnifiedCategorySelector({
                       })}
                     </div>
                   </button>
-                ))}\n              </div>\n            )}\n\n            {loading && <p className=\"text-sm text-gray-400 mt-2 flex items-center gap-2\"><FiRefreshCw className=\"animate-spin\" /> Поиск...</p>}\n            {error && (\n              <p className=\"text-sm text-red-400 mt-2 flex items-center gap-2\">\n                <FiAlertCircle /> {error}\n              </p>\n            )}\n          </div>\n        )}\n      </div>
+                ))}
+              </div>
+            )}
+
+            {loading && (
+              <p className="text-sm text-gray-400 mt-2 flex items-center gap-2">
+                <FiRefreshCw className="animate-spin" /> Поиск...
+              </p>
+            )}
+            
+            {error && (
+              <p className="text-sm text-red-400 mt-2 flex items-center gap-2">
+                <FiAlertCircle /> {error}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Attributes (after category selected) */}
       {selectedCategory && mergedAttributes.length > 0 && (
