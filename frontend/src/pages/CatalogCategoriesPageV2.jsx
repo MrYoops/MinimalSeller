@@ -78,6 +78,54 @@ export default function CatalogCategoriesPageV2() {
       wb_category_id: '',
       yandex_category_id: ''
     })
+    setModalSearch({ ozon: '', wb: '', yandex: '' })
+    setSearchResults({ ozon: [], wb: [], yandex: [] })
+  }
+  
+  // Search marketplace categories in modal
+  const searchInModal = async (marketplace) => {
+    const query = modalSearch[marketplace]
+    if (!query || query.length < 2) {
+      setSearchResults(prev => ({ ...prev, [marketplace]: [] }))
+      return
+    }
+    
+    setSearching(prev => ({ ...prev, [marketplace]: true }))
+    
+    try {
+      const response = await api.get(`/api/categories/marketplace/${marketplace}/search?query=${encodeURIComponent(query)}`)
+      const results = response.data.categories || []
+      setSearchResults(prev => ({ ...prev, [marketplace]: results.slice(0, 50) }))
+    } catch (error) {
+      console.error(`Search error for ${marketplace}:`, error)
+      alert(`Ошибка поиска: ${error.response?.data?.detail || error.message}`)
+    } finally {
+      setSearching(prev => ({ ...prev, [marketplace]: false }))
+    }
+  }
+  
+  const selectFromSearch = (marketplace, category) => {
+    if (marketplace === 'ozon') {
+      setCurrentMapping(prev => ({
+        ...prev,
+        ozon_category_id: category.category_id || category.id,
+        ozon_type_id: category.type_id || ''
+      }))
+    } else if (marketplace === 'wb') {
+      setCurrentMapping(prev => ({
+        ...prev,
+        wb_category_id: category.category_id || category.id
+      }))
+    } else if (marketplace === 'yandex') {
+      setCurrentMapping(prev => ({
+        ...prev,
+        yandex_category_id: category.category_id || category.id
+      }))
+    }
+    
+    // Clear search after selection
+    setModalSearch(prev => ({ ...prev, [marketplace]: '' }))
+    setSearchResults(prev => ({ ...prev, [marketplace]: [] }))
   }
 
   const handleSaveMapping = async () => {
