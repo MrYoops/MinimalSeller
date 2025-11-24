@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FiSearch, FiCheck, FiAlertCircle } from 'react-icons/fi'
+import { FiSearch, FiCheck, FiAlertCircle, FiRefreshCw } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
 
 /**
