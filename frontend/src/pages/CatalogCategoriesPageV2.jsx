@@ -398,47 +398,106 @@ export default function CatalogCategoriesPageV2() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-blue-400 mb-2 font-medium">Категория Ozon</label>
-                  <select
-                    value={currentMapping.ozon_category_id}
-                    onChange={(e) => {
-                      const selectedCat = categories.ozon.find(c => c.category_id === e.target.value)
-                      setCurrentMapping({ 
-                        ...currentMapping, 
-                        ozon_category_id: e.target.value,
-                        ozon_type_id: selectedCat?.type_id || ''
-                      })
-                    }}
-                    className="w-full px-3 py-3 bg-gray-800 border border-blue-500/50 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 outline-none"
+              {/* Ozon Search */}
+              <div className="border-2 border-blue-500/50 rounded-lg p-4 bg-blue-900/10">
+                <label className="block text-sm text-blue-400 mb-2 font-bold">
+                  🔵 Категория Ozon
+                  {currentMapping.ozon_category_id && (
+                    <span className="ml-2 px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">
+                      ✓ Выбрано: {currentMapping.ozon_category_id}
+                    </span>
+                  )}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={modalSearch.ozon}
+                    onChange={(e) => setModalSearch(prev => ({ ...prev, ozon: e.target.value }))}
+                    onKeyDown={(e) => e.key === 'Enter' && searchInModal('ozon')}
+                    placeholder="🔍 Поиск категории Ozon (мин. 2 символа)..."
+                    className="w-full px-4 py-3 pr-24 bg-gray-800 border border-blue-500/50 rounded-lg text-white placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 outline-none"
+                  />
+                  <button
+                    onClick={() => searchInModal('ozon')}
+                    disabled={searching.ozon || modalSearch.ozon.length < 2}
+                    className="absolute right-2 top-1.5 px-4 py-2 bg-blue-500 text-white rounded font-bold hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    <option value="" className="bg-gray-800 text-gray-400">Не выбрано</option>
-                    {categories.ozon.slice(0, 500).map((cat, idx) => (
-                      <option key={idx} value={cat.category_id} className="bg-gray-800 text-white">
-                        {cat.category_name} {cat.type_name ? `(${cat.type_name})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">Доступно {categories.ozon.length} категорий</p>
+                    {searching.ozon ? '⏳' : 'ИСКАТЬ'}
+                  </button>
                 </div>
+                
+                {searchResults.ozon.length > 0 && (
+                  <div className="mt-2 max-h-48 overflow-y-auto bg-gray-800 border-2 border-blue-500/50 rounded-lg">
+                    {searchResults.ozon.map((cat, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => selectFromSearch('ozon', cat)}
+                        className="w-full px-4 py-3 text-left hover:bg-blue-500/20 border-b border-gray-700 last:border-b-0 transition-colors"
+                      >
+                        <p className="font-medium text-white">{cat.category_name || cat.name}</p>
+                        <p className="text-xs text-blue-400 mt-1">
+                          ID: {cat.category_id || cat.id}
+                          {cat.type_id && ` | Type: ${cat.type_id}`}
+                          {cat.type_name && ` | ${cat.type_name}`}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {modalSearch.ozon && searchResults.ozon.length === 0 && !searching.ozon && (
+                  <p className="text-sm text-gray-400 mt-2">Нажмите "ИСКАТЬ" или Enter</p>
+                )}
+              </div>
 
-                <div>
-                  <label className="block text-sm text-purple-400 mb-2 font-medium">Категория WB</label>
-                  <select
-                    value={currentMapping.wb_category_id}
-                    onChange={(e) => setCurrentMapping({ ...currentMapping, wb_category_id: e.target.value })}
-                    className="w-full px-3 py-3 bg-gray-800 border border-purple-500/50 rounded-lg text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 outline-none"
+              {/* WB Search */}
+              <div className="border-2 border-purple-500/50 rounded-lg p-4 bg-purple-900/10">
+                <label className="block text-sm text-purple-400 mb-2 font-bold">
+                  🟣 Категория Wildberries
+                  {currentMapping.wb_category_id && (
+                    <span className="ml-2 px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded">
+                      ✓ Выбрано: {currentMapping.wb_category_id}
+                    </span>
+                  )}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={modalSearch.wb}
+                    onChange={(e) => setModalSearch(prev => ({ ...prev, wb: e.target.value }))}
+                    onKeyDown={(e) => e.key === 'Enter' && searchInModal('wb')}
+                    placeholder="🔍 Поиск категории WB (мин. 2 символа)..."
+                    className="w-full px-4 py-3 pr-24 bg-gray-800 border border-purple-500/50 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 outline-none"
+                  />
+                  <button
+                    onClick={() => searchInModal('wb')}
+                    disabled={searching.wb || modalSearch.wb.length < 2}
+                    className="absolute right-2 top-1.5 px-4 py-2 bg-purple-500 text-white rounded font-bold hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    <option value="" className="bg-gray-800 text-gray-400">Не выбрано</option>
-                    {categories.wb.slice(0, 200).map((cat, idx) => (
-                      <option key={idx} value={cat.id} className="bg-gray-800 text-white">
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">Доступно {categories.wb.length} категорий</p>
+                    {searching.wb ? '⏳' : 'ИСКАТЬ'}
+                  </button>
                 </div>
+                
+                {searchResults.wb.length > 0 && (
+                  <div className="mt-2 max-h-48 overflow-y-auto bg-gray-800 border-2 border-purple-500/50 rounded-lg">
+                    {searchResults.wb.map((cat, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => selectFromSearch('wb', cat)}
+                        className="w-full px-4 py-3 text-left hover:bg-purple-500/20 border-b border-gray-700 last:border-b-0 transition-colors"
+                      >
+                        <p className="font-medium text-white">{cat.category_name || cat.name}</p>
+                        <p className="text-xs text-purple-400 mt-1">
+                          ID: {cat.category_id || cat.id}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {modalSearch.wb && searchResults.wb.length === 0 && !searching.wb && (
+                  <p className="text-sm text-gray-400 mt-2">Нажмите "ИСКАТЬ" или Enter</p>
+                )}
               </div>
               
               {/* Preview */}
