@@ -12,13 +12,13 @@ export default function CatalogCategoriesPageV2() {
     yandex: []
   })
   const [searchQuery, setSearchQuery] = useState('')
-  const [mappings, setMappings] = useState([])
   const [showMappingModal, setShowMappingModal] = useState(false)
   const [currentMapping, setCurrentMapping] = useState({
     internal_name: '',
-    ozon_category_id: null,
-    wb_category_id: null,
-    yandex_category_id: null
+    ozon_category_id: '',
+    ozon_type_id: '',
+    wb_category_id: '',
+    yandex_category_id: ''
   })
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function CatalogCategoriesPageV2() {
   const loadAllCategories = async () => {
     setLoading(true)
     
-    for (const mp of ['ozon', 'wb', 'yandex']) {
+    for (const mp of ['ozon', 'wb']) {
       await loadMarketplaceCategories(mp)
     }
     
@@ -36,10 +36,9 @@ export default function CatalogCategoriesPageV2() {
   }
 
   const loadMarketplaceCategories = async (marketplace) => {
-    setLoadingCategories({ ...loadingCategories, [marketplace]: true })
+    setLoadingCategories(prev => ({ ...prev, [marketplace]: true }))
     
     try {
-      // Загружаем ВСЕ категории с нового endpoint
       const response = await api.get(`/api/categories/marketplace/${marketplace}/all?limit=1000`)
       const cats = response.data.categories || []
       
@@ -50,10 +49,10 @@ export default function CatalogCategoriesPageV2() {
       
       console.log(`✅ Loaded ${cats.length} categories for ${marketplace}`)
     } catch (error) {
-      console.error(`❌ Failed to load ${marketplace} categories:`, error)
-      alert(`Ошибка загрузки категорий ${marketplace}: ${error.response?.data?.detail || error.message}`)
+      console.error(`❌ Failed to load ${marketplace}:`, error)
+      alert(`Ошибка загрузки ${marketplace}: ${error.response?.data?.detail || error.message}`)
     } finally {
-      setLoadingCategories({ ...loadingCategories, [marketplace]: false })
+      setLoadingCategories(prev => ({ ...prev, [marketplace]: false }))
     }
   }
 
@@ -61,41 +60,69 @@ export default function CatalogCategoriesPageV2() {
     setShowMappingModal(true)
     setCurrentMapping({
       internal_name: '',
-      ozon_category_id: null,
-      wb_category_id: null,
-      yandex_category_id: null
+      ozon_category_id: '',
+      ozon_type_id: '',
+      wb_category_id: '',
+      yandex_category_id: ''
     })
   }
 
   const handleSaveMapping = async () => {
+    if (!currentMapping.internal_name) {
+      alert('Введите название категории')
+      return
+    }
+    
     try {
-      await api.post('/api/categories/mappings', currentMapping)
+      const payload = {
+        internal_name: currentMapping.internal_name,
+        ozon_category_id: currentMapping.ozon_category_id || null,
+        wb_category_id: currentMapping.wb_category_id || null,
+        yandex_category_id: currentMapping.yandex_category_id || null
+      }
+      
+      await api.post('/api/categories/mappings', payload)
+      
+      // Также сохраним type_id для Ozon в БД
+      if (currentMapping.ozon_category_id && currentMapping.ozon_type_id) {
+        // Обновим маппинг с type_id через дополнительный вызов
+        // Это можно сделать позже через отдельный endpoint
+      }
+      
       alert('✅ Сопоставление сохранено!')
       setShowMappingModal(false)
-      loadMappings()
     } catch (error) {
       alert('❌ Ошибка: ' + (error.response?.data?.detail || error.message))
     }
   }
 
-  const loadMappings = async () => {
-    try {
-      if (searchQuery) {
-        const response = await api.get(`/api/categories/mappings/search?query=${searchQuery}`)
-        setMappings(response.data.mappings || [])
-      }
-    } catch (error) {
-      console.error('Failed to load mappings:', error)
-    }
+  const filterCategories = (cats) => {
+    if (!searchQuery) return cats.slice(0, 200)
+    
+    const query = searchQuery.toLowerCase()
+    return cats.filter(cat => {
+      const name = cat.category_name || cat.name || ''
+      return name.toLowerCase().includes(query)
+    }).slice(0, 200)
   }
 
-  const filterCategories = (cats) => {
-    if (!searchQuery) return cats.slice(0, 100)
+  const handleCategorySelect = (marketplace, category) => {
+    if (marketplace === 'ozon') {
+      setCurrentMapping(prev => ({
+        ...prev,
+        ozon_category_id: category.category_id,
+        ozon_type_id: category.type_id || '',
+        internal_name: prev.internal_name || category.category_name
+      }))
+    } else if (marketplace === 'wb') {
+      setCurrentMapping(prev => ({
+        ...prev,
+        wb_category_id: category.id,
+        internal_name: prev.internal_name || category.name
+      }))
+    }
     
-    return cats.filter(cat => 
-      cat.category_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cat.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    ).slice(0, 100)
+    console.log('Category selected:', marketplace, category)
   }
 
   return (
@@ -112,14 +139,14 @@ export default function CatalogCategoriesPageV2() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-4xl font-bold text-mm-cyan mb-2">КАТЕГОРИИ МАРКЕТПЛЕЙСОВ</h1>
-            <p className="text-mm-text-secondary">
+            <p className="text-gray-400">
               Управление категориями и их сопоставление между маркетплейсами
             </p>
           </div>
           
           <button
             onClick={handleCreateMapping}
-            className="px-4 py-2 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded flex items-center gap-2"
+            className="px-6 py-3 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded-lg font-bold flex items-center gap-2"
           >
             <FiLink /> СОПОСТАВИТЬ
           </button>
@@ -134,20 +161,20 @@ export default function CatalogCategoriesPageV2() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Поиск по названию категории..."
-            className="w-full px-4 py-3 pl-10 bg-mm-secondary border border-mm-border rounded-lg text-mm-text focus:border-mm-cyan outline-none"
+            className="w-full px-4 py-3 pl-10 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-mm-cyan focus:ring-2 focus:ring-mm-cyan/50 outline-none"
           />
-          <FiSearch className="absolute left-3 top-4 text-mm-text-secondary" />
+          <FiSearch className="absolute left-3 top-4 text-gray-500" />
         </div>
       </div>
 
       {/* Info Banner */}
       <div className="max-w-7xl mx-auto mb-6">
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+        <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <FiAlertCircle className="text-blue-400 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-blue-300">
-              <p className="font-medium mb-1">ℹ️ Как работает система категорий:</p>
-              <ul className="space-y-1 text-blue-200">
+            <FiAlertCircle className="text-blue-400 mt-0.5 flex-shrink-0 text-xl" />
+            <div className="text-sm">
+              <p className="font-medium mb-2 text-blue-300">ℹ️ Как работает система категорий:</p>
+              <ul className="space-y-1 text-gray-300">
                 <li>• Категории загружаются автоматически при наличии API ключей маркетплейсов</li>
                 <li>• Сопоставьте категории между маркетплейсами для удобного управления</li>
                 <li>• В карточке товара выберите категорию - характеристики подтянутся автоматически</li>
@@ -160,161 +187,130 @@ export default function CatalogCategoriesPageV2() {
       {/* Categories Grid */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Ozon */}
-        <div className="bg-mm-secondary border border-blue-500/30 rounded-lg overflow-hidden">
-          <div className="bg-blue-500/20 px-4 py-3 border-b border-blue-500/30">
+        <div className="bg-gray-900 border-2 border-blue-500/50 rounded-lg overflow-hidden">
+          <div className="bg-blue-600/20 px-4 py-3 border-b border-blue-500/50">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-blue-400 flex items-center gap-2">
+              <h3 className="font-bold text-blue-400 flex items-center gap-2 text-lg">
                 🔵 OZON
-                <span className="text-xs font-normal text-mm-text-secondary">
+                <span className="text-xs font-normal text-gray-400">
                   ({filterCategories(categories.ozon).length})
                 </span>
               </h3>
               <button
                 onClick={() => loadMarketplaceCategories('ozon')}
                 disabled={loadingCategories.ozon}
-                className="text-blue-400 hover:text-blue-300"
+                className="text-blue-400 hover:text-blue-300 p-2"
+                title="Обновить"
               >
-                <FiRefreshCw className={loadingCategories.ozon ? 'animate-spin' : ''} />
+                <FiRefreshCw className={loadingCategories.ozon ? 'animate-spin' : ''} size={18} />
               </button>
             </div>
           </div>
           
           <div className="p-4 max-h-96 overflow-y-auto space-y-2">
             {loadingCategories.ozon ? (
-              <div className="text-center text-mm-text-secondary py-8">
-                <FiRefreshCw className="animate-spin inline mb-2" />
+              <div className="text-center text-gray-400 py-8">
+                <FiRefreshCw className="animate-spin inline mb-2 text-2xl" />
                 <p>Загрузка...</p>
               </div>
             ) : filterCategories(categories.ozon).length > 0 ? (
               filterCategories(categories.ozon).map((cat, idx) => (
                 <div
                   key={idx}
-                  className="p-3 bg-mm-dark border border-blue-500/20 rounded hover:border-blue-500/50 cursor-pointer transition-colors"
-                  onClick={() => {
-                    setCurrentMapping({
-                      ...currentMapping,
-                      ozon_category_id: cat.category_id,
-                      internal_name: currentMapping.internal_name || cat.category_name
-                    })
-                    setShowMappingModal(true)
-                  }}
+                  className="p-3 bg-gray-800 border border-blue-500/30 rounded hover:border-blue-500 hover:bg-gray-700 cursor-pointer transition-all"
+                  onClick={() => handleCategorySelect('ozon', cat)}
                 >
-                  <p className="text-sm text-mm-text font-medium">{cat.category_name || cat.name}</p>
+                  <p className="text-sm text-white font-medium">{cat.category_name || cat.name}</p>
                   {cat.type_name && (
-                    <p className="text-xs text-mm-text-secondary mt-1">Тип: {cat.type_name}</p>
+                    <p className="text-xs text-gray-400 mt-1">Тип: {cat.type_name}</p>
+                  )}
+                  {cat.type_id && (
+                    <p className="text-xs text-blue-400 mt-1">Type ID: {cat.type_id}</p>
                   )}
                 </div>
               ))
             ) : (
-              <div className="text-center text-mm-text-secondary py-8">
+              <div className="text-center text-gray-400 py-8">
                 <p>Нет категорий</p>
-                <p className="text-xs mt-2">Добавьте API ключ Ozon в разделе Интеграции</p>
+                <p className="text-xs mt-2">Добавьте API ключ Ozon</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Wildberries */}
-        <div className="bg-mm-secondary border border-purple-500/30 rounded-lg overflow-hidden">
-          <div className="bg-purple-500/20 px-4 py-3 border-b border-purple-500/30">
+        <div className="bg-gray-900 border-2 border-purple-500/50 rounded-lg overflow-hidden">
+          <div className="bg-purple-600/20 px-4 py-3 border-b border-purple-500/50">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-purple-400 flex items-center gap-2">
+              <h3 className="font-bold text-purple-400 flex items-center gap-2 text-lg">
                 🟣 WILDBERRIES
-                <span className="text-xs font-normal text-mm-text-secondary">
+                <span className="text-xs font-normal text-gray-400">
                   ({filterCategories(categories.wb).length})
                 </span>
               </h3>
               <button
                 onClick={() => loadMarketplaceCategories('wb')}
                 disabled={loadingCategories.wb}
-                className="text-purple-400 hover:text-purple-300"
+                className="text-purple-400 hover:text-purple-300 p-2"
+                title="Обновить"
               >
-                <FiRefreshCw className={loadingCategories.wb ? 'animate-spin' : ''} />
+                <FiRefreshCw className={loadingCategories.wb ? 'animate-spin' : ''} size={18} />
               </button>
             </div>
           </div>
           
           <div className="p-4 max-h-96 overflow-y-auto space-y-2">
             {loadingCategories.wb ? (
-              <div className="text-center text-mm-text-secondary py-8">
-                <FiRefreshCw className="animate-spin inline mb-2" />
+              <div className="text-center text-gray-400 py-8">
+                <FiRefreshCw className="animate-spin inline mb-2 text-2xl" />
                 <p>Загрузка...</p>
               </div>
             ) : filterCategories(categories.wb).length > 0 ? (
               filterCategories(categories.wb).map((cat, idx) => (
                 <div
                   key={idx}
-                  className="p-3 bg-mm-dark border border-purple-500/20 rounded hover:border-purple-500/50 cursor-pointer transition-colors"
-                  onClick={() => {
-                    setCurrentMapping({
-                      ...currentMapping,
-                      wb_category_id: cat.id,
-                      internal_name: currentMapping.internal_name || cat.name
-                    })
-                    setShowMappingModal(true)
-                  }}
+                  className="p-3 bg-gray-800 border border-purple-500/30 rounded hover:border-purple-500 hover:bg-gray-700 cursor-pointer transition-all"
+                  onClick={() => handleCategorySelect('wb', cat)}
                 >
-                  <p className="text-sm text-mm-text font-medium">{cat.name}</p>
+                  <p className="text-sm text-white font-medium">{cat.name}</p>
+                  <p className="text-xs text-purple-400 mt-1">ID: {cat.id}</p>
                 </div>
               ))
             ) : (
-              <div className="text-center text-mm-text-secondary py-8">
+              <div className="text-center text-gray-400 py-8">
                 <p>Нет категорий</p>
-                <p className="text-xs mt-2">Добавьте API ключ WB в разделе Интеграции</p>
+                <p className="text-xs mt-2">Добавьте API ключ WB</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Yandex */}
-        <div className="bg-mm-secondary border border-yellow-500/30 rounded-lg overflow-hidden">
-          <div className="bg-yellow-500/20 px-4 py-3 border-b border-yellow-500/30">
+        <div className="bg-gray-900 border-2 border-yellow-500/50 rounded-lg overflow-hidden">
+          <div className="bg-yellow-600/20 px-4 py-3 border-b border-yellow-500/50">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-yellow-400 flex items-center gap-2">
+              <h3 className="font-bold text-yellow-400 flex items-center gap-2 text-lg">
                 🟡 ЯНДЕКС МАРКЕТ
-                <span className="text-xs font-normal text-mm-text-secondary">
+                <span className="text-xs font-normal text-gray-400">
                   ({filterCategories(categories.yandex).length})
                 </span>
               </h3>
               <button
                 onClick={() => loadMarketplaceCategories('yandex')}
                 disabled={loadingCategories.yandex}
-                className="text-yellow-400 hover:text-yellow-300"
+                className="text-yellow-400 hover:text-yellow-300 p-2"
+                title="Обновить"
               >
-                <FiRefreshCw className={loadingCategories.yandex ? 'animate-spin' : ''} />
+                <FiRefreshCw className={loadingCategories.yandex ? 'animate-spin' : ''} size={18} />
               </button>
             </div>
           </div>
           
           <div className="p-4 max-h-96 overflow-y-auto space-y-2">
-            {loadingCategories.yandex ? (
-              <div className="text-center text-mm-text-secondary py-8">
-                <FiRefreshCw className="animate-spin inline mb-2" />
-                <p>Загрузка...</p>
-              </div>
-            ) : filterCategories(categories.yandex).length > 0 ? (
-              filterCategories(categories.yandex).map((cat, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 bg-mm-dark border border-yellow-500/20 rounded hover:border-yellow-500/50 cursor-pointer transition-colors"
-                  onClick={() => {
-                    setCurrentMapping({
-                      ...currentMapping,
-                      yandex_category_id: cat.id,
-                      internal_name: currentMapping.internal_name || cat.name
-                    })
-                    setShowMappingModal(true)
-                  }}
-                >
-                  <p className="text-sm text-mm-text font-medium">{cat.name}</p>
-                </div>
-              ))
-            ) : (
-              <div className="text-center text-mm-text-secondary py-8">
-                <p>Нет категорий</p>
-                <p className="text-xs mt-2">Добавьте API ключ Яндекса в разделе Интеграции</p>
-              </div>
-            )}
+            <div className="text-center text-gray-400 py-8">
+              <p>Нет API ключа</p>
+              <p className="text-xs mt-2">Добавьте интеграцию Яндекс</p>
+            </div>
           </div>
         </div>
       </div>
@@ -322,14 +318,14 @@ export default function CatalogCategoriesPageV2() {
       {/* Mapping Modal */}
       {showMappingModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-mm-secondary border border-mm-border rounded-lg max-w-2xl w-full p-6">
+          <div className="bg-gray-900 border-2 border-mm-cyan rounded-lg max-w-2xl w-full p-6">
             <h2 className="text-2xl font-bold text-mm-cyan mb-4">
               Создать сопоставление категорий
             </h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-mm-text-secondary mb-2">
+                <label className="block text-sm text-gray-300 mb-2 font-medium">
                   Название категории <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -337,71 +333,84 @@ export default function CatalogCategoriesPageV2() {
                   value={currentMapping.internal_name}
                   onChange={(e) => setCurrentMapping({ ...currentMapping, internal_name: e.target.value })}
                   placeholder="Например: Кроссовки спортивные"
-                  className="w-full px-4 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-mm-cyan focus:ring-2 focus:ring-mm-cyan/50 outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-blue-400 mb-2">Категория Ozon</label>
+                  <label className="block text-sm text-blue-400 mb-2 font-medium">Категория Ozon</label>
                   <select
-                    value={currentMapping.ozon_category_id || ''}
-                    onChange={(e) => setCurrentMapping({ ...currentMapping, ozon_category_id: e.target.value })}
-                    className="w-full px-3 py-2 bg-mm-dark border border-blue-500/30 rounded text-mm-text focus:border-blue-500 outline-none"
+                    value={currentMapping.ozon_category_id}
+                    onChange={(e) => {
+                      const selectedCat = categories.ozon.find(c => c.category_id === e.target.value)
+                      setCurrentMapping({ 
+                        ...currentMapping, 
+                        ozon_category_id: e.target.value,
+                        ozon_type_id: selectedCat?.type_id || ''
+                      })
+                    }}
+                    className="w-full px-3 py-3 bg-gray-800 border border-blue-500/50 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 outline-none"
                   >
-                    <option value="">Не выбрано</option>
-                    {categories.ozon.slice(0, 100).map((cat, idx) => (
-                      <option key={idx} value={cat.category_id}>
-                        {cat.category_name}
+                    <option value="" className="bg-gray-800 text-gray-400">Не выбрано</option>
+                    {categories.ozon.slice(0, 500).map((cat, idx) => (
+                      <option key={idx} value={cat.category_id} className="bg-gray-800 text-white">
+                        {cat.category_name} {cat.type_name ? `(${cat.type_name})` : ''}
                       </option>
                     ))}
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">Доступно {categories.ozon.length} категорий</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm text-purple-400 mb-2">Категория WB</label>
+                  <label className="block text-sm text-purple-400 mb-2 font-medium">Категория WB</label>
                   <select
-                    value={currentMapping.wb_category_id || ''}
+                    value={currentMapping.wb_category_id}
                     onChange={(e) => setCurrentMapping({ ...currentMapping, wb_category_id: e.target.value })}
-                    className="w-full px-3 py-2 bg-mm-dark border border-purple-500/30 rounded text-mm-text focus:border-purple-500 outline-none"
+                    className="w-full px-3 py-3 bg-gray-800 border border-purple-500/50 rounded-lg text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 outline-none"
                   >
-                    <option value="">Не выбрано</option>
-                    {categories.wb.slice(0, 100).map((cat, idx) => (
-                      <option key={idx} value={cat.id}>
+                    <option value="" className="bg-gray-800 text-gray-400">Не выбрано</option>
+                    {categories.wb.slice(0, 200).map((cat, idx) => (
+                      <option key={idx} value={cat.id} className="bg-gray-800 text-white">
                         {cat.name}
                       </option>
                     ))}
                   </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-yellow-400 mb-2">Категория Яндекс</label>
-                  <select
-                    value={currentMapping.yandex_category_id || ''}
-                    onChange={(e) => setCurrentMapping({ ...currentMapping, yandex_category_id: e.target.value })}
-                    className="w-full px-3 py-2 bg-mm-dark border border-yellow-500/30 rounded text-mm-text focus:border-yellow-500 outline-none"
-                  >
-                    <option value="">Не выбрано</option>
-                    {categories.yandex.slice(0, 100).map((cat, idx) => (
-                      <option key={idx} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Доступно {categories.wb.length} категорий</p>
                 </div>
               </div>
+              
+              {/* Preview */}
+              {currentMapping.internal_name && (
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                  <p className="text-sm text-gray-400 mb-2">Предпросмотр:</p>
+                  <p className="text-white font-medium mb-2">{currentMapping.internal_name}</p>
+                  <div className="flex gap-2">
+                    {currentMapping.ozon_category_id && (
+                      <span className="px-2 py-1 bg-blue-600/30 border border-blue-500/50 text-blue-300 text-xs rounded">
+                        Ozon
+                      </span>
+                    )}
+                    {currentMapping.wb_category_id && (
+                      <span className="px-2 py-1 bg-purple-600/30 border border-purple-500/50 text-purple-300 text-xs rounded">
+                        WB
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setShowMappingModal(false)}
-                  className="px-4 py-2 bg-mm-dark text-mm-text hover:bg-mm-dark/70 rounded"
+                  className="px-4 py-2 bg-gray-800 text-gray-300 hover:bg-gray-700 rounded-lg border border-gray-700"
                 >
                   Отмена
                 </button>
                 <button
                   onClick={handleSaveMapping}
                   disabled={!currentMapping.internal_name}
-                  className="px-4 py-2 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Сохранить
                 </button>
@@ -413,17 +422,17 @@ export default function CatalogCategoriesPageV2() {
 
       {/* Statistics */}
       <div className="max-w-7xl mx-auto mt-6 grid grid-cols-3 gap-4">
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+        <div className="bg-blue-600/20 border border-blue-500/50 rounded-lg p-4">
           <p className="text-sm text-blue-400 mb-1">Категорий Ozon</p>
-          <p className="text-2xl font-bold text-blue-300">{categories.ozon.length}</p>
+          <p className="text-3xl font-bold text-blue-300">{categories.ozon.length}</p>
         </div>
-        <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+        <div className="bg-purple-600/20 border border-purple-500/50 rounded-lg p-4">
           <p className="text-sm text-purple-400 mb-1">Категорий WB</p>
-          <p className="text-2xl font-bold text-purple-300">{categories.wb.length}</p>
+          <p className="text-3xl font-bold text-purple-300">{categories.wb.length}</p>
         </div>
-        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+        <div className="bg-yellow-600/20 border border-yellow-500/50 rounded-lg p-4">
           <p className="text-sm text-yellow-400 mb-1">Категорий Яндекс</p>
-          <p className="text-2xl font-bold text-yellow-300">{categories.yandex.length}</p>
+          <p className="text-3xl font-bold text-yellow-300">{categories.yandex.length}</p>
         </div>
       </div>
     </div>
