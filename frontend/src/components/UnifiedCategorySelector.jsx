@@ -193,12 +193,12 @@ export default function UnifiedCategorySelector({
     <div className="space-y-6">
       {/* Category Search */}
       <div className="bg-mm-secondary border border-mm-border rounded-lg p-4">
-        <label className="block text-sm font-medium text-mm-text mb-2">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
           КАТЕГОРИЯ <span className="text-red-400">*</span>
         </label>
         
         {selectedCategory ? (
-          <div className="flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+          <div className="flex items-center justify-between bg-green-900/30 border border-green-500/50 rounded-lg p-3">
             <div>
               <p className="text-green-400 font-medium flex items-center gap-2">
                 <FiCheck /> {selectedCategory.internal_name}
@@ -208,7 +208,7 @@ export default function UnifiedCategorySelector({
                   if (!catId) return null
                   const colors = mpColors[mp]
                   return (
-                    <span key={mp} className={`text-xs px-2 py-1 rounded ${colors?.badge || 'bg-gray-100'}`}>
+                    <span key={mp} className={`text-xs px-2 py-1 rounded font-medium ${colors?.badge || 'bg-gray-700 text-gray-300'}`}>
                       {mpNames[mp]?.toUpperCase()}
                     </span>
                   )
@@ -220,59 +220,52 @@ export default function UnifiedCategorySelector({
                 setSelectedCategory(null)
                 setAllAttributes({})
               }}
-              className="text-mm-text-secondary hover:text-mm-text"
+              className="text-gray-400 hover:text-white px-3 py-1 bg-gray-800 rounded border border-gray-700 hover:border-gray-600"
             >
               Изменить
             </button>
           </div>
         ) : (
-          <>
+          <div className="relative">
             <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Начните вводить название категории..."
-                className="w-full px-4 py-2 pl-10 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
+                className="w-full px-4 py-3 pl-10 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-mm-cyan focus:ring-2 focus:ring-mm-cyan/50 outline-none"
               />
-              <FiSearch className="absolute left-3 top-3 text-mm-text-secondary" />
+              <FiSearch className="absolute left-3 top-3.5 text-gray-500" />
             </div>
 
             {/* Search Results */}
             {searchResults.length > 0 && (
-              <div className="absolute z-10 mt-2 w-full bg-mm-secondary border border-mm-border rounded-lg shadow-xl max-h-64 overflow-y-auto">
+              <div className="absolute z-50 mt-2 w-full bg-gray-800 border-2 border-mm-cyan rounded-lg shadow-2xl max-h-72 overflow-y-auto">
+                <div className="p-2">
+                  <p className="text-xs text-gray-400 px-2 py-1 mb-1">
+                    Найдено: {searchResults.length}
+                  </p>
+                </div>
                 {searchResults.map((mapping, idx) => (
                   <button
                     key={idx}
                     onClick={() => selectCategory(mapping)}
-                    className="w-full px-4 py-3 text-left hover:bg-mm-dark border-b border-mm-border last:border-b-0 transition-colors"
+                    className="w-full px-4 py-3 text-left hover:bg-mm-cyan/20 border-b border-gray-700 last:border-b-0 transition-colors\"
                   >
-                    <p className="font-medium text-mm-text">{mapping.internal_name}</p>
+                    <p className="font-medium text-white mb-1">{mapping.internal_name}</p>
                     <div className="flex gap-2 mt-1">
                       {Object.entries(mapping.marketplace_categories || {}).map(([mp, catId]) => {
                         if (!catId) return null
                         const colors = mpColors[mp]
                         return (
-                          <span key={mp} className={`text-xs px-2 py-0.5 rounded ${colors?.badge || 'bg-gray-600'}`}>
+                          <span key={mp} className={`text-xs px-2 py-0.5 rounded font-medium ${colors?.badge || 'bg-gray-700 text-gray-300'}`}>
                             {mpNames[mp]}
                           </span>
                         )
                       })}
                     </div>
                   </button>
-                ))}
-              </div>
-            )}
-
-            {loading && <p className="text-sm text-mm-text-secondary mt-2">Поиск...</p>}
-            {error && (
-              <p className="text-sm text-red-400 mt-2 flex items-center gap-2">
-                <FiAlertCircle /> {error}
-              </p>
-            )}
-          </>
-        )}
-      </div>
+                ))}\n              </div>\n            )}\n\n            {loading && <p className=\"text-sm text-gray-400 mt-2 flex items-center gap-2\"><FiRefreshCw className=\"animate-spin\" /> Поиск...</p>}\n            {error && (\n              <p className=\"text-sm text-red-400 mt-2 flex items-center gap-2\">\n                <FiAlertCircle /> {error}\n              </p>\n            )}\n          </div>\n        )}\n      </div>
 
       {/* Attributes (after category selected) */}
       {selectedCategory && mergedAttributes.length > 0 && (
