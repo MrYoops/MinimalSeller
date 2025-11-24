@@ -1,15 +1,15 @@
 [
   {
     "content": "Phase 1 POC: Backend - Add attribute-values endpoint to category_routes_v2",
-    "status": "in_progress"
+    "status": "completed"
   },
   {
     "content": "Phase 1 POC: Backend - Implement category suggestion by product title (GET /api/categories/suggest)",
-    "status": "pending"
+    "status": "completed"
   },
   {
     "content": "Phase 1 POC: Backend - Create test script to verify suggestion → attributes → values flow",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "content": "Phase 1 POC: Test and fix core flow until fully working",
