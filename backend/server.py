@@ -1715,6 +1715,13 @@ try:
 except Exception as e:
     logger.error(f"Failed to include category_routes_v2: {e}")
 
+try:
+    from internal_category_routes import router as internal_category_router
+    app.include_router(internal_category_router)
+    logger.info("Internal category routes included")
+except Exception as e:
+    logger.error(f"Failed to include internal_category_routes: {e}")
+
 # Skip marketplace_warehouse_routes for now (requires proper get_current_user setup)
 # try:
 #     from marketplace_warehouse_routes import router as marketplace_warehouse_router
