@@ -1,15 +1,11 @@
 [
   {
-    "content": "Phase 1 POC: Test and fix core flow until fully working",
+    "content": "Phase 2: Backend - Create internal_categories schema and CRUD API",
     "status": "completed"
   },
   {
-    "content": "Phase 2: Backend - Create internal_categories schema and CRUD API",
-    "status": "in_progress"
-  },
-  {
     "content": "Phase 2: Backend - Implement merged attributes API",
-    "status": "pending"
+    "status": "completed"
   },
   {
     "content": "Phase 2: Frontend - Admin Categories Management Page",
