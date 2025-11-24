@@ -16,6 +16,7 @@ import CatalogCategoriesPageV2 from './pages/CatalogCategoriesPageV2'
 import CatalogProductFormV4 from './pages/CatalogProductFormV4'
 import CatalogProductFormPage from './pages/CatalogProductFormPage' // Старая форма
 import CatalogImportPage from './pages/CatalogImportPage'
+import InternalCategoriesPage from './pages/InternalCategoriesPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 
