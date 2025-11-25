@@ -52,20 +52,43 @@ export default function CatalogCategoriesPageV2() {
     setLoadingCategories(prev => ({ ...prev, [marketplace]: true }))
     
     try {
-      const response = await api.get(`/api/categories/marketplace/${marketplace}/all?limit=1000`)
-      const cats = response.data.categories || []
+      // Для WB используем кэш
+      const url = marketplace === 'wb' 
+        ? `/api/categories/wb/cached`
+        : `/api/categories/marketplace/${marketplace}?limit=1000`
       
+      const response = await api.get(url)
       setCategories(prev => ({
         ...prev,
-        [marketplace]: cats
+        [marketplace]: response.data.categories || []
       }))
-      
-      console.log(`✅ Loaded ${cats.length} categories for ${marketplace}`)
     } catch (error) {
-      console.error(`❌ Failed to load ${marketplace}:`, error)
-      alert(`Ошибка загрузки ${marketplace}: ${error.response?.data?.detail || error.message}`)
+      console.error(`Failed to load ${marketplace} categories:`, error)
+      alert(`Ошибка загрузки категорий ${marketplace}`)
     } finally {
       setLoadingCategories(prev => ({ ...prev, [marketplace]: false }))
+    }
+  }
+  
+  const preloadWBCategories = async () => {
+    if (!confirm('Загрузить категории Wildberries?\n\nЭто займет 10-20 секунд.')) return
+    
+    setLoading(true)
+    try {
+      const response = await api.post('/api/categories/wb/preload')
+      
+      if (response.data.success) {
+        alert(`✅ ${response.data.message}`)
+        // Перезагрузить категории WB
+        await loadMarketplaceCategories('wb')
+      } else {
+        alert(`❌ Ошибка: ${response.data.error}`)
+      }
+    } catch (error) {
+      console.error('WB preload error:', error)
+      alert(`❌ Ошибка загрузки: ${error.response?.data?.detail || error.message}`)
+    } finally {
+      setLoading(false)
     }
   }
 
