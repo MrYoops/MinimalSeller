@@ -918,6 +918,20 @@ export default function CatalogProductFormV4() {
                   </div>
                 </div>
 
+                {/* ХАРАКТЕРИСТИКИ ТОВАРА */}
+                <div className="bg-mm-secondary p-6 rounded-lg">
+                  <h2 className="text-sm font-bold text-mm-text-secondary uppercase mb-4 flex items-center gap-2">
+                    <span>Характеристики товара</span>
+                    <span className="text-xs font-normal text-gray-400">
+                      ({Object.keys(product.characteristics || {}).length} шт)
+                    </span>
+                  </h2>
+                  <ProductCharacteristics
+                    characteristics={product.characteristics || {}}
+                    onChange={(newCharacteristics) => handleProductChange('characteristics', newCharacteristics)}
+                  />
+                </div>
+
                 {/* ПОЛ И СЕЗОН */}
                 <div className="bg-mm-secondary p-6 rounded-lg space-y-4">
                   <div>
