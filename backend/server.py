@@ -4545,20 +4545,35 @@ async def import_from_marketplace(
                         if char_name:
                             characteristics_dict[char_name] = char_value
                     
-                    # АВТОМАТИЧЕСКОЕ СОЗДАНИЕ CATEGORY MAPPING
+                    # АВТОМАТИЧЕСКОЕ СОЗДАНИЕ CATEGORY MAPPING + WB SUBJECT
                     category_name = mp_product.get('category', '')
+                    category_id = mp_product.get('category_id', '')
                     mapping_id = None
                     
-                    if category_name:
+                    # Для WB: сохраняем subject в кэш
+                    if marketplace == 'wb' and category_id and category_name:
+                        try:
+                            from wb_category_preload import WBCategoryManager
+                            wb_manager = WBCategoryManager(db)
+                            await wb_manager.add_subject_from_product(
+                                subject_id=int(category_id),
+                                subject_name=category_name
+                            )
+                            logger.info(f"✅ Auto-saved WB subject: {category_id} - {category_name}")
+                        except Exception as e:
+                            logger.warning(f"Failed to save WB subject: {str(e)}")
+                    
+                    # Создаем mapping
+                    if category_name and category_id:
                         try:
                             from category_system import CategorySystem
                             category_system = CategorySystem(db)
                             
                             mapping_id = await category_system.create_or_update_mapping(
                                 internal_name=category_name,
-                                ozon_category_id=mp_product.get('category_id') if marketplace == 'ozon' else None,
-                                wb_category_id=mp_product.get('category_id') if marketplace == 'wb' else None,
-                                yandex_category_id=mp_product.get('category_id') if marketplace == 'yandex' else None
+                                ozon_category_id=category_id if marketplace == 'ozon' else None,
+                                wb_category_id=category_id if marketplace == 'wb' else None,
+                                yandex_category_id=category_id if marketplace == 'yandex' else None
                             )
                             logger.info(f"✅ Auto-created category mapping: {mapping_id} for {category_name}")
                         except Exception as e:
