@@ -575,6 +575,10 @@ class WildberriesConnector(BaseConnector):
                 # Extract description
                 description = card.get('description', '')
                 
+                # ИСПРАВЛЕНО: Используем subjectID и subjectName вместо object
+                subject_id = card.get('subjectID')
+                subject_name = card.get('subjectName', '')
+                
                 # Extract sizes if available
                 sizes = card.get('sizes', [])
                 if sizes:
@@ -591,7 +595,8 @@ class WildberriesConnector(BaseConnector):
                             "stock": 0,
                             "marketplace": "wb",
                             "size": size.get('techSize', ''),
-                            "category": card.get('object', ''),
+                            "category": subject_name,  # ИСПРАВЛЕНО
+                            "category_id": str(subject_id) if subject_id else '',  # ДОБАВЛЕНО!
                             "brand": card.get('brand', '')
                         })
                 else:
@@ -608,7 +613,8 @@ class WildberriesConnector(BaseConnector):
                         "stock": 0,
                         "marketplace": "wb",
                         "size": '',
-                        "category": card.get('object', ''),
+                        "category": subject_name,  # ИСПРАВЛЕНО
+                        "category_id": str(subject_id) if subject_id else '',  # ДОБАВЛЕНО!
                         "brand": card.get('brand', '')
                     })
             
