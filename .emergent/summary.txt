@@ -1,167 +1,201 @@
 <analysis>**original_problem_statement:**
-The user's initial high-priority goal was to enable product creation on marketplaces (specifically Ozon) directly from the product form. This failed because the API payload sent to Ozon was incorrect.
+The user wants to build an admin panel for managing products on marketplaces (Ozon, Wildberries, Yandex). The core feature is a robust system for handling categories and their associated characteristics.
 
-The user then pivoted and provided new, overriding requirements. The new primary goal is to replicate the product creation workflow from a competitor application, . This involves:
-1.  When a user types a product name, the system must automatically search for and suggest relevant marketplace categories.
-2.  When the user selects a category for a specific marketplace (e.g., Ozon), the form must dynamically display **only the mandatory attributes** required by that marketplace for the selected category.
-3.  These mandatory fields must be clearly highlighted.
-4.  Once this workflow is implemented and verified, the system should use the collected data to successfully create the product on the marketplace, resolving the original issue.
+**PRODUCT REQUIREMENTS:**
+1.  **Category-Specific Characteristics:** Each product category must have its own unique set of characteristics.
+2.  **Required Characteristics:** Characteristics that are mandatory for a marketplace must be marked (e.g., with an asterisk ).
+3.  **Dynamic Forms:** When a user selects a category in the product creation/editing form, the form should dynamically display the fields for that category's characteristics.
+4.  **Marketplace-Specific Fields:** When a user checks a box for a specific marketplace (e.g., Send to WB), the form must show all characteristics required by that marketplace for the selected category, including empty fields for the user to fill.
+5.  **Category Suggestion:** The system should suggest relevant categories based on the product title the user enters.
+6.  **Pre-loading Categories:** For performance, all categories from marketplaces should be pre-loaded and cached in the local database.
+7.  **SelsUp as a Reference:** The functionality should be similar to what is observed on the SelsUp platform.
+8.  **Internal Categories:** The system should also support internal categories for the user's own website.
 
-The user provided login credentials to  for reference:
-URL: 
-Login: 
-Пароль: 
-
-**User's preferred language**: русский
+**User's preferred language**: Russian. The next agent MUST respond in Russian.
 
 **what currently exists?**
-- **Backend**:
-    - New API endpoints have been created in  for interacting with marketplace categories:
-        - : Searches for categories. This has been updated to recursively search Ozon's category tree.
-        - : Fetches attributes for a given category ID.
-        - : Fetches possible values for a dictionary-based attribute.
-    - The  in  has been updated with methods to call the corresponding Ozon APIs for categories and attributes.
-    - The core product creation logic in  remains **broken**, as it still does not correctly fetch and use s for dictionary attributes.
-- **Frontend**:
-    - A new component, , has been created and heavily refactored. It now automatically searches for categories based on the product name and is designed to display only the mandatory attributes returned by the backend.
-    - The main product form, , has been updated to use the new category selector component and pass the product name to it.
-    - The main router, , has been corrected to use  for the Create Product page ().
+A full-stack FARM (FastAPI, React, MongoDB) application. The backend has routes and connectors for managing marketplace categories (Ozon, WB), handling mappings, and serving product data. A cache-first architecture is in place, where marketplace categories are pre-loaded into MongoDB collections (, ) for fast lookups. The frontend has pages for managing category mappings, importing products, and a product editor form. The product editor was recently updated to dynamically load marketplace-specific characteristics but is now crashing.
 
 **Last working item**:
-- Last item agent was working: The agent just finished a major refactoring of the frontend to align with the user's new, corrected workflow for category selection. This involved changing  to auto-suggest categories based on the product name and modifying  to load the correct V4 form for new products. The agent was about to test this new implementation.
-- Status: 
-- Agent Testing Done: N
-- Which testing method agent to use? . The task is to first visually verify that the new UI flow for category selection works as the user requested on the product creation page.
-- User Testing Done: N
+*   **Last item agent was working:** Fixing a critical frontend crash that occurs when a user opens the product editor page (). This crash started immediately after the agent implemented a major feature to dynamically load and display ALL characteristics (including empty fields) for a selected marketplace (Ozon/WB) when a corresponding checkbox is ticked in the product form.
+*   **Status:** BLOCKED
+*   **Agent Testing Done:** N
+*   **Which testing method agent to use?** Frontend testing agent. The first step is to check the frontend error logs ((node:68) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:68) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+(node:276) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///app/frontend/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /app/frontend/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+(node:58) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///app/frontend/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /app/frontend/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+(node:60) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///app/frontend/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /app/frontend/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+(node:51) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///app/frontend/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /app/frontend/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+(node:58) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///app/frontend/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /app/frontend/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m) to find the JavaScript error. After fixing the crash, use the frontend testing agent to verify that the product editor loads correctly and the new dynamic characteristics feature works as expected.
+*   **User Testing Done:** N (User is blocked by the crash).
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Test and Verify New Category Workflow (P0)**
-  - **Description**: The frontend has been refactored to implement a new workflow: auto-suggest categories from the product name and show only mandatory fields. This entire flow needs to be tested to confirm it works as the user specified. There is a high chance the backend  endpoint will need a fix, as the frontend is now sending  but the backend was not updated to handle this parameter.
-  - **Next debug checklist**:
-    1.  Navigate to the Create Product page.
-    2.  Start typing a product name (e.g., Клавиатура or Футболка).
-    3.  Verify that a list of suggested categories appears automatically under the Ozon section.
-    4.  Select a category from the list.
-    5.  Verify that a new set of fields appears, and that they are only the *mandatory* attributes for that category.
-    6.  If attributes do not appear, check the browser's network tab for the call to  and inspect the backend logs to debug why it's failing. It's likely the  filter needs to be implemented in .
-  - **Why fix this issue and what will be achieved with the fix?** This is the user's explicit, current priority. Fixing this will validate the new UI/UX and unblock the final step of sending the correct data to Ozon.
-  - **Status**: 
-  - **Is recurring issue?** N
-  - **Should Test frontend/backend/both after fix?** Both
+*   **Issue 1:** Frontend crashes when opening the product editor page (P0).
+*   **Issue 2:** Photo upload for Ozon is not working (P1).
+*   **Issue 3:** The list of Wildberries (WB) categories is incomplete (P2).
 
-- **Issue 2: Product creation on Ozon fails due to invalid attribute format (P1)**
-  - **Description**: The original, underlying issue. The  method in  is unable to create a product on Ozon because it sends text strings for dictionary attributes (like color, gender) instead of the numeric s that the Ozon API requires.
-  - **Why fix this issue and what will be achieved with the fix?** This is the ultimate goal of the user's request. Success means a product will be created in the user's Ozon Seller account.
-  - **Status**: 
-  - **Is recurring issue?** Y
-  - **Should Test frontend/backend/both after fix?** Backend
-  - **Blocked on other issue:** Issue 1: Test and Verify New Category Workflow must be completed first.
+**Issues Detail:**
+*   **Issue 1: Frontend crashes on product editor page.**
+    *   **Attempted fixes:** None yet. The crash is a direct result of the last code change in  and the new  component.
+    *   **Next debug checklist:**
+        1.  Run (node:68) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:68) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+(node:276) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///app/frontend/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /app/frontend/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+(node:58) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///app/frontend/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /app/frontend/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+(node:60) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///app/frontend/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /app/frontend/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+(node:51) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///app/frontend/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /app/frontend/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+(node:58) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///app/frontend/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /app/frontend/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m to see the React error.
+        2.  Review . The error is likely an infinite render loop in a  hook or attempting to access a property of  or  during the initial render, especially in the logic that fetches and sets state for marketplace characteristics.
+        3.  Inspect  to ensure it gracefully handles cases where props (like attributes list) are loading or empty.
+    *   **Why fix this issue and what will be achieved with the fix?** This is a critical blocker. Users cannot edit products. Fixing this will unblock core functionality.
+    *   **Status:** IN PROGRESS
+    *   **Is recurring issue?** N
+    *   **Should Test frontend/backend/both after fix?** Frontend.
+    *   **Blocked on other issue:** No.
 
-- **Issue 3: Product creation on Wildberries is not implemented (P2)**
-  - **Description**: The  method is a non-functional placeholder.
-  - **Status**: 
-  - **Is recurring issue?** N
-  - **Should Test frontend/backend/both after fix?** Backend
+*   **Issue 2: Ozon photo upload fails.**
+    *   **Attempted fixes:** None.
+    *   **Next debug checklist:**
+        1.  Isolate the photo upload logic, likely in  inside the .
+        2.  Create a dedicated backend test script () to reproduce the failure.
+        3.  Consult the Ozon Seller API documentation for the correct method of uploading images and update the connector.
+    *   **Why fix this issue and what will be achieved with the fix?** Products cannot be successfully listed on marketplaces without images. This is essential functionality.
+    *   **Status:** NOT STARTED
+    *   **Is recurring issue?** N
+    *   **Should Test frontend/backend/both after fix?** Backend first, then end-to-end from the UI.
+    *   **Blocked on other issue:** No.
+
+*   **Issue 3: Incomplete WB category list.**
+    *   **Attempted fixes:** The agent discovered WB API endpoints for fetching all categories are broken. The current workaround is to populate a cache from s found in imported products, which is incomplete.
+    *   **Next debug checklist:**
+        1.  Research a new, working Wildberries API endpoint to get a full list of product categories (subjects).
+        2.  Update the  method in  -> .
+        3.  Update the backend preload endpoint () to use the new method.
+    *   **Why fix this issue and what will be achieved with the fix?** Users cannot map their products correctly if the target category doesn't exist in the system.
+    *   **Status:** IN PROGRESS
+    *   **Is recurring issue?** Y
+    *   **Should Test frontend/backend/both after fix?** Both.
+    *   **Blocked on other issue:** No.
 
 **In progress Task List**:
-N/A
+*   **Task 1: Complete dynamic marketplace characteristics in product form.**
+    *   **Where to resume:** Debug and fix the frontend crash on the product editor page (see Issue 1).
+    *   **What will be achieved with this?** Fulfills a key user requirement to see and fill out all marketplace-specific characteristics for a product.
+    *   **Status:** BLOCKED
+    *   **Should Test frontend/backend/both after fix?** Frontend.
+    *   **Blocked on something:** The frontend crash.
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks**:
-    - **P1: Implement Logic for Toolbar Buttons**: Implement functionality for the History, Duplicate, Download Photos buttons in .
-    - **P2: Implement Other UI Tabs**: Build out the currently empty tabs (Ключевые слова, Аналитика, Остатки, etc.) on the product form.
-- **Future Tasks**:
-    - Mass Editing UI.
-    - Prices Module UI for bulk updates.
-    - Product Kits & Grouping UI.
-    - Re-enable and debug the disabled  and .
+*   (P1) Yandex Marketplace Integration: Implement a  and add logic to support Yandex categories and characteristics.
+*   (P2) Complete Internal Categories Feature: The backend exists, but the frontend UI to manage categories for the user's own website needs to be finished and integrated.
 
 **Completed work in this session**
-- **Backend**:
-    - Created a new Category System via  with APIs to search Ozon categories (), get category attributes (), and get attribute values ().
-    - Implemented the logic in  to recursively fetch and flatten the Ozon category tree.
-- **Frontend**:
-    - Created  and refactored it to automatically suggest categories based on the product name and display mandatory fields.
-    - Corrected routing in  to ensure the correct product form () is used for creating new products.
+-   **Ozon Category Preloading & Search (DONE):** Fixed the Ozon connector, implemented backend endpoints, and added a UI button to preload all 11,297 Ozon categories into a local MongoDB cache, enabling instant search.
+-   **Category Mapping UI (DONE):** Replaced the static dropdown in the category mapping modal with a dynamic search input that queries the local cache.
+-   **API Key Handling (DONE):** Refactored backend to use any available API key in the system, fixing user-specific access issues.
+-   **Product Form Characteristics (Initial Version DONE):** Added a component () to display a product's *existing* characteristics. This was later superseded by the new, now-broken implementation.
 
 **Earlier issues found/mentioned but not fixed**
-- **Issue 1: Ozon Connector Does Not Import Photos**
-  - **Debug checklist**: Investigate Ozon Seller API for media; update  in .
-  - **Why to solve this issue and what will be achieved with this?** To achieve feature parity with Wildberries import and provide a complete import experience for Ozon.
-  - **Should Test frontend/backend/both after fix**: Backend.
-  - **Is recurring issue?**: N
-
-**Known issue recurrence from previous fork**
-- **Issue recurrence in previous fork**: .
-- **Recurrence count**: 0
-- **Status**: 
+*   **Issue 1: Ozon photo upload fails.**
+    *   **Debug checklist:** See pending issues list.
+    *   **Why to solve this issue and what will be achieved with this?** Core functionality for listing products.
+    *   **Should Test frontend/backend/both after fix:** Backend, then Both.
+    *   **Is recurring issue?** N
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Ozon API Integration**: Interacting with Ozon's category and attribute APIs (, , ).
-- **Dynamic Form Generation**: Frontend UI is dynamically built based on attributes fetched from the backend API.
-- **Debounced API Calls**: Using  and a timeout to automatically trigger an API search as the user types, without overwhelming the server.
-- **Recursive Data Processing**: The backend recursively traverses Ozon's nested category tree to create a flat, searchable list.
+*   **Stack:** FastAPI (Python), React (JavaScript), MongoDB.
+*   **Architecture:** The system has moved to a **cache-first architecture**. Categories from Ozon and WB are pre-loaded into MongoDB collections (, ) for fast, reliable searching, avoiding slow and unreliable real-time API calls.
+*   **Category Mapping:** The central concept is the  collection, which links a single user-defined category name to the corresponding category IDs on each marketplace.
 
 **key DB schema**
--   ****: No changes in this session.
--   ****: No changes in this session.
-
-**changes in tech stack**
-N/A
+*   :  (Stores all Ozon categories)
+*   :  (Stores WB categories, currently incomplete)
+*   : 
+*   : 
+*   : 
 
 **All files**
-- **Created**:
-  - : Houses all new API endpoints for fetching marketplace categories and attributes.
-  - : A new React component responsible for the entire category selection and attribute rendering workflow.
-- **Updated**:
-  - : To import and include the new .
-  - : To add methods for fetching category/attribute data from Ozon.
-  - : To integrate and pass props to the new  component.
-  - : To fix the routing for creating new products to use the  component.
-
-**Areas that need refactoring**:
-- The old product form files (, etc.) should be deleted to avoid confusion.
-
-**key api endpoints**
-- : Searches for marketplace categories.
-- : Gets attributes for a category. **Note**: The backend does not yet handle the  parameter.
-- : The main save endpoint, which will eventually trigger the marketplace creation.
+*   **Created:**
+    *    & : Scripts for category preloading.
+    *   : A new component to display all characteristics for a marketplace, including empty ones. This is likely part of the problem.
+*   **Updated:**
+    *   : Major fixes to Ozon category parsing.
+    *   : Added preload endpoints and changed search logic to use the cache.
+    *   : Added UI buttons for preloading.
+    *   : Heavily refactored to implement dynamic characteristic loading. **This is the source of the current crash.**
 
 **Critical Info for New Agent**
-- **The user's workflow is king.** Do not deviate from the newly specified logic: 1) Auto-suggest category from product name, 2) Show ONLY mandatory fields. The previous implementation was explicitly rejected.
-- **The next likely bug is on the backend.** The frontend  was updated to request only mandatory attributes (), but the backend  was not updated to filter based on this parameter. You will likely need to implement this filter.
-- **The original Ozon  issue is still unresolved.** Once the category/attribute UI is working and collecting the right data, the final step is to fix  to use that data, fetch s for dictionary attributes, and construct a valid payload for the Ozon  API.
-
-**documents created in this job**
-N/A
+*   **The biggest recent change is the shift to dynamic characteristics on the product form.** The user no longer wants to see just saved characteristics; they want to see all available characteristics for a marketplace/category combo (including empty ones) by ticking a checkbox. The implementation of this feature in  has broken the page.
+*   **The WB category list is incomplete.** The agent's previous attempts to get a full list from the WB API failed. A definitive solution is still needed.
+*   The system now uses a **cache-first approach** for categories. Do not implement features that make real-time category search calls to marketplaces; use the local DB caches.
 
 **Last 5 User Messages and any pending user messages**
-1.  **User (Chat 228)**: Critical feedback rejecting the agent's first implementation. Explicitly stated that the category should be suggested automatically from the product name, and that irrelevant attributes (like gender for a keyboard) should not be shown. Demanded the agent re-learn the SelSup workflow.
-2.  **User (Chat 237)**: Confirmed the agent's new, corrected plan: auto-suggest category from name, show only mandatory/highlighted fields.
-3.  **User (Chat 267)**: продолжай (continue) - instruction to proceed with the implementation.
-4.  **User (Chat 281)**: продолжай (continue) - instruction to proceed.
-5.  **User (Chat 307)**: продолжи следующие этапы но в разделе категорий почему то категорий нету... (continue with the next steps, but for some reason there are no categories in the category section...). This was the user pointing out the bug where the frontend wasn't displaying the categories returned by the API.
+1.  **User:** Explained the entire logic of how categories and mappings work.
+2.  **User:** Requested a major change: show ALL characteristics (including empty ones) for a selected marketplace in the product form, triggered by checkboxes.
+3.  **User:** **frontend crashes when opening the product card editor** - This is the current, highest-priority task.
+4.  **User:** Explained the logic of the category system.
+5.  **User:** Complained about an error loading Ozon categories, which the agent subsequently fixed.
 
 **Project Health Check:**
-- **Broken**:
-  - Ozon Product Creation ( payload logic).
-  - Wildberries Product Creation (not implemented).
-- **In Progress / Verification Needed**:
-  - The new SelSup-style category selection workflow. The frontend code is written but untested.
+*   **Broken:** The product editor page is non-functional due to a frontend crash, which is a P0 showstopper.
 
 **Testing status**
-- Testing agent used after significant changes: YES (used for both backend and frontend debugging).
-- Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: []
-- Known regressions: None
+*   **Testing agent used after significant changes:** NO. The last major frontend refactor was not tested before the user found the crash.
+*   **Troubleshoot agent used after agent stuck in loop:** NO.
+*   **Test files created:** Yes, multiple backend test scripts for isolated debugging.
+*   **Known regressions:** The product editor page worked before the last change and is now broken.
 
 **Credentials to test flow:**
-- Use  / .
-- The user's real Ozon and WB API keys are associated with this account.
+*   **Internal Users:**  / 
+*   **API Keys:** Available in the message history for both WB and Ozon. They have been saved to the database.
 
 **What agent forgot to execute**
-- The agent implemented the  parameter on the frontend API call to fetch attributes but forgot to add the corresponding filtering logic on the backend in . This will likely be the next bug discovered.
-- The core issue of fixing the Ozon  payload in  has been deferred and is still pending.</analysis>
+*   The user's report about Ozon photo upload fails has not been investigated.
+*   The agent did not test the frontend after a significant refactoring of the product form, leading to the user discovering the crash.</analysis>
