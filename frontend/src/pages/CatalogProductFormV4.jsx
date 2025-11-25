@@ -3,6 +3,7 @@ import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiImage, FiEdit, FiEye, FiDownlo
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import UnifiedCategorySelector from '../components/UnifiedCategorySelector'
+import ProductCharacteristics from '../components/ProductCharacteristics'
 
 export default function CatalogProductFormV4() {
   const { api } = useAuth()
