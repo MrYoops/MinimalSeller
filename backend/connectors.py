@@ -283,6 +283,23 @@ class OzonConnector(BaseConnector):
             logger.error(f"[Ozon] Unexpected error: {str(e)}")
             raise MarketplaceError(f"Failed to fetch Ozon warehouses: {str(e)}", 500)
     
+    async def search_categories(self, query: str) -> List[Dict[str, Any]]:
+        """Search categories by name (quick method)"""
+        logger.info(f"[WB] Searching categories: '{query}'")
+        
+        # Простой поиск: загружаем все категории и фильтруем
+        all_categories = await self.get_categories()
+        
+        # Фильтруем по query (регистронезависимо)
+        query_lower = query.lower()
+        filtered = [
+            cat for cat in all_categories 
+            if query_lower in cat.get('name', '').lower()
+        ]
+        
+        logger.info(f"[WB] Found {len(filtered)} categories matching '{query}'")
+        return filtered[:100]  # Максимум 100 результатов
+    
     async def get_categories(self) -> List[Dict[str, Any]]:
         """Get category tree from Ozon with attributes (recursively flattens tree)"""
         logger.info("[Ozon] Fetching category tree")
