@@ -692,6 +692,23 @@ class WildberriesConnector(BaseConnector):
             logger.error(f"[WB] Unexpected error: {str(e)}")
             raise MarketplaceError(f"Failed to fetch WB warehouses: {str(e)}", 500)
     
+    async def search_categories(self, query: str) -> List[Dict[str, Any]]:
+        """Search WB categories by name"""
+        logger.info(f"[WB] Searching categories: '{query}'")
+        
+        # Загружаем все категории и фильтруем
+        all_categories = await self.get_categories()
+        
+        # Фильтруем по query (регистронезависимо)
+        query_lower = query.lower()
+        filtered = [
+            cat for cat in all_categories 
+            if query_lower in cat.get('name', '').lower()
+        ]
+        
+        logger.info(f"[WB] Found {len(filtered)} categories matching '{query}'")
+        return filtered[:100]  # Максимум 100 результатов
+    
     async def get_categories(self) -> List[Dict[str, Any]]:
         """Get ALL categories (subjects) from Wildberries - FIXED VERSION"""
         logger.info("[WB] Fetching ALL categories (subjects)")
