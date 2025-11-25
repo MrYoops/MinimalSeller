@@ -292,6 +292,27 @@ async def create_category_mapping(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/api/categories/mappings/{mapping_id}")
+async def get_mapping_by_id(
+    mapping_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить mapping по ID"""
+    try:
+        from bson import ObjectId
+        
+        mapping = await server.db.category_mappings.find_one({"_id": ObjectId(mapping_id)})
+        if not mapping:
+            raise HTTPException(status_code=404, detail="Mapping not found")
+        
+        mapping["id"] = str(mapping.pop("_id"))
+        return mapping
+        
+    except Exception as e:
+        logger.error(f"[GetMapping] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/api/categories/mappings/search")
 async def search_mappings(
     query: str = Query(..., min_length=1),
