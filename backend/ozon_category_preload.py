@@ -1,1 +1,114 @@
-"""\nСистема предзагрузки категорий Ozon\n"""\n\nfrom motor.motor_asyncio import AsyncIOMotorDatabase\nfrom datetime import datetime\nfrom typing import List, Dict, Any\nimport logging\n\nlogger = logging.getLogger(__name__)\n\n\nclass OzonCategoryManager:\n    """Менеджер категорий Ozon с кэшированием в БД"""\n    \n    def __init__(self, db: AsyncIOMotorDatabase):\n        self.db = db\n        self.collection = db.ozon_categories_cache\n    \n    async def preload_from_api(self, connector) -> Dict[str, Any]:\n        """Предзагрузка категорий с API Ozon"""\n        logger.info("[OzonCategoryManager] Preloading categories from API")\n        \n        try:\n            categories = await connector.get_categories()\n            \n            saved_count = 0\n            for category in categories:\n                category['loaded_at'] = datetime.utcnow()\n                category['source'] = 'api'\n                category['marketplace'] = 'ozon'\n                \n                await self.collection.replace_one(\n                    {\n                        'marketplace': 'ozon',\n                        'category_id': category['category_id']\n                    },\n                    category,\n                    upsert=True\n                )\n                saved_count += 1\n            \n            logger.info(f"[OzonCategoryManager] Saved {saved_count} categories to DB")\n            \n            return {\n                'success': True,\n                'loaded': saved_count,\n                'message': f'Загружено {saved_count} категорий Ozon'\n            }\n            \n        except Exception as e:\n            logger.error(f"[OzonCategoryManager] Preload failed: {e}")\n            return {\n                'success': False,\n                'error': str(e)\n            }\n    \n    async def get_all_categories(self) -> List[Dict[str, Any]]:\n        """Получить все категории из БД"""\n        try:\n            categories = await self.collection.find({'marketplace': 'ozon'}).to_list(length=20000)\n            \n            for cat in categories:\n                if '_id' in cat:\n                    cat.pop('_id')\n            \n            logger.info(f"[OzonCategoryManager] Retrieved {len(categories)} categories from DB")\n            return categories\n            \n        except Exception as e:\n            logger.error(f"[OzonCategoryManager] Failed to get categories: {e}")\n            return []\n    \n    async def search_categories(self, query: str) -> List[Dict[str, Any]]:\n        """Поиск категорий в БД"""\n        try:\n            categories = await self.collection.find({\n                'marketplace': 'ozon',\n                'name': {'$regex': query, '$options': 'i'}\n            }).limit(100).to_list(100)\n            \n            for cat in categories:\n                if '_id' in cat:\n                    cat.pop('_id')\n            \n            logger.info(f"[OzonCategoryManager] Search '{query}': found {len(categories)} categories")\n            return categories\n            \n        except Exception as e:\n            logger.error(f"[OzonCategoryManager] Search failed: {e}")\n            return []\n    \n    async def get_stats(self) -> Dict[str, Any]:\n        """Статистика загруженных категорий"""\n        try:\n            total = await self.collection.count_documents({'marketplace': 'ozon'})\n            \n            last_updated = await self.collection.find_one(\n                {'marketplace': 'ozon'},\n                sort=[('loaded_at', -1)]\n            )\n            \n            return {\n                'total': total,\n                'last_updated': last_updated.get('loaded_at') if last_updated else None\n            }\n            \n        except Exception as e:\n            logger.error(f"[OzonCategoryManager] Stats failed: {e}")\n            return {\n                'total': 0,\n                'last_updated': None\n            }\n
+# -*- coding: utf-8 -*-
+"""
+Ozon Category Preload System
+"""
+
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from datetime import datetime
+from typing import List, Dict, Any
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class OzonCategoryManager:
+    """Менеджер категорий Ozon с кэшированием в БД"""
+    
+    def __init__(self, db: AsyncIOMotorDatabase):
+        self.db = db
+        self.collection = db.ozon_categories_cache
+    
+    async def preload_from_api(self, connector) -> Dict[str, Any]:
+        """Предзагрузка категорий с API Ozon"""
+        logger.info("[OzonCategoryManager] Preloading categories from API")
+        
+        try:
+            categories = await connector.get_categories()
+            
+            saved_count = 0
+            for category in categories:
+                category['loaded_at'] = datetime.utcnow()
+                category['source'] = 'api'
+                category['marketplace'] = 'ozon'
+                
+                await self.collection.replace_one(
+                    {
+                        'marketplace': 'ozon',
+                        'category_id': category['category_id']
+                    },
+                    category,
+                    upsert=True
+                )
+                saved_count += 1
+            
+            logger.info(f"[OzonCategoryManager] Saved {saved_count} categories to DB")
+            
+            return {
+                'success': True,
+                'loaded': saved_count,
+                'message': f'Загружено {saved_count} категорий Ozon'
+            }
+            
+        except Exception as e:
+            logger.error(f"[OzonCategoryManager] Preload failed: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    async def get_all_categories(self) -> List[Dict[str, Any]]:
+        """Получить все категории из БД"""
+        try:
+            categories = await self.collection.find({'marketplace': 'ozon'}).to_list(length=20000)
+            
+            for cat in categories:
+                if '_id' in cat:
+                    cat.pop('_id')
+            
+            logger.info(f"[OzonCategoryManager] Retrieved {len(categories)} categories from DB")
+            return categories
+            
+        except Exception as e:
+            logger.error(f"[OzonCategoryManager] Failed to get categories: {e}")
+            return []
+    
+    async def search_categories(self, query: str) -> List[Dict[str, Any]]:
+        """Поиск категорий в БД"""
+        try:
+            categories = await self.collection.find({
+                'marketplace': 'ozon',
+                'name': {'$regex': query, '$options': 'i'}
+            }).limit(100).to_list(100)
+            
+            for cat in categories:
+                if '_id' in cat:
+                    cat.pop('_id')
+            
+            logger.info(f"[OzonCategoryManager] Search '{query}': found {len(categories)} categories")
+            return categories
+            
+        except Exception as e:
+            logger.error(f"[OzonCategoryManager] Search failed: {e}")
+            return []
+    
+    async def get_stats(self) -> Dict[str, Any]:
+        """Статистика загруженных категорий"""
+        try:
+            total = await self.collection.count_documents({'marketplace': 'ozon'})
+            
+            last_updated = await self.collection.find_one(
+                {'marketplace': 'ozon'},
+                sort=[('loaded_at', -1)]
+            )
+            
+            return {
+                'total': total,
+                'last_updated': last_updated.get('loaded_at') if last_updated else None
+            }
+            
+        except Exception as e:
+            logger.error(f"[OzonCategoryManager] Stats failed: {e}")
+            return {
+                'total': 0,
+                'last_updated': None
+            }
