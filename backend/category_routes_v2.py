@@ -273,6 +273,96 @@ async def search_mappings(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+# ========== WB ПРЕДЗАГРУЗКА КАТЕГОРИЙ ==========
+
+@router.post("/api/categories/wb/preload")
+async def preload_wb_categories(
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Предзагрузка категорий WB в базу данных
+    Загружает parent categories (80 шт) и сохраняет
+    Subjects добавляются автоматически при импорте товаров
+    """
+    logger.info("[WB Preload] Starting category preload")
+    
+    # Получить API ключи WB
+    profile = await server.db.seller_profiles.find_one({'user_id': current_user['_id']})
+    if not profile:
+        raise HTTPException(status_code=404, detail="Seller profile not found")
+    
+    api_keys = [k for k in profile.get('api_keys', []) if k.get('marketplace') == 'wb']
+    if not api_keys:
+        raise HTTPException(status_code=400, detail="No WB API key found")
+    
+    api_key = api_keys[0]
+    
+    try:
+        from connectors import WildberriesConnector
+        
+        # Создать коннектор
+        connector = WildberriesConnector(api_key.get('client_id', ''), api_key['api_key'])
+        
+        # Менеджер категорий
+        manager = WBCategoryManager(server.db)
+        
+        # Предзагрузить
+        result = await manager.preload_from_api(connector)
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"[WB Preload] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/categories/wb/cached")
+async def get_cached_wb_categories(
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Получить категорий WB из кэша (БД)
+    Быстро, без запросов к API
+    """
+    try:
+        manager = WBCategoryManager(server.db)
+        
+        if search:
+            categories = await manager.search_categories(search)
+        else:
+            categories = await manager.get_all_categories()
+        
+        return {
+            "categories": categories,
+            "total": len(categories),
+            "cached": True
+        }
+        
+    except Exception as e:
+        logger.error(f"[WB Cached] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/categories/wb/stats")
+async def get_wb_categories_stats(
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Статистика предзагруженных категорий WB
+    """
+    try:
+        manager = WBCategoryManager(server.db)
+        stats = await manager.get_stats()
+        
+        return stats
+        
+    except Exception as e:
+        logger.error(f"[WB Stats] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ========== ЗНАЧЕНИЯ АТРИБУТОВ (СЛОВАРИ) ==========
 
 @router.get("/api/categories/marketplace/{marketplace}/{category_id}/attribute-values")
