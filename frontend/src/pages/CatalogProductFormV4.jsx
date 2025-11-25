@@ -46,6 +46,18 @@ export default function CatalogProductFormV4() {
   })
   
   // Основные данные товара
+  // Характеристики по маркетплейсам
+  const [mpCharacteristics, setMpCharacteristics] = useState({
+    wb: [],
+    ozon: [],
+    yandex: []
+  })
+  const [loadingCharacteristics, setLoadingCharacteristics] = useState({
+    wb: false,
+    ozon: false,
+    yandex: false
+  })
+  
   const [product, setProduct] = useState({
     article: '',
     name: '',
