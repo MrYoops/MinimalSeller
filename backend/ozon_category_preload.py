@@ -31,11 +31,15 @@ class OzonCategoryManager:
                 category['source'] = 'api'
                 category['marketplace'] = 'ozon'
                 
+                # ИСПРАВЛЕНО: используем category_id + type_id как уникальный ключ
+                unique_key = {
+                    'marketplace': 'ozon',
+                    'category_id': category['category_id'],
+                    'type_id': category.get('type_id', 0)
+                }
+                
                 await self.collection.replace_one(
-                    {
-                        'marketplace': 'ozon',
-                        'category_id': category['category_id']
-                    },
+                    unique_key,
                     category,
                     upsert=True
                 )
