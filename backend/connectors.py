@@ -676,29 +676,65 @@ class WildberriesConnector(BaseConnector):
             raise MarketplaceError(f"Failed to fetch WB warehouses: {str(e)}", 500)
     
     async def get_categories(self) -> List[Dict[str, Any]]:
-        """Get parent categories (subjects) from Wildberries"""
-        logger.info("[WB] Fetching parent categories (subjects)")
+        """Get ALL categories (subjects) from Wildberries - FIXED VERSION"""
+        logger.info("[WB] Fetching ALL categories (subjects)")
         
-        url = f"{self.content_api_url}/content/v2/object/parent/all"
+        # Сначала получаем родительские категории
+        url_parents = f"{self.content_api_url}/content/v2/object/parent/all"
         headers = self._get_headers()
         
+        all_categories = []
+        
         try:
-            response_data = await self._make_request("GET", url, headers)
-            
+            # 1. Получаем родительские категории
+            response_data = await self._make_request("GET", url_parents, headers)
             parents = response_data.get('data', [])
             logger.info(f"[WB] Received {len(parents)} parent categories")
             
-            formatted_categories = []
+            # 2. Для каждой родительской категории получаем subcategories
             for parent in parents:
-                formatted_categories.append({
-                    "id": str(parent.get('id', '')),
-                    "name": parent.get('name', 'Unnamed'),
+                parent_id = parent.get('id')
+                parent_name = parent.get('name', 'Unnamed')
+                
+                # Добавляем родительскую категорию
+                all_categories.append({
+                    "id": str(parent_id),
+                    "category_id": str(parent_id),
+                    "name": parent_name,
+                    "category_name": parent_name,
                     "is_visible": parent.get('isVisible', True),
+                    "is_parent": True,
+                    "parent_id": None,
+                    "parent_name": None,
                     "marketplace": "wb"
                 })
+                
+                # Получаем subcategories для этой родительской категории
+                try:
+                    url_subjects = f"{self.content_api_url}/content/v2/object/parent/{parent_id}/list"
+                    subjects_data = await self._make_request("GET", url_subjects, headers)
+                    subjects = subjects_data.get('data', [])
+                    
+                    logger.info(f"[WB] Parent '{parent_name}': {len(subjects)} subcategories")
+                    
+                    for subject in subjects:
+                        all_categories.append({
+                            "id": str(subject.get('objectID', '')),
+                            "category_id": str(subject.get('objectID', '')),
+                            "name": subject.get('objectName', 'Unnamed'),
+                            "category_name": subject.get('objectName', 'Unnamed'),
+                            "is_visible": subject.get('isVisible', True),
+                            "is_parent": False,
+                            "parent_id": str(parent_id),
+                            "parent_name": parent_name,
+                            "marketplace": "wb"
+                        })
+                except Exception as e:
+                    logger.warning(f"[WB] Failed to fetch subcategories for {parent_name}: {e}")
+                    continue
             
-            logger.info(f"[WB] Formatted {len(formatted_categories)} categories")
-            return formatted_categories
+            logger.info(f"[WB] Total formatted categories: {len(all_categories)}")
+            return all_categories
             
         except MarketplaceError as e:
             logger.error(f"[WB] Failed to fetch categories: {e.message}")
