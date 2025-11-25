@@ -12,6 +12,7 @@ import server
 from category_system import CategorySystem
 from connectors import get_connector, MarketplaceError
 from wb_category_preload import WBCategoryManager
+from ozon_category_preload import OzonCategoryManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
