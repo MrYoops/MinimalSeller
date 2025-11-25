@@ -330,6 +330,72 @@ export default function CatalogProductFormV4() {
   const handleProductChange = (field, value) => {
     setProduct(prev => ({ ...prev, [field]: value }))
   }
+  
+  // Загрузка характеристик при выборе маркетплейса
+  const loadMarketplaceCharacteristics = async (marketplace, categoryMappingId) => {
+    if (!categoryMappingId) {
+      alert('Сначала выберите категорию товара')
+      return
+    }
+    
+    setLoadingCharacteristics(prev => ({ ...prev, [marketplace]: true }))
+    
+    try {
+      // Получить mapping чтобы узнать category_id для маркетплейса
+      const mappingResponse = await api.get(`/api/categories/mappings/${categoryMappingId}`)
+      const mapping = mappingResponse.data
+      
+      const categoryId = mapping.marketplace_categories?.[marketplace]
+      const typeId = mapping.marketplace_type_ids?.[marketplace]
+      
+      if (!categoryId) {
+        alert(`Категория не сопоставлена с ${marketplace.toUpperCase()}. Создайте сопоставление.`)
+        return
+      }
+      
+      // Загрузить характеристики
+      let url = `/api/categories/marketplace/${marketplace}/${categoryId}/attributes`
+      if (typeId && marketplace === 'ozon') {
+        url += `?type_id=${typeId}`
+      }
+      
+      const response = await api.get(url)
+      const characteristics = response.data.attributes || []
+      
+      setMpCharacteristics(prev => ({
+        ...prev,
+        [marketplace]: characteristics
+      }))
+      
+      console.log(`Загружено ${characteristics.length} характеристик для ${marketplace}`)
+      
+    } catch (error) {
+      console.error(`Failed to load ${marketplace} characteristics:`, error)
+      alert(`Ошибка загрузки характеристик ${marketplace}: ${error.response?.data?.detail || error.message}`)
+    } finally {
+      setLoadingCharacteristics(prev => ({ ...prev, [marketplace]: false }))
+    }
+  }
+  
+  // Обработка изменения галочки маркетплейса
+  const handleMarketplaceToggle = async (marketplace, enabled) => {
+    // Обновить состояние галочки
+    setProduct(prev => ({
+      ...prev,
+      marketplace_data: {
+        ...prev.marketplace_data,
+        [marketplace]: {
+          ...prev.marketplace_data[marketplace],
+          enabled: enabled
+        }
+      }
+    }))
+    
+    // Если включили и нет характеристик - загрузить
+    if (enabled && mpCharacteristics[marketplace].length === 0) {
+      await loadMarketplaceCharacteristics(marketplace, product.category_mapping_id)
+    }
+  }
 
   const handleMarketplaceDataChange = (marketplace, field, value) => {
     setMarketplaceData(prev => ({
