@@ -52,10 +52,15 @@ export default function CatalogCategoriesPageV2() {
     setLoadingCategories(prev => ({ ...prev, [marketplace]: true }))
     
     try {
-      // Для WB используем кэш
-      const url = marketplace === 'wb' 
-        ? `/api/categories/wb/cached`
-        : `/api/categories/marketplace/${marketplace}?limit=1000`
+      // Для WB и Ozon используем кэш
+      let url
+      if (marketplace === 'wb') {
+        url = `/api/categories/wb/cached`
+      } else if (marketplace === 'ozon') {
+        url = `/api/categories/ozon/cached`
+      } else {
+        url = `/api/categories/marketplace/${marketplace}?limit=1000`
+      }
       
       const response = await api.get(url)
       setCategories(prev => ({
