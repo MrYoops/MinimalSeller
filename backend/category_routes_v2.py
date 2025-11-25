@@ -127,6 +127,21 @@ async def search_marketplace_categories(
                 "cached": True
             }
         
+        # Для Ozon используем кэш всегда
+        if marketplace == 'ozon':
+            manager = OzonCategoryManager(server.db)
+            categories = await manager.search_categories(query)
+            
+            logger.info(f"[CategorySearch] Ozon from cache: {len(categories)} results")
+            
+            return {
+                "marketplace": marketplace,
+                "query": query,
+                "total": len(categories),
+                "categories": categories,
+                "cached": True
+            }
+        
         # Для других МП - старая логика (поиск в category_tree_cache)
         category_system = get_category_system()
         categories = await category_system.search_categories(marketplace, query, limit=50)
