@@ -105,11 +105,28 @@ async def search_marketplace_categories(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Поиск категорий - сначала в предзагруженных, если пусто - напрямую с API
+    Поиск категорий - СНАЧАЛА ИЗ КЭША (БД), потом с API если пусто
+    Для WB всегда из кэша (быстро)
     """
     logger.info(f"[CategorySearch] Searching {marketplace} categories: '{query}'")
     
     try:
+        # Для WB используем кэш всегда
+        if marketplace == 'wb':
+            manager = WBCategoryManager(server.db)
+            categories = await manager.search_categories(query)
+            
+            logger.info(f"[CategorySearch] WB from cache: {len(categories)} results")
+            
+            return {
+                "marketplace": marketplace,
+                "query": query,
+                "total": len(categories),
+                "categories": categories,
+                "cached": True
+            }
+        
+        # Для других МП - старая логика (поиск в category_tree_cache)
         category_system = get_category_system()
         categories = await category_system.search_categories(marketplace, query, limit=50)
         
