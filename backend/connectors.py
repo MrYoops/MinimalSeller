@@ -318,18 +318,22 @@ class OzonConnector(BaseConnector):
             def flatten_categories(cats, parent_name='', parent_cat_id=''):
                 result = []
                 for cat in cats:
-                    cat_id = cat.get('category_id', cat.get('description_category_id', ''))
+                    # ИСПРАВЛЕНО: description_category_id основной ключ для Ozon
+                    cat_id = cat.get('description_category_id', cat.get('category_id', ''))
                     cat_name = cat.get('category_name', '')
                     type_id = cat.get('type_id', 0)
                     type_name = cat.get('type_name', '')
                     
-                    # Если есть category_id, это родительская категория
-                    if cat_id:
+                    # Если есть cat_id И cat_name, это родительская категория
+                    if cat_id and cat_name:
                         full_name = f"{parent_name} / {cat_name}" if parent_name else cat_name
                         
                         result.append({
                             "id": str(cat_id),
+                            "category_id": str(cat_id),  # ДОБАВЛЕНО
+                            "description_category_id": cat_id,  # ДОБАВЛЕНО
                             "name": full_name,
+                            "category_name": full_name,  # ДОБАВЛЕНО
                             "type_id": type_id,
                             "type_name": type_name,
                             "disabled": cat.get('disabled', False),
@@ -341,14 +345,17 @@ class OzonConnector(BaseConnector):
                         if children:
                             result.extend(flatten_categories(children, full_name, str(cat_id)))
                     
-                    # Если нет category_id но есть type_id, это тип товара (конечная категория)
+                    # Если нет cat_name но есть type_id, это тип товара (конечная категория)
                     elif type_id and type_name:
                         # Используем type_name как название
                         full_name = f"{parent_name} / {type_name}" if parent_name else type_name
                         
                         result.append({
-                            "id": parent_cat_id,  # Используем ID родителя
+                            "id": str(parent_cat_id),  # Используем ID родителя
+                            "category_id": str(parent_cat_id),  # ДОБАВЛЕНО
+                            "description_category_id": parent_cat_id,  # ДОБАВЛЕНО
                             "name": full_name,
+                            "category_name": full_name,  # ДОБАВЛЕНО
                             "type_id": type_id,
                             "type_name": type_name,
                             "disabled": cat.get('disabled', False),
