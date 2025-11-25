@@ -260,6 +260,16 @@ export default function CatalogCategoriesPageV2() {
             </button>
             
             <button
+              onClick={preloadOzonCategories}
+              disabled={loading}
+              className="px-6 py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold flex items-center gap-2 disabled:opacity-50"
+              title="Загрузить категории Ozon в базу"
+            >
+              <FiRefreshCw className={loading ? 'animate-spin' : ''} /> 
+              ЗАГРУЗИТЬ OZON
+            </button>
+            
+            <button
               onClick={handleCreateMapping}
               className="px-6 py-3 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded-lg font-bold flex items-center gap-2"
             >
