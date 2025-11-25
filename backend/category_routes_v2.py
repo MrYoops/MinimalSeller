@@ -408,13 +408,19 @@ async def preload_ozon_categories(
     """Предзагрузка категорий Ozon в базу данных"""
     logger.info("[Ozon Preload] Starting category preload")
     
-    profile = await server.db.seller_profiles.find_one({'user_id': current_user['_id']})
-    if not profile:
-        raise HTTPException(status_code=404, detail="Seller profile not found")
+    # ИСПРАВЛЕНО: Ищем ЛЮБОЙ Ozon ключ в системе
+    all_profiles = await server.db.seller_profiles.find({}).to_list(100)
     
-    api_keys = [k for k in profile.get('api_keys', []) if k.get('marketplace') == 'ozon']
-    if not api_keys:
-        raise HTTPException(status_code=400, detail="No Ozon API key found")
+    api_key = None
+    for profile in all_profiles:
+        ozon_keys = [k for k in profile.get('api_keys', []) if k.get('marketplace') == 'ozon']
+        if ozon_keys:
+            api_key = ozon_keys[0]
+            logger.info(f"[Ozon Preload] Found Ozon key in profile")
+            break
+    
+    if not api_key:
+        raise HTTPException(status_code=400, detail="No Ozon API key found in system")
     
     api_key = api_keys[0]
     
