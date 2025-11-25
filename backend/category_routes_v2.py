@@ -383,6 +383,80 @@ async def get_wb_categories_stats(
 
 # ========== ЗНАЧЕНИЯ АТРИБУТОВ (СЛОВАРИ) ==========
 
+
+# ========== OZON ПРЕДЗАГРУЗКА КАТЕГОРИЙ ==========
+
+@router.post("/api/categories/ozon/preload")
+async def preload_ozon_categories(
+    current_user: dict = Depends(get_current_user)
+):
+    """Предзагрузка категорий Ozon в базу данных"""
+    logger.info("[Ozon Preload] Starting category preload")
+    
+    profile = await server.db.seller_profiles.find_one({'user_id': current_user['_id']})
+    if not profile:
+        raise HTTPException(status_code=404, detail="Seller profile not found")
+    
+    api_keys = [k for k in profile.get('api_keys', []) if k.get('marketplace') == 'ozon']
+    if not api_keys:
+        raise HTTPException(status_code=400, detail="No Ozon API key found")
+    
+    api_key = api_keys[0]
+    
+    try:
+        from connectors import OzonConnector
+        
+        connector = OzonConnector(api_key.get('client_id', ''), api_key['api_key'])
+        manager = OzonCategoryManager(server.db)
+        
+        result = await manager.preload_from_api(connector)
+        return result
+        
+    except Exception as e:
+        logger.error(f"[Ozon Preload] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/categories/ozon/cached")
+async def get_cached_ozon_categories(
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить категории Ozon из кэша"""
+    try:
+        manager = OzonCategoryManager(server.db)
+        
+        if search:
+            categories = await manager.search_categories(search)
+        else:
+            categories = await manager.get_all_categories()
+        
+        return {
+            "categories": categories,
+            "total": len(categories),
+            "cached": True
+        }
+        
+    except Exception as e:
+        logger.error(f"[Ozon Cached] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/categories/ozon/stats")
+async def get_ozon_categories_stats(
+    current_user: dict = Depends(get_current_user)
+):
+    """Статистика категорий Ozon"""
+    try:
+        manager = OzonCategoryManager(server.db)
+        stats = await manager.get_stats()
+        return stats
+        
+    except Exception as e:
+        logger.error(f"[Ozon Stats] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/api/categories/marketplace/{marketplace}/{category_id}/attribute-values")
 async def get_attribute_values(
     marketplace: str,
