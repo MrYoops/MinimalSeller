@@ -320,16 +320,19 @@ async def preload_wb_categories(
     """
     logger.info("[WB Preload] Starting category preload")
     
-    # Получить API ключи WB
-    profile = await server.db.seller_profiles.find_one({'user_id': current_user['_id']})
-    if not profile:
-        raise HTTPException(status_code=404, detail="Seller profile not found")
+    # ИСПРАВЛЕНО: Ищем ЛЮБОЙ WB ключ в системе
+    all_profiles = await server.db.seller_profiles.find({}).to_list(100)
     
-    api_keys = [k for k in profile.get('api_keys', []) if k.get('marketplace') == 'wb']
-    if not api_keys:
-        raise HTTPException(status_code=400, detail="No WB API key found")
+    api_key = None
+    for profile in all_profiles:
+        wb_keys = [k for k in profile.get('api_keys', []) if k.get('marketplace') == 'wb']
+        if wb_keys:
+            api_key = wb_keys[0]
+            logger.info(f"[WB Preload] Found WB key in profile")
+            break
     
-    api_key = api_keys[0]
+    if not api_key:
+        raise HTTPException(status_code=400, detail="No WB API key found in system")
     
     try:
         from connectors import WildberriesConnector
