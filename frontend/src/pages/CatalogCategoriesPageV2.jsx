@@ -228,12 +228,24 @@ export default function CatalogCategoriesPageV2() {
             </p>
           </div>
           
-          <button
-            onClick={handleCreateMapping}
-            className="px-6 py-3 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded-lg font-bold flex items-center gap-2"
-          >
-            <FiLink /> СОПОСТАВИТЬ
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={preloadWBCategories}
+              disabled={loading}
+              className="px-6 py-3 bg-purple-600 text-white hover:bg-purple-700 rounded-lg font-bold flex items-center gap-2 disabled:opacity-50"
+              title="Загрузить категории Wildberries в базу"
+            >
+              <FiRefreshCw className={loading ? 'animate-spin' : ''} /> 
+              ЗАГРУЗИТЬ WB
+            </button>
+            
+            <button
+              onClick={handleCreateMapping}
+              className="px-6 py-3 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded-lg font-bold flex items-center gap-2"
+            >
+              <FiLink /> СОПОСТАВИТЬ
+            </button>
+          </div>
         </div>
       </div>
 
