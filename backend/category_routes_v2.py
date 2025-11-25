@@ -425,8 +425,6 @@ async def preload_ozon_categories(
     if not api_key:
         raise HTTPException(status_code=400, detail="No Ozon API key found in system")
     
-    api_key = api_keys[0]
-    
     try:
         from connectors import OzonConnector
         
