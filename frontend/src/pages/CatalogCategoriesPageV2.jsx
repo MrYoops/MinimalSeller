@@ -79,13 +79,33 @@ export default function CatalogCategoriesPageV2() {
       
       if (response.data.success) {
         alert(`✅ ${response.data.message}`)
-        // Перезагрузить категории WB
         await loadMarketplaceCategories('wb')
       } else {
         alert(`❌ Ошибка: ${response.data.error}`)
       }
     } catch (error) {
       console.error('WB preload error:', error)
+      alert(`❌ Ошибка загрузки: ${error.response?.data?.detail || error.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const preloadOzonCategories = async () => {
+    if (!confirm('Загрузить категории Ozon?\n\nЭто займет 30-60 секунд.\n\n11,000+ категорий будут загружены в базу.')) return
+    
+    setLoading(true)
+    try {
+      const response = await api.post('/api/categories/ozon/preload')
+      
+      if (response.data.success) {
+        alert(`✅ ${response.data.message}\n\nЗагружено: ${response.data.loaded} категорий`)
+        await loadMarketplaceCategories('ozon')
+      } else {
+        alert(`❌ Ошибка: ${response.data.error}`)
+      }
+    } catch (error) {
+      console.error('Ozon preload error:', error)
       alert(`❌ Ошибка загрузки: ${error.response?.data?.detail || error.message}`)
     } finally {
       setLoading(false)
