@@ -11,6 +11,7 @@ from server import get_current_user
 import server
 from category_system import CategorySystem
 from connectors import get_connector, MarketplaceError
+from wb_category_preload import WBCategoryManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
