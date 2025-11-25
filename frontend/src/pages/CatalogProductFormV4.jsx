@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiImage, FiEdit, FiEye, FiDownload, FiUpload, FiSettings, FiClock, FiCheck } from 'react-icons/fi'
+import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiImage, FiEdit, FiEye, FiDownload, FiUpload, FiSettings, FiClock, FiCheck, FiAlertCircle } from 'react-icons/fi'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import UnifiedCategorySelector from '../components/UnifiedCategorySelector'
