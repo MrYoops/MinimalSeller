@@ -1082,7 +1082,7 @@ export default function CatalogProductFormV4() {
                   )}
                   
                   {/* Характеристики Яндекс */}
-                  {product.marketplace_data?.yandex?.enabled && (
+                  {selectedMarketplaces.yandex && (
                     <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4">
                       <MarketplaceCharacteristics
                         marketplace="yandex"
