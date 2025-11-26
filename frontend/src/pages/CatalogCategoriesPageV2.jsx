@@ -52,6 +52,18 @@ export default function CatalogCategoriesPageV2() {
     
     setLoading(false)
   }
+  
+  const loadMappings = async () => {
+    setLoadingMappings(true)
+    try {
+      const response = await api.get('/api/categories/mappings')
+      setMappings(response.data || [])
+    } catch (error) {
+      console.error('Failed to load mappings:', error)
+    } finally {
+      setLoadingMappings(false)
+    }
+  }
 
   const loadMarketplaceCategories = async (marketplace) => {
     setLoadingCategories(prev => ({ ...prev, [marketplace]: true }))
