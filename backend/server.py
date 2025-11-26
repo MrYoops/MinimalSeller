@@ -2884,6 +2884,7 @@ async def get_catalog_products(
             name=prod["name"],
             brand=prod.get("brand"),
             category_id=prod.get("category_id"),
+            category_mapping_id=prod.get("category_mapping_id"),
             category_name=category_name,
             description=prod.get("description", ""),
             status=prod.get("status", "draft"),
