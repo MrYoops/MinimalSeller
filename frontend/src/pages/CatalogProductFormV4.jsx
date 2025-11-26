@@ -764,6 +764,7 @@ export default function CatalogProductFormV4() {
                   {/* ЕДИНЫЙ СЕЛЕКТОР КАТЕГОРИИ */}
                   <UnifiedCategorySelector
                     productName={product.name}
+                    initialCategoryMappingId={product.category_mapping_id}
                     selectedMarketplaces={Object.keys(selectedMarketplaces).filter(mp => selectedMarketplaces[mp])}
                     onCategorySelected={(mapping) => {
                       console.log('[ProductForm] Category selected:', mapping)
