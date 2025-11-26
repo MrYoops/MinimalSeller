@@ -4563,21 +4563,31 @@ async def import_from_marketplace(
                         except Exception as e:
                             logger.warning(f"Failed to save WB subject: {str(e)}")
                     
-                    # Создаем mapping
+                    # Найти или создать mapping
                     if category_name and category_id:
                         try:
-                            from category_system import CategorySystem
-                            category_system = CategorySystem(db)
+                            # Сначала ищем существующий mapping по category_id маркетплейса
+                            existing_mapping = await db.category_mappings.find_one({
+                                f"marketplace_categories.{marketplace}": str(category_id)
+                            })
                             
-                            mapping_id = await category_system.create_or_update_mapping(
-                                internal_name=category_name,
-                                ozon_category_id=category_id if marketplace == 'ozon' else None,
-                                wb_category_id=category_id if marketplace == 'wb' else None,
-                                yandex_category_id=category_id if marketplace == 'yandex' else None
-                            )
-                            logger.info(f"✅ Auto-created category mapping: {mapping_id} for {category_name}")
+                            if existing_mapping:
+                                mapping_id = str(existing_mapping.get('_id'))
+                                logger.info(f"✅ Found existing mapping: {existing_mapping.get('internal_name')} for {marketplace} category {category_id}")
+                            else:
+                                # Создаем новый mapping только если не нашли
+                                from category_system import CategorySystem
+                                category_system = CategorySystem(db)
+                                
+                                mapping_id = await category_system.create_or_update_mapping(
+                                    internal_name=category_name,
+                                    ozon_category_id=category_id if marketplace == 'ozon' else None,
+                                    wb_category_id=category_id if marketplace == 'wb' else None,
+                                    yandex_category_id=category_id if marketplace == 'yandex' else None
+                                )
+                                logger.info(f"✅ Auto-created category mapping: {mapping_id} for {category_name}")
                         except Exception as e:
-                            logger.warning(f"Failed to create category mapping: {str(e)}")
+                            logger.warning(f"Failed to create/find category mapping: {str(e)}")
                     
                     product_data = {
                         "seller_id": str(current_user["_id"]),
