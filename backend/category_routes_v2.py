@@ -418,14 +418,25 @@ async def get_mapping_by_id(
     """Получить mapping по ID"""
     try:
         from bson import ObjectId
+        from bson.errors import InvalidId
         
-        mapping = await server.db.category_mappings.find_one({"_id": ObjectId(mapping_id)})
+        # Пробуем конвертировать в ObjectId
+        try:
+            object_id = ObjectId(mapping_id)
+        except InvalidId:
+            # Если не получилось, ищем по строковому id
+            mapping = await server.db.category_mappings.find_one({"id": mapping_id})
+        else:
+            mapping = await server.db.category_mappings.find_one({"_id": object_id})
+        
         if not mapping:
             raise HTTPException(status_code=404, detail="Mapping not found")
         
         mapping["id"] = str(mapping.pop("_id"))
         return mapping
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[GetMapping] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
