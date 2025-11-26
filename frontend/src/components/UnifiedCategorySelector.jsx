@@ -232,10 +232,18 @@ export default function UnifiedCategorySelector({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Начните вводить название категории..."
+                placeholder="Начните вводить название категории... (мин. 2 символа)"
                 className="w-full px-4 py-3 pl-10 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-mm-cyan focus:ring-2 focus:ring-mm-cyan/50 outline-none"
+                autoComplete="off"
               />
               <FiSearch className="absolute left-3 top-3.5 text-gray-500" />
+              {searchQuery.length > 0 && searchQuery.length < 2 && (
+                <div className="absolute right-3 top-3.5">
+                  <span className="text-xs text-gray-500">
+                    {searchQuery.length}/2
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Search Results Dropdown */}
