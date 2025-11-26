@@ -470,6 +470,7 @@ class ProductCatalogResponse(BaseModel):
     name: str
     brand: Optional[str]
     category_id: Optional[str]
+    category_mapping_id: Optional[str] = None  # ID сопоставления категории
     category_name: Optional[str] = None  # Для удобства отображения
     description: str
     status: str
