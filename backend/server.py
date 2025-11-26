@@ -2951,9 +2951,21 @@ async def get_catalog_product(
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
     
-    # Получить название категории
+    # Получить название категории из category_mapping
     category_name = None
-    if product.get("category_id"):
+    category_mapping_id = product.get("category_mapping_id")
+    
+    if category_mapping_id:
+        try:
+            from bson import ObjectId
+            mapping = await db.category_mappings.find_one({"_id": ObjectId(category_mapping_id)})
+            if mapping:
+                category_name = mapping.get("internal_name")
+        except:
+            pass
+    
+    # Fallback на старый способ
+    if not category_name and product.get("category_id"):
         category = await db.product_categories.find_one({"_id": product["category_id"]})
         if category:
             category_name = category["name"]
@@ -2969,6 +2981,7 @@ async def get_catalog_product(
         name=product["name"],
         brand=product.get("brand"),
         category_id=product.get("category_id"),
+        category_mapping_id=category_mapping_id,
         category_name=category_name,
         description=product.get("description", ""),
         status=product.get("status", "draft"),
