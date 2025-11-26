@@ -292,6 +292,26 @@ async def create_category_mapping(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/api/categories/mappings")
+async def get_all_mappings(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить все сопоставления категорий"""
+    try:
+        mappings_cursor = server.db.category_mappings.find({}).sort("internal_name", 1)
+        mappings = []
+        
+        async for mapping in mappings_cursor:
+            mapping["id"] = str(mapping.pop("_id"))
+            mappings.append(mapping)
+        
+        return mappings
+        
+    except Exception as e:
+        logger.error(f"[GetAllMappings] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/api/categories/mappings/{mapping_id}")
 async def get_mapping_by_id(
     mapping_id: str,
