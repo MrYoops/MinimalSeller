@@ -350,7 +350,13 @@ export default function CatalogProductFormV4() {
       const typeId = mapping.marketplace_type_ids?.[marketplace]
       
       if (!categoryId) {
-        alert(`Категория не сопоставлена с ${marketplace.toUpperCase()}. Создайте сопоставление.`)
+        console.warn(`Category not mapped to ${marketplace}`)
+        // Не загружаем характеристики, но не показываем ошибку
+        // Пользователь может использовать товар без этого маркетплейса
+        setMpCharacteristics(prev => ({
+          ...prev,
+          [marketplace]: []
+        }))
         return
       }
       
