@@ -1017,47 +1017,18 @@ export default function CatalogProductFormV4() {
                     </div>
                   )}
                   
-                  {/* Галочки маркетплейсов */}
-                  <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-blue-300 mb-3 flex items-center gap-2">
-                      <FiAlertCircle />
-                      Выберите маркетплейсы для загрузки характеристик:
-                    </h3>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={product.marketplace_data?.wb?.enabled || false}
-                          onChange={(e) => handleMarketplaceToggle('wb', e.target.checked)}
-                          className="w-4 h-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
-                        />
-                        <span className="text-sm text-purple-400 font-medium">🟣 Wildberries</span>
-                      </label>
-                      
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={product.marketplace_data?.ozon?.enabled || false}
-                          onChange={(e) => handleMarketplaceToggle('ozon', e.target.checked)}
-                          className="w-4 h-4 rounded border-gray-600 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-blue-400 font-medium">🔵 Ozon</span>
-                      </label>
-                      
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={product.marketplace_data?.yandex?.enabled || false}
-                          onChange={(e) => handleMarketplaceToggle('yandex', e.target.checked)}
-                          className="w-4 h-4 rounded border-gray-600 text-yellow-600 focus:ring-yellow-500"
-                        />
-                        <span className="text-sm text-yellow-400 font-medium">🟡 Яндекс</span>
-                      </label>
+                  {/* Подсказка */}
+                  {!selectedMarketplaces.wb && !selectedMarketplaces.ozon && !selectedMarketplaces.yandex && (
+                    <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4">
+                      <p className="text-sm text-blue-300 flex items-center gap-2">
+                        <FiAlertCircle />
+                        Отметьте галочки маркетплейсов внизу страницы ("Отправить в:"), чтобы загрузить характеристики
+                      </p>
                     </div>
-                  </div>
+                  )}
                   
                   {/* Характеристики WB */}
-                  {product.marketplace_data?.wb?.enabled && (
+                  {selectedMarketplaces.wb && (
                     <div className="bg-purple-900/20 border border-purple-600/30 rounded-lg p-4">
                       <MarketplaceCharacteristics
                         marketplace="wb"
