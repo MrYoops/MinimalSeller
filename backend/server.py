@@ -2855,9 +2855,19 @@ async def get_catalog_products(
     
     result = []
     for prod in products:
-        # Получить название категории
+        # Получить название категории из category_mapping
         category_name = None
-        if prod.get("category_id"):
+        if prod.get("category_mapping_id"):
+            try:
+                from bson import ObjectId
+                mapping = await db.category_mappings.find_one({"_id": ObjectId(prod["category_mapping_id"])})
+                if mapping:
+                    category_name = mapping.get("internal_name")
+            except:
+                pass
+        
+        # Fallback на старый способ если нет mapping
+        if not category_name and prod.get("category_id"):
             category = await db.product_categories.find_one({"_id": prod["category_id"]})
             if category:
                 category_name = category["name"]
