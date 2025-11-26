@@ -378,25 +378,22 @@ export default function CatalogProductFormV4() {
     }
   }
   
-  // Обработка изменения галочки маркетплейса
-  const handleMarketplaceToggle = async (marketplace, enabled) => {
-    // Обновить состояние галочки
-    setProduct(prev => ({
-      ...prev,
-      marketplace_data: {
-        ...prev.marketplace_data,
-        [marketplace]: {
-          ...prev.marketplace_data[marketplace],
-          enabled: enabled
+  // Загрузка характеристик при изменении нижних галочек
+  useEffect(() => {
+    const loadCharacteristicsForSelectedMarketplaces = async () => {
+      if (!product.category_mapping_id) return
+      
+      // Проверяем каждый маркетплейс
+      for (const mp of ['ozon', 'wb', 'yandex']) {
+        // Если галочка включена и характеристики еще не загружены
+        if (selectedMarketplaces[mp] && mpCharacteristics[mp].length === 0 && !loadingCharacteristics[mp]) {
+          await loadMarketplaceCharacteristics(mp, product.category_mapping_id)
         }
       }
-    }))
-    
-    // Если включили и нет характеристик - загрузить
-    if (enabled && mpCharacteristics[marketplace].length === 0) {
-      await loadMarketplaceCharacteristics(marketplace, product.category_mapping_id)
     }
-  }
+    
+    loadCharacteristicsForSelectedMarketplaces()
+  }, [selectedMarketplaces.ozon, selectedMarketplaces.wb, selectedMarketplaces.yandex, product.category_mapping_id])
 
   const handleMarketplaceDataChange = (marketplace, field, value) => {
     setMarketplaceData(prev => ({
