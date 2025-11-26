@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext'
 export default function UnifiedCategorySelector({ 
   productName = '',
   selectedMarketplaces = [], // ['ozon', 'wb', 'yandex']
+  initialCategoryMappingId = null, // ID уже выбранной категории
   onCategorySelected,
   onAttributesLoaded
 }) {
@@ -19,6 +20,7 @@ export default function UnifiedCategorySelector({
   const [allAttributes, setAllAttributes] = useState({}) // По маркетплейсам
   const [attributeValues, setAttributeValues] = useState({}) // Кэш значений
   const [loading, setLoading] = useState(false)
+  const [loadingInitial, setLoadingInitial] = useState(false)
   const [error, setError] = useState(null)
 
   // Цвета маркетплейсов
