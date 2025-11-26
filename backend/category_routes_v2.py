@@ -312,6 +312,20 @@ async def get_all_mappings(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/api/categories/mappings/search")
+async def search_mappings(
+    query: str = Query(..., min_length=1),
+    current_user: dict = Depends(get_current_user)
+):
+    """Поиск сопоставлений"""
+    try:
+        category_system = get_category_system()
+        mappings = await category_system.search_mappings(query, limit=50)
+        return {"query": query, "total": len(mappings), "mappings": mappings}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/api/categories/mappings/{mapping_id}")
 async def get_mapping_by_id(
     mapping_id: str,
@@ -330,20 +344,6 @@ async def get_mapping_by_id(
         
     except Exception as e:
         logger.error(f"[GetMapping] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/api/categories/mappings/search")
-async def search_mappings(
-    query: str = Query(..., min_length=1),
-    current_user: dict = Depends(get_current_user)
-):
-    """Поиск сопоставлений"""
-    try:
-        category_system = get_category_system()
-        mappings = await category_system.search_mappings(query, limit=50)
-        return {"query": query, "total": len(mappings), "mappings": mappings}
-    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
