@@ -217,6 +217,7 @@ export default function CatalogCategoriesPageV2() {
       
       alert('✅ Сопоставление сохранено!')
       setShowMappingModal(false)
+      loadMappings() // Перезагрузить таблицу сопоставлений
     } catch (error) {
       alert('❌ Ошибка: ' + (error.response?.data?.detail || error.message))
     }
