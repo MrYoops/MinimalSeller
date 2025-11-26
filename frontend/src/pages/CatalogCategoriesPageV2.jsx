@@ -33,9 +33,14 @@ export default function CatalogCategoriesPageV2() {
     yandex: []
   })
   const [searching, setSearching] = useState({})
+  
+  // Сопоставленные категории
+  const [mappings, setMappings] = useState([])
+  const [loadingMappings, setLoadingMappings] = useState(false)
 
   useEffect(() => {
     loadAllCategories()
+    loadMappings()
   }, [])
 
   const loadAllCategories = async () => {
