@@ -238,47 +238,59 @@ export default function UnifiedCategorySelector({
               <FiSearch className="absolute left-3 top-3.5 text-gray-500" />
             </div>
 
-            {/* Search Results */}
-            {searchResults.length > 0 && (
-              <div className="absolute z-50 mt-2 w-full bg-gray-800 border-2 border-mm-cyan rounded-lg shadow-2xl max-h-72 overflow-y-auto">
-                <div className="p-2">
-                  <p className="text-xs text-gray-400 px-2 py-1 mb-1">
-                    Найдено: {searchResults.length}
-                  </p>
-                </div>
-                {searchResults.map((mapping, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => selectCategory(mapping)}
-                    className="w-full px-4 py-3 text-left hover:bg-mm-cyan/20 border-b border-gray-700 last:border-b-0 transition-colors\"
-                  >
-                    <p className="font-medium text-white mb-1">{mapping.internal_name}</p>
-                    <div className="flex gap-2 mt-1">
-                      {Object.entries(mapping.marketplace_categories || {}).map(([mp, catId]) => {
-                        if (!catId) return null
-                        const colors = mpColors[mp]
-                        return (
-                          <span key={mp} className={`text-xs px-2 py-0.5 rounded font-medium ${colors?.badge || 'bg-gray-700 text-gray-300'}`}>
-                            {mpNames[mp]}
-                          </span>
-                        )
-                      })}
+            {/* Search Results Dropdown */}
+            {searchQuery.length >= 2 && (
+              <div className="absolute z-50 mt-2 w-full bg-gray-800 border-2 border-mm-cyan rounded-lg shadow-2xl max-h-80 overflow-hidden">
+                {loading ? (
+                  <div className="p-6 text-center">
+                    <FiRefreshCw className="animate-spin inline text-2xl text-mm-cyan mb-2" />
+                    <p className="text-sm text-gray-400">Поиск категорий...</p>
+                  </div>
+                ) : error ? (
+                  <div className="p-6 text-center">
+                    <FiAlertCircle className="inline text-2xl text-red-400 mb-2" />
+                    <p className="text-sm text-red-400">{error}</p>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <>
+                    <div className="bg-gray-900 px-4 py-2 border-b border-gray-700">
+                      <p className="text-xs text-mm-cyan font-medium">
+                        Найдено категорий: {searchResults.length}
+                      </p>
                     </div>
-                  </button>
-                ))}
+                    <div className="max-h-64 overflow-y-auto">
+                      {searchResults.map((mapping, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => selectCategory(mapping)}
+                          className="w-full px-4 py-3 text-left hover:bg-mm-cyan/20 border-b border-gray-700 last:border-b-0 transition-colors focus:bg-mm-cyan/30 focus:outline-none"
+                        >
+                          <p className="font-medium text-white mb-1">{mapping.internal_name}</p>
+                          <div className="flex gap-2 mt-1 flex-wrap">
+                            {Object.entries(mapping.marketplace_categories || {}).map(([mp, catId]) => {
+                              if (!catId) return null
+                              const colors = mpColors[mp]
+                              return (
+                                <span key={mp} className={`text-xs px-2 py-0.5 rounded font-medium ${colors?.badge || 'bg-gray-700 text-gray-300'}`}>
+                                  {mpNames[mp]}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-6 text-center">
+                    <FiSearch className="inline text-3xl text-gray-600 mb-2" />
+                    <p className="text-sm text-gray-400 mb-2">Категории не найдены</p>
+                    <p className="text-xs text-gray-500">
+                      Попробуйте изменить запрос или создайте новое сопоставление
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
-
-            {loading && (
-              <p className="text-sm text-gray-400 mt-2 flex items-center gap-2">
-                <FiRefreshCw className="animate-spin" /> Поиск...
-              </p>
-            )}
-            
-            {error && (
-              <p className="text-sm text-red-400 mt-2 flex items-center gap-2">
-                <FiAlertCircle /> {error}
-              </p>
             )}
           </div>
         )}
