@@ -37,12 +37,23 @@ export default function MarketplaceCharacteristics({
   if (!characteristics || characteristics.length === 0) {
     return (
       <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4">
-        <p className="text-yellow-200 text-sm flex items-start gap-2">
-          <FiAlertCircle className="mt-0.5 flex-shrink-0" />
-          <span>
-            Характеристики не загружены. Убедитесь что категория сопоставлена с {mpNames[marketplace]}.
-          </span>
-        </p>
+        <div className="flex items-start gap-3">
+          <FiAlertCircle className="mt-0.5 flex-shrink-0 text-yellow-400" size={20} />
+          <div className="flex-1">
+            <p className="text-yellow-200 text-sm mb-2">
+              Категория товара не сопоставлена с {mpNames[marketplace]}
+            </p>
+            <p className="text-yellow-200/70 text-xs mb-3">
+              Для загрузки характеристик необходимо создать или обновить сопоставление категории, добавив категорию {mpNames[marketplace]}.
+            </p>
+            <a
+              href="/catalog/categories"
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-xs rounded transition"
+            >
+              Перейти к сопоставлениям
+            </a>
+          </div>
+        </div>
       </div>
     )
   }
