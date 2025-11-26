@@ -334,6 +334,100 @@ export default function CatalogCategoriesPageV2() {
         </div>
       </div>
 
+      {/* Таблица сопоставленных категорий */}
+      <div className="max-w-7xl mx-auto mb-8">
+        <div className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
+          <div className="bg-gray-800 px-6 py-4 border-b border-gray-700">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-mm-cyan flex items-center gap-2">
+                📊 СОПОСТАВЛЕННЫЕ КАТЕГОРИИ
+                <span className="text-sm font-normal text-gray-400">
+                  ({mappings.length})
+                </span>
+              </h2>
+              <button
+                onClick={loadMappings}
+                disabled={loadingMappings}
+                className="text-mm-cyan hover:text-mm-cyan/80 p-2"
+                title="Обновить"
+              >
+                <FiRefreshCw className={loadingMappings ? 'animate-spin' : ''} size={18} />
+              </button>
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            {loadingMappings ? (
+              <div className="text-center text-gray-400 py-12">
+                <FiRefreshCw className="animate-spin inline mb-2 text-3xl" />
+                <p>Загрузка сопоставлений...</p>
+              </div>
+            ) : mappings.length > 0 ? (
+              <table className="w-full">
+                <thead className="bg-gray-800 border-b border-gray-700">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-blue-400 uppercase tracking-wider border-r border-gray-700">
+                      🔵 Ozon
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-purple-400 uppercase tracking-wider border-r border-gray-700">
+                      🟣 Wildberries
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400 uppercase tracking-wider border-r border-gray-700">
+                      🟡 Яндекс Маркет
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-mm-cyan uppercase tracking-wider">
+                      📁 Наша Категория
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {mappings.map((mapping) => (
+                    <tr key={mapping.id} className="hover:bg-gray-800/50 transition-colors">
+                      <td className="px-6 py-4 text-sm text-gray-300 border-r border-gray-800">
+                        {mapping.marketplace_categories?.ozon ? (
+                          <div>
+                            <p className="font-medium text-blue-300">ID: {mapping.marketplace_categories.ozon}</p>
+                            {mapping.marketplace_type_ids?.ozon && (
+                              <p className="text-xs text-gray-500 mt-1">Type: {mapping.marketplace_type_ids.ozon}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-600 italic">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-300 border-r border-gray-800">
+                        {mapping.marketplace_categories?.wildberries ? (
+                          <p className="font-medium text-purple-300">ID: {mapping.marketplace_categories.wildberries}</p>
+                        ) : (
+                          <span className="text-gray-600 italic">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-300 border-r border-gray-800">
+                        {mapping.marketplace_categories?.yandex ? (
+                          <p className="font-medium text-yellow-300">ID: {mapping.marketplace_categories.yandex}</p>
+                        ) : (
+                          <span className="text-gray-600 italic">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <p className="font-bold text-mm-cyan">{mapping.internal_name}</p>
+                        <p className="text-xs text-gray-500 mt-1">ID: {mapping.id}</p>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-center text-gray-400 py-12">
+                <FiLink className="inline text-5xl mb-4 opacity-50" />
+                <p className="text-lg font-medium">Нет сопоставлений</p>
+                <p className="text-sm mt-2">Нажмите кнопку "СОПОСТАВИТЬ" чтобы создать первое сопоставление</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Categories Grid */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Ozon */}
