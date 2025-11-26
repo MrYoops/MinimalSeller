@@ -4828,6 +4828,22 @@ async def update_product_from_marketplace(
         if not marketplace_product:
             raise HTTPException(status_code=404, detail=f"Товар не найден на {marketplace.upper()}")
         
+        # Попытаться найти соответствующий mapping по category_id маркетплейса
+        category_mapping_id = None
+        mp_category_id = marketplace_product.get('category_id')
+        
+        if mp_category_id:
+            # Ищем mapping где есть эта категория
+            mapping = await db.category_mappings.find_one({
+                f"marketplace_categories.{marketplace}": str(mp_category_id)
+            })
+            
+            if mapping:
+                category_mapping_id = str(mapping.get('_id'))
+                logger.info(f"✅ Found category mapping: {mapping.get('internal_name')} for {marketplace} category {mp_category_id}")
+            else:
+                logger.warning(f"⚠️ No category mapping found for {marketplace} category {mp_category_id}")
+        
         # Обновить данные товара
         update_data = {
             "name": marketplace_product.get('name', product['name']),
@@ -4836,6 +4852,10 @@ async def update_product_from_marketplace(
             "characteristics": marketplace_product.get('characteristics', {}),
             "updated_at": datetime.utcnow()
         }
+        
+        # Если нашли mapping - добавить его
+        if category_mapping_id:
+            update_data["category_mapping_id"] = category_mapping_id
         
         # Обновить цены если есть
         if marketplace_product.get('price'):
