@@ -299,6 +299,83 @@ async def create_category_mapping(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/api/categories/mappings/auto-suggest")
+async def auto_suggest_category_mapping(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Автоматически подобрать категории на других маркетплейсах
+    на основе уже выбранной категории одного маркетплейса
+    """
+    try:
+        source_marketplace = data.get('source_marketplace')  # ozon, wb, yandex
+        source_category_id = data.get('source_category_id')
+        source_category_name = data.get('source_category_name')
+        
+        if not source_marketplace or not source_category_id:
+            raise HTTPException(status_code=400, detail="source_marketplace and source_category_id required")
+        
+        logger.info(f"[AutoSuggest] Finding matches for {source_marketplace} category {source_category_id}: {source_category_name}")
+        
+        suggestions = {}
+        
+        # Список маркетплейсов для поиска
+        target_marketplaces = ['ozon', 'wb', 'yandex']
+        target_marketplaces.remove(source_marketplace)
+        
+        for target_mp in target_marketplaces:
+            # Поиск по названию категории в кэше
+            search_query = {"marketplace": target_mp, "disabled": False}
+            
+            if source_category_name:
+                # Разбиваем название на ключевые слова
+                keywords = source_category_name.lower().split()
+                # Ищем категории, содержащие хотя бы одно из ключевых слов
+                search_query["$or"] = [
+                    {"category_name": {"$regex": kw, "$options": "i"}} for kw in keywords if len(kw) > 3
+                ]
+            
+            if search_query.get("$or"):
+                matches = await server.db[f"{target_mp}_categories_cache"].find(
+                    search_query
+                ).limit(5).to_list(length=5)
+                
+                if matches:
+                    # Сортируем по релевантности (количество совпадающих слов)
+                    scored_matches = []
+                    for match in matches:
+                        match_name = match.get('category_name', '').lower()
+                        score = sum(1 for kw in keywords if kw.lower() in match_name)
+                        scored_matches.append({
+                            "category_id": match.get('category_id') or match.get('id'),
+                            "category_name": match.get('category_name') or match.get('name'),
+                            "type_id": match.get('type_id'),
+                            "score": score
+                        })
+                    
+                    # Сортируем по score
+                    scored_matches.sort(key=lambda x: x['score'], reverse=True)
+                    suggestions[target_mp] = scored_matches[:3]  # Топ 3
+                else:
+                    suggestions[target_mp] = []
+            else:
+                suggestions[target_mp] = []
+        
+        return {
+            "source": {
+                "marketplace": source_marketplace,
+                "category_id": source_category_id,
+                "category_name": source_category_name
+            },
+            "suggestions": suggestions
+        }
+        
+    except Exception as e:
+        logger.error(f"[AutoSuggest] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/api/categories/mappings")
 async def get_all_mappings(
     current_user: dict = Depends(get_current_user)
