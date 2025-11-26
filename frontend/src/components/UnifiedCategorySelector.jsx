@@ -36,6 +36,34 @@ export default function UnifiedCategorySelector({
     yandex: 'Яндекс'
   }
 
+  // Загрузить начальную категорию если есть ID
+  useEffect(() => {
+    const loadInitialCategory = async () => {
+      if (!initialCategoryMappingId || selectedCategory) return
+      
+      setLoadingInitial(true)
+      try {
+        console.log('[UnifiedCategory] Loading initial category:', initialCategoryMappingId)
+        const response = await api.get(`/api/categories/mappings/${initialCategoryMappingId}`)
+        const mapping = response.data
+        
+        console.log('[UnifiedCategory] Initial category loaded:', mapping)
+        setSelectedCategory(mapping)
+        
+        // Уведомить родителя
+        if (onCategorySelected) {
+          onCategorySelected(mapping)
+        }
+      } catch (err) {
+        console.error('[UnifiedCategory] Failed to load initial category:', err)
+      } finally {
+        setLoadingInitial(false)
+      }
+    }
+    
+    loadInitialCategory()
+  }, [initialCategoryMappingId])
+
   // Автопоиск при вводе названия товара
   useEffect(() => {
     if (productName && productName.length > 3 && !selectedCategory) {
