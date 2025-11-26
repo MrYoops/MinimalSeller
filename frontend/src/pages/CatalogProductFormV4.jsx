@@ -1055,7 +1055,7 @@ export default function CatalogProductFormV4() {
                   )}
                   
                   {/* Характеристики Ozon */}
-                  {product.marketplace_data?.ozon?.enabled && (
+                  {selectedMarketplaces.ozon && (
                     <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4">
                       <MarketplaceCharacteristics
                         marketplace="ozon"
