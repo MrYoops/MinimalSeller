@@ -240,7 +240,14 @@ async def get_category_attributes(
         
         if marketplace == 'ozon':
             if not type_id:
-                raise HTTPException(status_code=400, detail="type_id required for Ozon")
+                logger.warning(f"[Attributes] Ozon type_id missing for category {category_id}, cannot load attributes")
+                return {
+                    "marketplace": marketplace,
+                    "category_id": category_id,
+                    "attributes": [],
+                    "cached": False,
+                    "error": "type_id required for Ozon categories"
+                }
             attributes = await connector.get_category_attributes(int(category_id), type_id)
         elif marketplace == 'wb':
             attributes = await connector.get_category_characteristics(int(category_id))
