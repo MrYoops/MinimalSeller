@@ -401,12 +401,50 @@ async def search_mappings(
     query: str = Query(..., min_length=1),
     current_user: dict = Depends(get_current_user)
 ):
-    """Поиск сопоставлений"""
+    """Поиск сопоставлений - универсальный поиск по внутреннему имени И по категориям маркетплейсов"""
     try:
-        category_system = get_category_system()
-        mappings = await category_system.search_mappings(query, limit=50)
-        return {"query": query, "total": len(mappings), "mappings": mappings}
+        results = []
+        
+        # 1. Поиск по внутреннему имени категории
+        regex = {"$regex": query, "$options": "i"}
+        mappings = await server.db.category_mappings.find({
+            "internal_name": regex
+        }).limit(20).to_list(length=20)
+        
+        for mapping in mappings:
+            mapping["id"] = str(mapping.pop("_id"))
+            mapping["match_type"] = "internal"
+            results.append(mapping)
+        
+        # 2. Поиск по категориям маркетплейсов в кэше
+        for marketplace in ['ozon', 'wb', 'yandex']:
+            cache_collection = f"{marketplace}_categories_cache"
+            
+            # Ищем категорию в кэше маркетплейса
+            mp_categories = await server.db[cache_collection].find({
+                "$or": [
+                    {"category_name": regex},
+                    {"name": regex}
+                ]
+            }).limit(10).to_list(length=10)
+            
+            for mp_cat in mp_categories:
+                cat_id = str(mp_cat.get('category_id') or mp_cat.get('id'))
+                
+                # Найти mapping где есть эта категория маркетплейса
+                mapping = await server.db.category_mappings.find_one({
+                    f"marketplace_categories.{marketplace}": cat_id
+                })
+                
+                if mapping and str(mapping['_id']) not in [r.get('id') for r in results]:
+                    mapping["id"] = str(mapping.pop("_id"))
+                    mapping["match_type"] = f"marketplace_{marketplace}"
+                    mapping["matched_category_name"] = mp_cat.get('category_name') or mp_cat.get('name')
+                    results.append(mapping)
+        
+        return {"query": query, "total": len(results), "mappings": results}
     except Exception as e:
+        logger.error(f"[SearchMappings] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
