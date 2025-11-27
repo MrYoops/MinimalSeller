@@ -64,6 +64,20 @@ export default function CatalogCategoriesPageV2() {
       setLoadingMappings(false)
     }
   }
+  
+  const deleteMapping = async (mappingId, mappingName) => {
+    if (!confirm(`Вы уверены что хотите удалить сопоставление "${mappingName}"?\n\nЭто действие нельзя отменить.`)) {
+      return
+    }
+    
+    try {
+      await api.delete(`/api/categories/mappings/${mappingId}`)
+      alert('✅ Сопоставление удалено!')
+      loadMappings() // Перезагрузить список
+    } catch (error) {
+      alert('❌ Ошибка удаления: ' + (error.response?.data?.detail || error.message))
+    }
+  }
 
   const loadMarketplaceCategories = async (marketplace) => {
     setLoadingCategories(prev => ({ ...prev, [marketplace]: true }))
