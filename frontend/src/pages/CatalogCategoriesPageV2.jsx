@@ -426,9 +426,19 @@ export default function CatalogCategoriesPageV2() {
                           <span className="text-gray-600 italic">—</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm">
+                      <td className="px-6 py-4 text-sm border-r border-gray-800">
                         <p className="font-bold text-mm-cyan">{mapping.internal_name}</p>
                         <p className="text-xs text-gray-500 mt-1">ID: {mapping.id}</p>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => deleteMapping(mapping.id, mapping.internal_name)}
+                          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition flex items-center gap-1 mx-auto"
+                          title="Удалить сопоставление"
+                        >
+                          <FiTrash2 size={14} />
+                          Удалить
+                        </button>
                       </td>
                     </tr>
                   ))}
