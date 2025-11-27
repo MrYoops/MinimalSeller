@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import UnifiedCategorySelector from '../components/UnifiedCategorySelector'
 import ProductCharacteristics from '../components/ProductCharacteristics'
 import MarketplaceCharacteristics from '../components/MarketplaceCharacteristics'
+import UnifiedMarketplaceCharacteristics from '../components/UnifiedMarketplaceCharacteristics'
 import { FiLoader } from 'react-icons/fi'
 
 export default function CatalogProductFormV4() {
