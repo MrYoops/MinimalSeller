@@ -303,7 +303,14 @@ export default function UnifiedCategorySelector({
                           onClick={() => selectCategory(mapping)}
                           className="w-full px-4 py-3 text-left hover:bg-mm-cyan/20 border-b border-gray-700 last:border-b-0 transition-colors focus:bg-mm-cyan/30 focus:outline-none"
                         >
-                          <p className="font-medium text-white mb-1">{mapping.internal_name}</p>
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="font-medium text-white">{mapping.internal_name}</p>
+                            {mapping.matched_category_name && (
+                              <span className="text-xs text-gray-400 italic">
+                                ({mapping.matched_category_name})
+                              </span>
+                            )}
+                          </div>
                           <div className="flex gap-2 mt-1 flex-wrap">
                             {Object.entries(mapping.marketplace_categories || {}).map(([mp, catId]) => {
                               if (!catId) return null
