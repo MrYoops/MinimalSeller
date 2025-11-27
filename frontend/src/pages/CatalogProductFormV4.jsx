@@ -422,6 +422,79 @@ export default function CatalogProductFormV4() {
     
     loadCharacteristicsForSelectedMarketplaces()
   }, [selectedMarketplaces.ozon, selectedMarketplaces.wb, selectedMarketplaces.yandex, product.category_mapping_id])
+  
+  // Миграция данных: копирование общих характеристик между МП
+  useEffect(() => {
+    if (!product.marketplace_data || activeMarketplaces.length < 2) return
+    
+    const migrateCommonCharacteristics = () => {
+      // Собираем все имена характеристик по всем МП
+      const allCharNames = new Set()
+      const charsByMp = {}
+      
+      activeMarketplaces.forEach(mp => {
+        const chars = mpCharacteristics[mp] || []
+        charsByMp[mp] = chars.map(c => c.name || c.attribute_name || c.charcName)
+        chars.forEach(c => {
+          const name = c.name || c.attribute_name || c.charcName
+          allCharNames.add(name)
+        })
+      })
+      
+      // Находим характеристики, которые есть в нескольких МП (общие)
+      const commonCharNames = Array.from(allCharNames).filter(charName => {
+        const mpCount = activeMarketplaces.filter(mp => charsByMp[mp]?.includes(charName)).length
+        return mpCount > 1
+      })
+      
+      if (commonCharNames.length === 0) return
+      
+      // Копируем значения общих полей
+      let updated = false
+      const newMarketplaceData = { ...product.marketplace_data }
+      
+      commonCharNames.forEach(charName => {
+        // Находим МП где это поле уже заполнено
+        const mpWithValue = activeMarketplaces.find(mp => 
+          newMarketplaceData[mp]?.characteristics?.[charName]
+        )
+        
+        if (mpWithValue) {
+          const value = newMarketplaceData[mpWithValue].characteristics[charName]
+          
+          // Копируем в другие МП где это поле есть но не заполнено
+          activeMarketplaces.forEach(mp => {
+            if (mp !== mpWithValue && charsByMp[mp]?.includes(charName)) {
+              if (!newMarketplaceData[mp]?.characteristics?.[charName]) {
+                if (!newMarketplaceData[mp]) {
+                  newMarketplaceData[mp] = { characteristics: {} }
+                }
+                if (!newMarketplaceData[mp].characteristics) {
+                  newMarketplaceData[mp].characteristics = {}
+                }
+                newMarketplaceData[mp].characteristics[charName] = value
+                updated = true
+              }
+            }
+          })
+        }
+      })
+      
+      if (updated) {
+        console.log('[Migration] Migrated common characteristics values between marketplaces')
+        setProduct(prev => ({
+          ...prev,
+          marketplace_data: newMarketplaceData
+        }))
+      }
+    }
+    
+    // Задержка чтобы не срабатывало на каждом изменении
+    const timer = setTimeout(migrateCommonCharacteristics, 500)
+    return () => clearTimeout(timer)
+  }, [mpCharacteristics, selectedMarketplaces])
+
+  const activeMarketplaces = Object.keys(selectedMarketplaces).filter(mp => selectedMarketplaces[mp])
 
   const handleMarketplaceDataChange = (marketplace, field, value) => {
     setMarketplaceData(prev => ({
