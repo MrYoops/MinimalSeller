@@ -10,7 +10,8 @@ export default function UnifiedMarketplaceCharacteristics({
   characteristicsByMarketplace = {},
   valuesByMarketplace = {},
   onChange,
-  loading = {}
+  loading = {},
+  baseCharacteristics = {} // Базовые характеристики товара (чтобы исключить дубли)
 }) {
   
   const mpConfig = {
