@@ -342,12 +342,26 @@ export default function CatalogProductFormV4() {
     setLoadingCharacteristics(prev => ({ ...prev, [marketplace]: true }))
     
     try {
+      // Маппинг кратких названий на полные (для совместимости с БД)
+      const marketplaceKeys = {
+        'ozon': 'ozon',
+        'wb': 'wildberries',
+        'yandex': 'yandex'
+      }
+      
+      const dbKey = marketplaceKeys[marketplace] || marketplace
+      
       // Получить mapping чтобы узнать category_id для маркетплейса
       const mappingResponse = await api.get(`/api/categories/mappings/${categoryMappingId}`)
       const mapping = mappingResponse.data
       
-      const categoryId = mapping.marketplace_categories?.[marketplace]
-      const typeId = mapping.marketplace_type_ids?.[marketplace]
+      console.log('[loadMarketplaceCharacteristics] Mapping:', mapping)
+      console.log('[loadMarketplaceCharacteristics] Looking for key:', dbKey)
+      
+      const categoryId = mapping.marketplace_categories?.[dbKey]
+      const typeId = mapping.marketplace_type_ids?.[dbKey]
+      
+      console.log('[loadMarketplaceCharacteristics] Found categoryId:', categoryId, 'typeId:', typeId)
       
       if (!categoryId) {
         console.warn(`Category not mapped to ${marketplace}`)
