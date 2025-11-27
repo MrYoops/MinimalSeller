@@ -1130,6 +1130,7 @@ export default function CatalogProductFormV4() {
                       ozon: product.marketplace_data?.ozon?.characteristics || {},
                       yandex: product.marketplace_data?.yandex?.characteristics || {}
                     }}
+                    baseCharacteristics={product.characteristics || {}}
                     onChange={(mp, charId, charName, value) => {
                       setProduct(prev => ({
                         ...prev,
