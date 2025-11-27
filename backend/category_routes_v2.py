@@ -480,6 +480,37 @@ async def get_mapping_by_id(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.delete("/api/categories/mappings/{mapping_id}")
+async def delete_mapping(
+    mapping_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Удалить сопоставление категории"""
+    try:
+        from bson import ObjectId
+        from bson.errors import InvalidId
+        
+        # Пробуем конвертировать в ObjectId
+        try:
+            object_id = ObjectId(mapping_id)
+        except InvalidId:
+            raise HTTPException(status_code=400, detail="Invalid mapping ID format")
+        
+        result = await server.db.category_mappings.delete_one({"_id": object_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Mapping not found")
+        
+        logger.info(f"[DeleteMapping] Deleted mapping: {mapping_id}")
+        return {"message": "Mapping deleted successfully", "mapping_id": mapping_id}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[DeleteMapping] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 # ========== WB ПРЕДЗАГРУЗКА КАТЕГОРИЙ ==========
 
