@@ -45,7 +45,7 @@ function AppRoutes() {
       <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
       <Route path="/" element={
         <ProtectedRoute>
-          {user?.role === 'admin' ? <AdminDashboard /> : <SellerDashboard />}
+          {user?.role === 'admin' ? <AdminDashboardV2 /> : <SellerDashboard />}
         </ProtectedRoute>
       } />
       <Route path="/products/:id/edit" element={
