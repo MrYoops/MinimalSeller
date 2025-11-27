@@ -121,12 +121,20 @@ export default function UnifiedCategorySelector({
   const loadAttributesForMarketplaces = async (mapping) => {
     setLoading(true)
     const newAttributes = {}
+    
+    // Маппинг кратких названий на полные (для совместимости с БД)
+    const marketplaceKeys = {
+      'ozon': 'ozon',
+      'wb': 'wildberries',
+      'yandex': 'yandex'
+    }
 
     for (const mp of selectedMarketplaces) {
-      const categoryId = mapping.marketplace_categories?.[mp]
+      const dbKey = marketplaceKeys[mp] || mp
+      const categoryId = mapping.marketplace_categories?.[dbKey]
       
       if (!categoryId) {
-        console.log(`[UnifiedCategory] No category mapped for ${mp}`)
+        console.log(`[UnifiedCategory] No category mapped for ${mp} (dbKey: ${dbKey})`)
         continue
       }
 
