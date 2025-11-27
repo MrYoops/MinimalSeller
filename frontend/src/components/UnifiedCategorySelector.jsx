@@ -257,12 +257,20 @@ export default function UnifiedCategorySelector({
           </div>
         ) : (
           <div className="relative">
+            <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-3 mb-3">
+              <p className="text-xs text-blue-300">
+                💡 <strong>Подсказка:</strong> Вы можете искать по названию категории любого маркетплейса!
+                Например: "Мыши WB", "Клавиатуры Ozon", "Футболки". 
+                Система автоматически найдет сопоставление и применит категории для всех маркетплейсов.
+              </p>
+            </div>
+            
             <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Начните вводить название категории... (мин. 2 символа)"
+                placeholder="🔍 Поиск по категориям WB, Ozon, Яндекс... (мин. 2 символа)"
                 className="w-full px-4 py-3 pl-10 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-mm-cyan focus:ring-2 focus:ring-mm-cyan/50 outline-none"
                 autoComplete="off"
               />
