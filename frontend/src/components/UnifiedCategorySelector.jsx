@@ -142,8 +142,8 @@ export default function UnifiedCategorySelector({
         // Для Ozon нужен type_id
         let url = `/api/categories/marketplace/${mp}/${categoryId}/attributes`
         
-        if (mp === 'ozon' && mapping.marketplace_type_ids?.ozon) {
-          url += `?type_id=${mapping.marketplace_type_ids.ozon}`
+        if (mp === 'ozon' && mapping.marketplace_type_ids?.[dbKey]) {
+          url += `?type_id=${mapping.marketplace_type_ids[dbKey]}`
         }
 
         const response = await api.get(url)
