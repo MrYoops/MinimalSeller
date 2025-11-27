@@ -1048,95 +1048,32 @@ export default function CatalogProductFormV4() {
                   )}
                   
                   {/* Подсказка */}
-                  {!selectedMarketplaces.wb && !selectedMarketplaces.ozon && !selectedMarketplaces.yandex && (
-                    <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4">
-                      <p className="text-sm text-blue-300 flex items-center gap-2">
-                        <FiAlertCircle />
-                        Отметьте галочки маркетплейсов внизу страницы ("Отправить в:"), чтобы загрузить характеристики
-                      </p>
-                    </div>
-                  )}
-                  
-                  {/* Характеристики WB */}
-                  {selectedMarketplaces.wb && (
-                    <div className="bg-purple-900/20 border border-purple-600/30 rounded-lg p-4">
-                      <MarketplaceCharacteristics
-                        marketplace="wb"
-                        characteristics={mpCharacteristics.wb}
-                        values={product.marketplace_data?.wb?.characteristics || {}}
-                        onChange={(mp, charId, charName, value) => {
-                          setProduct(prev => ({
-                            ...prev,
-                            marketplace_data: {
-                              ...prev.marketplace_data,
-                              [mp]: {
-                                ...prev.marketplace_data[mp],
-                                characteristics: {
-                                  ...prev.marketplace_data[mp].characteristics,
-                                  [charName]: value
-                                }
-                              }
+                  {/* Единая секция характеристик со smart-объединением */}
+                  <UnifiedMarketplaceCharacteristics
+                    selectedMarketplaces={selectedMarketplaces}
+                    characteristicsByMarketplace={mpCharacteristics}
+                    valuesByMarketplace={{
+                      wb: product.marketplace_data?.wb?.characteristics || {},
+                      ozon: product.marketplace_data?.ozon?.characteristics || {},
+                      yandex: product.marketplace_data?.yandex?.characteristics || {}
+                    }}
+                    onChange={(mp, charId, charName, value) => {
+                      setProduct(prev => ({
+                        ...prev,
+                        marketplace_data: {
+                          ...prev.marketplace_data,
+                          [mp]: {
+                            ...prev.marketplace_data?.[mp],
+                            characteristics: {
+                              ...prev.marketplace_data?.[mp]?.characteristics,
+                              [charName]: value
                             }
-                          }))
-                        }}
-                        loading={loadingCharacteristics.wb}
-                      />
-                    </div>
-                  )}
-                  
-                  {/* Характеристики Ozon */}
-                  {selectedMarketplaces.ozon && (
-                    <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4">
-                      <MarketplaceCharacteristics
-                        marketplace="ozon"
-                        characteristics={mpCharacteristics.ozon}
-                        values={product.marketplace_data?.ozon?.characteristics || {}}
-                        onChange={(mp, charId, charName, value) => {
-                          setProduct(prev => ({
-                            ...prev,
-                            marketplace_data: {
-                              ...prev.marketplace_data,
-                              [mp]: {
-                                ...prev.marketplace_data[mp],
-                                characteristics: {
-                                  ...prev.marketplace_data[mp].characteristics,
-                                  [charName]: value
-                                }
-                              }
-                            }
-                          }))
-                        }}
-                        loading={loadingCharacteristics.ozon}
-                      />
-                    </div>
-                  )}
-                  
-                  {/* Характеристики Яндекс */}
-                  {selectedMarketplaces.yandex && (
-                    <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4">
-                      <MarketplaceCharacteristics
-                        marketplace="yandex"
-                        characteristics={mpCharacteristics.yandex}
-                        values={product.marketplace_data?.yandex?.characteristics || {}}
-                        onChange={(mp, charId, charName, value) => {
-                          setProduct(prev => ({
-                            ...prev,
-                            marketplace_data: {
-                              ...prev.marketplace_data,
-                              [mp]: {
-                                ...prev.marketplace_data[mp],
-                                characteristics: {
-                                  ...prev.marketplace_data[mp].characteristics,
-                                  [charName]: value
-                                }
-                              }
-                            }
-                          }))
-                        }}
-                        loading={loadingCharacteristics.yandex}
-                      />
-                    </div>
-                  )}
+                          }
+                        }
+                      }))
+                    }}
+                    loading={loadingCharacteristics}
+                  />
                 </div>
 
                 {/* ПОЛ И СЕЗОН */}
