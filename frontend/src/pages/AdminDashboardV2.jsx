@@ -112,7 +112,7 @@ function SellersManagementTab() {
 
 function AdminDashboardV2() {
   const { user, logout } = useAuth()
-  const [activeTab, setActiveTab] = useState('products')
+  const [activeTab, setActiveTab] = useState('sellers')
 
   return (
     <div className="min-h-screen bg-mm-black">
