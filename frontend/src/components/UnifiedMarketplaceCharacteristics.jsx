@@ -61,6 +61,9 @@ export default function UnifiedMarketplaceCharacteristics({
       return { common: [], specific: {} }
     }
     
+    // Получаем список имен базовых характеристик для исключения дублей
+    const baseCharNames = new Set(Object.keys(baseCharacteristics || {}).map(name => name.toLowerCase().trim()))
+    
     // Создаем карту: charName -> { marketplaces: [...], data: {...} }
     const charMap = new Map()
     
@@ -72,6 +75,12 @@ export default function UnifiedMarketplaceCharacteristics({
         const charId = char.id || char.attribute_id || char.charcID
         const isRequired = char.is_required || char.required
         const isDictionary = char.dictionary_id > 0 || char.type === 'Dictionary'
+        
+        // ИСКЛЮЧАЕМ характеристику, если она уже есть в базовых характеристиках
+        if (baseCharNames.has(charName.toLowerCase().trim())) {
+          console.log(`[UnifiedMarketplaceCharacteristics] Skipping "${charName}" - already in base characteristics`)
+          return
+        }
         
         if (!charMap.has(charName)) {
           charMap.set(charName, {
@@ -124,7 +133,7 @@ export default function UnifiedMarketplaceCharacteristics({
     })
     
     return { common, specific }
-  }, [activeMarketplaces, characteristicsByMarketplace])
+  }, [activeMarketplaces, characteristicsByMarketplace, baseCharacteristics])
   
   const handleChange = (charName, value, affectedMarketplaces) => {
     if (onChange) {
