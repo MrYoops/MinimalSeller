@@ -389,8 +389,11 @@ export default function CatalogCategoriesPageV2() {
                     <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400 uppercase tracking-wider border-r border-gray-700">
                       🟡 Яндекс Маркет
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-mm-cyan uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-mm-cyan uppercase tracking-wider border-r border-gray-700">
                       📁 Наша Категория
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-400 uppercase tracking-wider">
+                      Действия
                     </th>
                   </tr>
                 </thead>
