@@ -228,32 +228,54 @@ export default function UnifiedCategorySelector({
         </label>
         
         {selectedCategory ? (
-          <div className="flex items-center justify-between bg-green-900/30 border border-green-500/50 rounded-lg p-3">
-            <div>
-              <p className="text-green-400 font-medium flex items-center gap-2">
-                <FiCheck /> {selectedCategory.internal_name}
-              </p>
-              <div className="flex gap-2 mt-2">
-                {Object.entries(selectedCategory.marketplace_categories || {}).map(([mp, catId]) => {
-                  if (!catId) return null
-                  const colors = mpColors[mp]
-                  return (
-                    <span key={mp} className={`text-xs px-2 py-1 rounded font-medium ${colors?.badge || 'bg-gray-700 text-gray-300'}`}>
-                      {mpNames[mp]?.toUpperCase()}
-                    </span>
-                  )
-                })}
+          <div className="bg-green-900/20 border-2 border-green-500/50 rounded-lg p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex-shrink-0 w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
+                    <FiCheck className="text-white" size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Категория товара:</p>
+                    <p className="text-lg font-bold text-green-300">{selectedCategory.internal_name}</p>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-800/50 rounded-lg p-3">
+                  <p className="text-xs text-gray-400 mb-2">Автоматически сопоставлено с:</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {Object.entries(selectedCategory.marketplace_categories || {}).map(([mp, catId]) => {
+                      const colors = mpColors[mp]
+                      return (
+                        <div key={mp} className={`rounded p-2 ${catId ? 'bg-gray-700' : 'bg-gray-800 border border-gray-700 border-dashed'}`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs px-2 py-0.5 rounded font-medium ${colors?.badge || 'bg-gray-600 text-gray-400'}`}>
+                              {mpNames[mp]}
+                            </span>
+                          </div>
+                          {catId ? (
+                            <p className="text-xs text-gray-400">ID: {catId}</p>
+                          ) : (
+                            <p className="text-xs text-gray-500 italic">Не сопоставлено</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
               </div>
+              
+              <button
+                onClick={() => {
+                  setSelectedCategory(null)
+                  setAllAttributes({})
+                }}
+                className="p-2 text-gray-400 hover:text-white transition flex-shrink-0"
+                title="Изменить категорию"
+              >
+                <FiEdit size={18} />
+              </button>
             </div>
-            <button
-              onClick={() => {
-                setSelectedCategory(null)
-                setAllAttributes({})
-              }}
-              className="text-gray-400 hover:text-white px-3 py-1 bg-gray-800 rounded border border-gray-700 hover:border-gray-600"
-            >
-              Изменить
-            </button>
           </div>
         ) : (
           <div className="relative">
