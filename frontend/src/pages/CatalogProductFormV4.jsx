@@ -387,12 +387,19 @@ export default function CatalogProductFormV4() {
   // Загрузка характеристик при изменении нижних галочек
   useEffect(() => {
     const loadCharacteristicsForSelectedMarketplaces = async () => {
-      if (!product.category_mapping_id) return
+      console.log('[ProductForm] Loading characteristics, category_mapping_id:', product.category_mapping_id)
+      console.log('[ProductForm] Selected marketplaces:', selectedMarketplaces)
+      
+      if (!product.category_mapping_id) {
+        console.log('[ProductForm] No category_mapping_id, skipping')
+        return
+      }
       
       // Проверяем каждый маркетплейс
       for (const mp of ['ozon', 'wb', 'yandex']) {
         // Если галочка включена и характеристики еще не загружены
         if (selectedMarketplaces[mp] && mpCharacteristics[mp].length === 0 && !loadingCharacteristics[mp]) {
+          console.log(`[ProductForm] Loading characteristics for ${mp}`)
           await loadMarketplaceCharacteristics(mp, product.category_mapping_id)
         }
       }
