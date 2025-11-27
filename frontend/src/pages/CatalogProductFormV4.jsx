@@ -774,7 +774,11 @@ export default function CatalogProductFormV4() {
                     selectedMarketplaces={Object.keys(selectedMarketplaces).filter(mp => selectedMarketplaces[mp])}
                     onCategorySelected={(mapping) => {
                       console.log('[ProductForm] Category selected:', mapping)
-                      setProduct(prev => ({ ...prev, category_mapping_id: mapping.id }))
+                      if (mapping) {
+                        setProduct(prev => ({ ...prev, category_mapping_id: mapping.id }))
+                      } else {
+                        setProduct(prev => ({ ...prev, category_mapping_id: null }))
+                      }
                     }}
                     onAttributesLoaded={(attributes) => {
                       console.log('[ProductForm] Attributes loaded:', attributes)
