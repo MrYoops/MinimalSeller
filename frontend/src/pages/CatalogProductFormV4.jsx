@@ -877,6 +877,9 @@ export default function CatalogProductFormV4() {
                       console.log('[ProductForm] Category selected:', mapping)
                       if (mapping) {
                         setProduct(prev => ({ ...prev, category_mapping_id: mapping.id }))
+                        // Сбросить флаги загрузки при смене категории
+                        setCharacteristicsAttempted({ wb: false, ozon: false, yandex: false })
+                        setMpCharacteristics({ wb: [], ozon: [], yandex: [] })
                       } else {
                         setProduct(prev => ({ ...prev, category_mapping_id: null }))
                       }
