@@ -147,17 +147,44 @@ export default function UnifiedMarketplaceCharacteristics({
     return allChars
   }, [activeMarketplaces, characteristicsByMarketplace, baseCharacteristics])
   
-  const handleChange = (charName, value, affectedMarketplaces) => {
-    if (onChange) {
-      // Обновляем значение для всех затронутых маркетплейсов
-      affectedMarketplaces.forEach(mp => {
-        const char = analysisResult.common.find(c => c.name === charName) || 
-                     analysisResult.specific[mp]?.find(c => c.name === charName)
-        if (char) {
-          onChange(mp, char.id, charName, value)
+  // Обработчик изменения - СИНХРОНИЗИРУЕТ значение во все источники
+  const handleChange = (charName, value, sources) => {
+    console.log(`[Unified] Changing "${charName}" = "${value}" for sources:`, sources)
+    
+    sources.forEach(source => {
+      if (source === 'base') {
+        // Обновить базовую характеристику
+        if (onBaseCharacteristicChange) {
+          onBaseCharacteristicChange(charName, value)
         }
-      })
+      } else {
+        // Обновить характеристику маркетплейса
+        if (onChange) {
+          const entry = unifiedCharacteristics.find(c => c.name === charName)
+          const mpData = entry?.mpData?.[source]
+          const charId = mpData?.id || charName
+          
+          onChange(source, charId, charName, value)
+        }
+      }
+    })
+  }
+  
+  // Получить текущее значение характеристики
+  const getCurrentValue = (charName, sources) => {
+    // Приоритет: base > первый МП в списке
+    if (sources.includes('base') && baseCharacteristics[charName]) {
+      return baseCharacteristics[charName]
     }
+    
+    // Ищем в МП
+    for (const mp of sources) {
+      if (mp === 'base') continue
+      const value = valuesByMarketplace[mp]?.[charName]
+      if (value) return value
+    }
+    
+    return ''
   }
   
   const renderCharacteristic = (entry, context = 'common') => {
