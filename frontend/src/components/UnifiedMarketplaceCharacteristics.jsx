@@ -3,8 +3,9 @@ import { FiStar, FiAlertCircle } from 'react-icons/fi'
 import QuickCategoryMatcher from './QuickCategoryMatcher'
 
 /**
- * Компонент для отображения характеристик маркетплейсов с умным объединением
- * Группирует общие поля и разделяет специфичные
+ * Компонент для отображения ВСЕХ характеристик товара
+ * Объединяет базовые + маркетплейсовые в ОДНУ таблицу
+ * Автоматически синхронизирует значения между всеми источниками
  */
 export default function UnifiedMarketplaceCharacteristics({ 
   selectedMarketplaces = {},
@@ -12,10 +13,11 @@ export default function UnifiedMarketplaceCharacteristics({
   valuesByMarketplace = {},
   onChange,
   loading = {},
-  baseCharacteristics = {}, // Базовые характеристики товара (чтобы исключить дубли)
-  currentMappingId = null, // ID текущего маппинга (для быстрого обновления)
-  currentCategoryName = '', // Название текущей категории (для автопоиска)
-  onMappingUpdated // Callback когда маппинг обновлен
+  baseCharacteristics = {},
+  currentMappingId = null,
+  currentCategoryName = '',
+  onMappingUpdated,
+  onBaseCharacteristicChange // Новый callback для обновления базовых характеристик
 }) {
   
   const mpConfig = {
