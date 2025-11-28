@@ -13,8 +13,8 @@ from typing import Dict, Any, Optional
 BACKEND_URL = "https://catmaster-1.preview.emergentagent.com/api"
 
 # Test credentials from review request
-TEST_SELLER_EMAIL = "testuser@test.com"
-TEST_SELLER_PASSWORD = "password"
+TEST_SELLER_EMAIL = "seller@test.com"
+TEST_SELLER_PASSWORD = "password123"
 
 # Colors for output
 class Colors:
