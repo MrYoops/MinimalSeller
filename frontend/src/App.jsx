@@ -14,6 +14,7 @@ import WarehouseDetailNew from './pages/WarehouseDetailNew'
 import IntegrationsPage from './pages/IntegrationsPage'
 import CatalogProductsPage from './pages/CatalogProductsPage'
 import CatalogCategoriesPageV2 from './pages/CatalogCategoriesPageV2'
+import CatalogCategoriesPageSimple from './pages/CatalogCategoriesPageSimple'
 import CatalogProductFormV4 from './pages/CatalogProductFormV4'
 import CatalogProductFormPage from './pages/CatalogProductFormPage' // Старая форма
 import CatalogImportPage from './pages/CatalogImportPage'
