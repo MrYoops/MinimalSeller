@@ -1145,6 +1145,14 @@ export default function CatalogProductFormV4() {
                       yandex: product.marketplace_data?.yandex?.characteristics || {}
                     }}
                     baseCharacteristics={product.characteristics || {}}
+                    currentMappingId={product.category_mapping_id}
+                    currentCategoryName={currentMapping?.internal_name || ''}
+                    onMappingUpdated={async (marketplace, categoryId, categoryName, typeId) => {
+                      console.log(`[ProductForm] Mapping updated for ${marketplace}:`, categoryId)
+                      // Перезагрузить характеристики для этого МП
+                      setCharacteristicsAttempted(prev => ({ ...prev, [marketplace]: false }))
+                      await loadMarketplaceCharacteristics(marketplace, product.category_mapping_id)
+                    }}
                     onChange={(mp, charId, charName, value) => {
                       setProduct(prev => ({
                         ...prev,
