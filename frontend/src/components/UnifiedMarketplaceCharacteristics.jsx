@@ -53,6 +53,14 @@ export default function UnifiedMarketplaceCharacteristics({
         border: 'border-yellow-500',
         badge: 'bg-yellow-600/20 text-yellow-300 border-yellow-500/30'
       }
+    },
+    base: {
+      name: 'Базовая',
+      shortName: 'Базовая',
+      icon: '📦',
+      color: {
+        badge: 'bg-gray-600/20 text-gray-300 border-gray-500/30'
+      }
     }
   }
   
