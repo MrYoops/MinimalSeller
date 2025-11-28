@@ -66,7 +66,13 @@ export default function UnifiedMarketplaceCharacteristics({
     }
     
     // Получаем список имен базовых характеристик для исключения дублей
-    const baseCharNames = new Set(Object.keys(baseCharacteristics || {}).map(name => name.toLowerCase().trim()))
+    const baseCharNames = new Set(
+      Object.keys(baseCharacteristics || {})
+        .filter(name => name && name.trim()) // Фильтруем пустые
+        .map(name => name.toLowerCase().trim())
+    )
+    
+    console.log('[UnifiedMarketplaceCharacteristics] Base characteristics:', Array.from(baseCharNames))
     
     // Создаем карту: charName -> { marketplaces: [...], data: {...} }
     const charMap = new Map()
