@@ -282,16 +282,14 @@ export default function UnifiedMarketplaceCharacteristics({
     )
   }
   
-  const { common, specific } = analysisResult
-  
-  const commonRequired = common.filter(c => c.requiredIn.length > 0)
-  const commonOptional = common.filter(c => c.requiredIn.length === 0)
-  
-  // Определяем МП без характеристик (нужно показать QuickMatcher)
+  // МП которым нужен QuickMatcher (нет характеристик)
   const marketplacesNeedingMapping = activeMarketplaces.filter(mp => {
     const chars = characteristicsByMarketplace[mp] || []
     return chars.length === 0
   })
+  
+  const requiredChars = unifiedCharacteristics.filter(c => c.requiredIn.length > 0)
+  const optionalChars = unifiedCharacteristics.filter(c => c.requiredIn.length === 0)
   
   return (
     <div className="space-y-6">
