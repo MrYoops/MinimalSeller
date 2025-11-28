@@ -130,37 +130,64 @@ class CategorySystem:
     ) -> str:
         """
         Создать или обновить сопоставление категорий между маркетплейсами
+        УМНАЯ ЛОГИКА: Сначала ищет существующий маппинг по category_id МП, 
+        если не найден - ищет по internal_name, если все равно нет - создает новый
         Возвращает ID сопоставления
         """
         logger.info(f"[CategorySystem] Creating/updating mapping for '{internal_name}'")
+        logger.info(f"  Ozon: {ozon_category_id}, WB: {wb_category_id}, Yandex: {yandex_category_id}")
         
-        # Проверить существование
-        existing = await self.db.category_mappings.find_one({
-            "internal_name": internal_name
-        })
+        existing = None
+        
+        # 1. Поиск по category_id маркетплейса (приоритет!)
+        search_conditions = []
+        if ozon_category_id:
+            search_conditions.append({"marketplace_categories.ozon": ozon_category_id})
+        if wb_category_id:
+            search_conditions.append({"marketplace_categories.wildberries": wb_category_id})
+        if yandex_category_id:
+            search_conditions.append({"marketplace_categories.yandex": yandex_category_id})
+        
+        if search_conditions:
+            existing = await self.db.category_mappings.find_one({
+                "$or": search_conditions
+            })
+            if existing:
+                logger.info(f"✅ Found existing mapping by marketplace category_id: {existing['_id']}")
+        
+        # 2. Если не найден по category_id, ищем по internal_name
+        if not existing:
+            existing = await self.db.category_mappings.find_one({
+                "internal_name": internal_name
+            })
+            if existing:
+                logger.info(f"✅ Found existing mapping by internal_name: {existing['_id']}")
         
         mapping_doc = {
             "internal_name": internal_name,
             "marketplace_categories": {
-                "ozon": ozon_category_id,
-                "wildberries": wb_category_id,
-                "yandex": yandex_category_id
+                "ozon": ozon_category_id or existing.get("marketplace_categories", {}).get("ozon") if existing else None,
+                "wildberries": wb_category_id or existing.get("marketplace_categories", {}).get("wildberries") if existing else None,
+                "yandex": yandex_category_id or existing.get("marketplace_categories", {}).get("yandex") if existing else None
             },
             "updated_at": datetime.utcnow()
         }
         
         if existing:
+            # Обновляем существующий маппинг (сливаем данные)
             await self.db.category_mappings.update_one(
                 {"_id": existing["_id"]},
                 {"$set": mapping_doc}
             )
             mapping_id = str(existing["_id"])
+            logger.info(f"✅ Updated existing mapping: {mapping_id}")
         else:
+            # Создаем новый маппинг
             mapping_doc["created_at"] = datetime.utcnow()
             result = await self.db.category_mappings.insert_one(mapping_doc)
             mapping_id = str(result.inserted_id)
+            logger.info(f"✅ Created new mapping: {mapping_id}")
         
-        logger.info(f"[CategorySystem] Mapping saved: {mapping_id}")
         return mapping_id
     
     async def get_mapping_by_id(self, mapping_id: str) -> Optional[Dict[str, Any]]:
