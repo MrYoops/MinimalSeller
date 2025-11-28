@@ -1383,6 +1383,315 @@ class BackendTester:
             self.failed += 1
             return False
     
+    def test_quick_category_search_ozon(self) -> bool:
+        """Test 20: QuickMatcher - Search Ozon Categories"""
+        print("\n" + "="*60)
+        print("TEST 20: QuickMatcher - Search Ozon Categories")
+        print("="*60)
+        print_info("Testing /api/categories/marketplace/ozon/search endpoint")
+        print_info("This is used by QuickCategoryMatcher for auto-suggestions")
+        
+        if not self.token:
+            print_error("No token available. Login first.")
+            self.failed += 1
+            return False
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}"
+            }
+            
+            # Search for "Кроссовки" (sneakers) - common category
+            response = requests.get(
+                f"{self.base_url}/categories/marketplace/ozon/search",
+                headers=headers,
+                params={"query": "Кроссовки"},
+                timeout=30
+            )
+            
+            print_info(f"Response status: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                categories = data.get('categories', [])
+                
+                print_success(f"✅ Ozon category search successful!")
+                print_info(f"Found {len(categories)} categories")
+                print_info(f"Cached: {data.get('cached', False)}")
+                
+                if categories:
+                    # Show first 3 categories (what QuickMatcher shows)
+                    for i, cat in enumerate(categories[:3]):
+                        cat_id = cat.get('category_id') or cat.get('id')
+                        cat_name = cat.get('category_name') or cat.get('name')
+                        type_id = cat.get('type_id')
+                        print_info(f"  {i+1}. {cat_name} (ID: {cat_id}, Type: {type_id})")
+                    
+                    # Store for next test
+                    self.test_ozon_category_id = categories[0].get('category_id') or categories[0].get('id')
+                    self.test_ozon_type_id = categories[0].get('type_id')
+                    self.test_ozon_category_name = categories[0].get('category_name') or categories[0].get('name')
+                    
+                    self.passed += 1
+                    return True
+                else:
+                    print_warning("No categories found - cache may be empty")
+                    print_info("Run category preload first: POST /api/categories/ozon/preload")
+                    self.warnings += 1
+                    return True
+            else:
+                print_error(f"Category search failed: {response.status_code}")
+                print_error(f"Response: {response.text}")
+                self.failed += 1
+                return False
+                
+        except Exception as e:
+            print_error(f"Exception during category search: {str(e)}")
+            self.failed += 1
+            return False
+    
+    def test_quick_update_mapping(self) -> bool:
+        """Test 21: QuickMatcher - Update Mapping with Selected Category"""
+        print("\n" + "="*60)
+        print("TEST 21: QuickMatcher - Quick Update Mapping")
+        print("="*60)
+        print_info("Testing /api/categories/mappings/quick-update endpoint")
+        print_info("This is called when user selects category from QuickMatcher")
+        
+        if not self.token:
+            print_error("No token available. Login first.")
+            self.failed += 1
+            return False
+        
+        # First, get or create a test mapping
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json"
+            }
+            
+            # Get all mappings to find one without Ozon category
+            print_info("Step 1: Finding a mapping without Ozon category...")
+            
+            mappings_response = requests.get(
+                f"{self.base_url}/categories/mappings",
+                headers=headers,
+                timeout=10
+            )
+            
+            if mappings_response.status_code != 200:
+                print_error("Could not fetch mappings")
+                self.failed += 1
+                return False
+            
+            mappings = mappings_response.json()
+            
+            # Find mapping without Ozon category
+            test_mapping_id = None
+            for mapping in mappings:
+                ozon_cat = mapping.get('marketplace_categories', {}).get('ozon')
+                if not ozon_cat:
+                    test_mapping_id = mapping.get('id')
+                    print_info(f"Found mapping without Ozon: {mapping.get('internal_name')} (ID: {test_mapping_id})")
+                    break
+            
+            if not test_mapping_id:
+                print_warning("No mapping without Ozon category found")
+                print_info("Creating a test mapping...")
+                
+                # Create a test mapping
+                create_response = requests.post(
+                    f"{self.base_url}/categories/mappings",
+                    headers=headers,
+                    json={
+                        "internal_name": "Test Category for QuickMatcher",
+                        "wb_category_id": "123456"
+                    },
+                    timeout=10
+                )
+                
+                if create_response.status_code == 200:
+                    test_mapping_id = create_response.json().get('mapping_id')
+                    print_success(f"Created test mapping: {test_mapping_id}")
+                else:
+                    print_error("Could not create test mapping")
+                    self.failed += 1
+                    return False
+            
+            # Step 2: Quick update with Ozon category
+            print_info("Step 2: Updating mapping with Ozon category...")
+            
+            ozon_cat_id = getattr(self, 'test_ozon_category_id', '15621048')
+            ozon_type_id = getattr(self, 'test_ozon_type_id', 91248)
+            
+            update_payload = {
+                "mapping_id": test_mapping_id,
+                "marketplace": "ozon",
+                "category_id": str(ozon_cat_id),
+                "type_id": ozon_type_id
+            }
+            
+            print_info(f"Payload: {update_payload}")
+            
+            response = requests.post(
+                f"{self.base_url}/categories/mappings/quick-update",
+                headers=headers,
+                json=update_payload,
+                timeout=30
+            )
+            
+            print_info(f"Response status: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                print_success(f"✅ Mapping updated successfully!")
+                print_info(f"Message: {data.get('message')}")
+                
+                # Verify the update
+                updated_mapping = data.get('mapping', {})
+                ozon_category = updated_mapping.get('marketplace_categories', {}).get('ozon')
+                
+                if ozon_category == str(ozon_cat_id):
+                    print_success(f"✅ Verified: Ozon category {ozon_cat_id} added to mapping")
+                    self.passed += 1
+                    return True
+                else:
+                    print_warning(f"Ozon category not found in updated mapping: {updated_mapping}")
+                    self.warnings += 1
+                    return True
+            else:
+                print_error(f"Quick update failed: {response.status_code}")
+                print_error(f"Response: {response.text}")
+                self.failed += 1
+                return False
+                
+        except Exception as e:
+            print_error(f"Exception during quick update: {str(e)}")
+            self.failed += 1
+            return False
+    
+    def test_load_characteristics_wb(self) -> bool:
+        """Test 22: Load WB Characteristics for Category"""
+        print("\n" + "="*60)
+        print("TEST 22: Load WB Characteristics")
+        print("="*60)
+        print_info("Testing /api/categories/marketplace/wb/{category_id}/attributes")
+        
+        if not self.token:
+            print_error("No token available. Login first.")
+            self.failed += 1
+            return False
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}"
+            }
+            
+            # Use a common WB category (e.g., Обувь)
+            wb_category_id = "8126"  # Common category
+            
+            response = requests.get(
+                f"{self.base_url}/categories/marketplace/wb/{wb_category_id}/attributes",
+                headers=headers,
+                timeout=30
+            )
+            
+            print_info(f"Response status: {response.status_code}")
+            print_info(f"Category ID: {wb_category_id}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                attributes = data.get('attributes', [])
+                
+                print_success(f"✅ WB characteristics loaded successfully!")
+                print_info(f"Found {len(attributes)} characteristics")
+                print_info(f"Cached: {data.get('cached', False)}")
+                
+                if attributes:
+                    # Show first few characteristics
+                    for i, attr in enumerate(attributes[:5]):
+                        attr_id = attr.get('id') or attr.get('charcID')
+                        attr_name = attr.get('name') or attr.get('charcName')
+                        is_required = attr.get('is_required') or attr.get('required')
+                        print_info(f"  {i+1}. {attr_name} (ID: {attr_id}, Required: {is_required})")
+                
+                self.passed += 1
+                return True
+            else:
+                print_error(f"Load characteristics failed: {response.status_code}")
+                print_error(f"Response: {response.text}")
+                self.failed += 1
+                return False
+                
+        except Exception as e:
+            print_error(f"Exception during load characteristics: {str(e)}")
+            self.failed += 1
+            return False
+    
+    def test_load_characteristics_ozon(self) -> bool:
+        """Test 23: Load Ozon Characteristics for Category"""
+        print("\n" + "="*60)
+        print("TEST 23: Load Ozon Characteristics")
+        print("="*60)
+        print_info("Testing /api/categories/marketplace/ozon/{category_id}/attributes")
+        
+        if not self.token:
+            print_error("No token available. Login first.")
+            self.failed += 1
+            return False
+        
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}"
+            }
+            
+            # Use category from previous test or default
+            ozon_cat_id = getattr(self, 'test_ozon_category_id', '15621048')
+            ozon_type_id = getattr(self, 'test_ozon_type_id', 91248)
+            
+            params = {}
+            if ozon_type_id:
+                params['type_id'] = ozon_type_id
+            
+            response = requests.get(
+                f"{self.base_url}/categories/marketplace/ozon/{ozon_cat_id}/attributes",
+                headers=headers,
+                params=params,
+                timeout=30
+            )
+            
+            print_info(f"Response status: {response.status_code}")
+            print_info(f"Category ID: {ozon_cat_id}, Type ID: {ozon_type_id}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                attributes = data.get('attributes', [])
+                
+                print_success(f"✅ Ozon characteristics loaded successfully!")
+                print_info(f"Found {len(attributes)} characteristics")
+                print_info(f"Cached: {data.get('cached', False)}")
+                
+                if attributes:
+                    # Show first few characteristics
+                    for i, attr in enumerate(attributes[:5]):
+                        attr_id = attr.get('attribute_id') or attr.get('id')
+                        attr_name = attr.get('name')
+                        is_required = attr.get('is_required')
+                        print_info(f"  {i+1}. {attr_name} (ID: {attr_id}, Required: {is_required})")
+                
+                self.passed += 1
+                return True
+            else:
+                print_error(f"Load characteristics failed: {response.status_code}")
+                print_error(f"Response: {response.text}")
+                self.failed += 1
+                return False
+                
+        except Exception as e:
+            print_error(f"Exception during load characteristics: {str(e)}")
+            self.failed += 1
+            return False
+    
     def run_all_tests(self):
         """Run all backend tests"""
         print("\n" + "="*60)
