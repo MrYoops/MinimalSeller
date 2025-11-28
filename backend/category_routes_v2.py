@@ -511,6 +511,84 @@ async def delete_mapping(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/api/categories/mappings/quick-update")
+async def quick_update_mapping(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Быстрое обновление маппинга - добавить категорию МП к существующему маппингу
+    Используется когда пользователь выбирает категорию из QuickMatcher
+    """
+    try:
+        from bson import ObjectId
+        from bson.errors import InvalidId
+        
+        mapping_id = data.get('mapping_id')
+        marketplace = data.get('marketplace')
+        category_id = data.get('category_id')
+        category_name = data.get('category_name', '')
+        type_id = data.get('type_id')
+        
+        if not mapping_id or not marketplace or not category_id:
+            raise HTTPException(status_code=400, detail="mapping_id, marketplace, and category_id required")
+        
+        logger.info(f"[QuickUpdate] Updating mapping {mapping_id}: {marketplace} -> {category_id}")
+        
+        # Конвертируем mapping_id в ObjectId
+        try:
+            object_id = ObjectId(mapping_id)
+        except InvalidId:
+            raise HTTPException(status_code=400, detail="Invalid mapping ID format")
+        
+        # Проверяем существование маппинга
+        mapping = await server.db.category_mappings.find_one({"_id": object_id})
+        if not mapping:
+            raise HTTPException(status_code=404, detail="Mapping not found")
+        
+        # Маппинг ключей для БД
+        db_key_map = {
+            'ozon': 'ozon',
+            'wb': 'wildberries',
+            'yandex': 'yandex'
+        }
+        db_key = db_key_map.get(marketplace, marketplace)
+        
+        # Обновляем категорию МП
+        update_doc = {
+            f"marketplace_categories.{db_key}": category_id,
+            "updated_at": datetime.utcnow()
+        }
+        
+        # Для Ozon добавляем type_id
+        if type_id and marketplace == 'ozon':
+            if "marketplace_type_ids" not in mapping:
+                mapping["marketplace_type_ids"] = {}
+            update_doc[f"marketplace_type_ids.{db_key}"] = type_id
+        
+        await server.db.category_mappings.update_one(
+            {"_id": object_id},
+            {"$set": update_doc}
+        )
+        
+        logger.info(f"✅ [QuickUpdate] Mapping updated: {marketplace} category {category_id} added")
+        
+        # Возвращаем обновленный маппинг
+        updated_mapping = await server.db.category_mappings.find_one({"_id": object_id})
+        updated_mapping["id"] = str(updated_mapping.pop("_id"))
+        
+        return {
+            "message": f"Категория {marketplace} добавлена в маппинг",
+            "mapping": updated_mapping
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[QuickUpdate] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 # ========== WB ПРЕДЗАГРУЗКА КАТЕГОРИЙ ==========
 
