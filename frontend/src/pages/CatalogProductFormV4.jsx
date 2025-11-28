@@ -1121,20 +1121,8 @@ export default function CatalogProductFormV4() {
                     Характеристики товара
                   </h2>
                   
-                  {/* Базовые характеристики (если есть) */}
-                  {Object.keys(product.characteristics || {}).length > 0 && (
-                    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-                      <h3 className="text-sm font-semibold text-gray-300 mb-3">
-                        Базовые характеристики ({Object.keys(product.characteristics || {}).length} шт)
-                      </h3>
-                      <ProductCharacteristics
-                        characteristics={product.characteristics || {}}
-                        onChange={(newCharacteristics) => handleProductChange('characteristics', newCharacteristics)}
-                      />
-                    </div>
-                  )}
+                  {/* Базовые характеристики теперь объединены в UnifiedMarketplaceCharacteristics */}
                   
-                  {/* Подсказка */}
                   {/* Единая секция характеристик со smart-объединением */}
                   <UnifiedMarketplaceCharacteristics
                     selectedMarketplaces={selectedMarketplaces}
