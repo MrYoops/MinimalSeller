@@ -276,7 +276,7 @@ export default function UnifiedMarketplaceCharacteristics({
       <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4">
         <p className="text-sm text-blue-300 flex items-center gap-2">
           <FiAlertCircle />
-          Отметьте галочки маркетплейсов внизу страницы ("Отправить в:"), чтобы загрузить характеристики
+          Отметьте галочки маркетплейсов внизу страницы (&quot;Отправить в:&quot;), чтобы загрузить характеристики
         </p>
       </div>
     )
