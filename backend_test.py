@@ -1754,6 +1754,18 @@ class BackendTester:
         self.test_attribute_values_ozon()
         self.test_save_category_mappings()
         
+        # QUICKMATCHER TESTS
+        print("\n" + "="*60)
+        print("QUICKMATCHER FEATURE TESTS (INLINE CATEGORY SELECTION)")
+        print("="*60)
+        print_warning("CRITICAL: Testing QuickCategoryMatcher inline feature")
+        print_info("Testing endpoints used by QuickCategoryMatcher component")
+        
+        self.test_quick_category_search_ozon()
+        self.test_quick_update_mapping()
+        self.test_load_characteristics_wb()
+        self.test_load_characteristics_ozon()
+        
         # Print summary
         print("\n" + "="*60)
         print("TEST SUMMARY")
