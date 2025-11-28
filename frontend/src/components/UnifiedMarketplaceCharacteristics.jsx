@@ -187,13 +187,10 @@ export default function UnifiedMarketplaceCharacteristics({
     return ''
   }
   
-  const renderCharacteristic = (entry, context = 'common') => {
-    const { name, requiredIn, isDictionary, marketplaces } = entry
+  const renderCharacteristic = (entry) => {
+    const { name, sources, requiredIn, isDictionary } = entry
     
-    // Определяем, какое значение показывать (из первого МП где оно есть)
-    const firstMpWithValue = marketplaces.find(mp => valuesByMarketplace[mp]?.[name])
-    const currentValue = firstMpWithValue ? valuesByMarketplace[firstMpWithValue][name] : ''
-    
+    const currentValue = getCurrentValue(name, sources)
     const isRequired = requiredIn.length > 0
     
     return (
@@ -203,15 +200,29 @@ export default function UnifiedMarketplaceCharacteristics({
             {isRequired && <FiStar className="text-red-500 flex-shrink-0" size={12} />}
             <span>{name}</span>
             
-            {/* Бейджи маркетплейсов */}
-            <div className="flex items-center gap-1 ml-auto">
-              {marketplaces.map(mp => {
-                const config = mpConfig[mp]
-                const isRequiredHere = requiredIn.includes(mp)
+            {/* Бейджи источников */}
+            <div className="flex items-center gap-1 ml-auto flex-wrap">
+              {sources.map(source => {
+                if (source === 'base') {
+                  const config = mpConfig.base
+                  return (
+                    <span
+                      key={source}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs border rounded ${config.color.badge}`}
+                      title="Базовая характеристика"
+                    >
+                      {config.icon} {config.shortName}
+                    </span>
+                  )
+                }
+                
+                const config = mpConfig[source]
+                const mpData = entry.mpData?.[source]
+                const isRequiredHere = mpData?.isRequired
                 
                 return (
                   <span
-                    key={mp}
+                    key={source}
                     className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs border rounded ${config.color.badge}`}
                     title={isRequiredHere ? `Обязательно для ${config.name}` : `Для ${config.name}`}
                   >
@@ -227,7 +238,7 @@ export default function UnifiedMarketplaceCharacteristics({
         {isDictionary ? (
           <select
             value={currentValue}
-            onChange={(e) => handleChange(name, e.target.value, marketplaces)}
+            onChange={(e) => handleChange(name, e.target.value, sources)}
             className="w-full px-3 py-2 bg-[#0F172A] border border-[#334155] rounded text-white focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/50 outline-none"
           >
             <option value="">Выберите значение</option>
@@ -237,7 +248,7 @@ export default function UnifiedMarketplaceCharacteristics({
           <input
             type="text"
             value={currentValue}
-            onChange={(e) => handleChange(name, e.target.value, marketplaces)}
+            onChange={(e) => handleChange(name, e.target.value, sources)}
             className="w-full px-3 py-2 bg-[#0F172A] border border-[#334155] rounded text-white focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/50 outline-none"
             placeholder={isRequired ? "Обязательное поле" : "Введите значение"}
           />
