@@ -1153,6 +1153,16 @@ export default function CatalogProductFormV4() {
                       setCharacteristicsAttempted(prev => ({ ...prev, [marketplace]: false }))
                       await loadMarketplaceCharacteristics(marketplace, product.category_mapping_id)
                     }}
+                    onBaseCharacteristicChange={(charName, value) => {
+                      // Обновить базовую характеристику
+                      setProduct(prev => ({
+                        ...prev,
+                        characteristics: {
+                          ...prev.characteristics,
+                          [charName]: value
+                        }
+                      }))
+                    }}
                     onChange={(mp, charId, charName, value) => {
                       setProduct(prev => ({
                         ...prev,
