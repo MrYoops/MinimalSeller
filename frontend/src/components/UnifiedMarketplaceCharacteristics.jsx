@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import { FiStar, FiAlertCircle } from 'react-icons/fi'
+import QuickCategoryMatcher from './QuickCategoryMatcher'
 
 /**
  * Компонент для отображения характеристик маркетплейсов с умным объединением
