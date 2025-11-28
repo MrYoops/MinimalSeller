@@ -302,7 +302,6 @@ export default function UnifiedMarketplaceCharacteristics({
           currentCategoryName={currentCategoryName}
           onCategorySelected={(marketplace, categoryId, categoryName, typeId) => {
             console.log(`[UnifiedCharacteristics] Category selected for ${marketplace}:`, categoryId)
-            // Уведомляем родителя что маппинг обновлен
             if (onMappingUpdated) {
               onMappingUpdated(marketplace, categoryId, categoryName, typeId)
             }
@@ -313,100 +312,59 @@ export default function UnifiedMarketplaceCharacteristics({
         />
       ))}
       
-      {/* ОБЩИЕ ПОЛЯ */}
-      {common.length > 0 && (
-        <div className="bg-gradient-to-r from-cyan-900/20 to-teal-900/20 border border-cyan-600/30 rounded-lg p-4">
-          <div className="flex items-center gap-3 pb-3 border-b border-cyan-600/30 mb-4">
+      {/* ЕДИНАЯ ТАБЛИЦА ВСЕХ ХАРАКТЕРИСТИК */}
+      {unifiedCharacteristics.length > 0 && (
+        <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-cyan-600/30 rounded-lg p-5">
+          <div className="flex items-center gap-3 pb-4 border-b border-cyan-600/30 mb-5">
             <div className="w-3 h-3 rounded-full bg-cyan-500"></div>
-            <h3 className="text-lg font-bold text-cyan-400">
-              📦 ОБЩИЕ ПОЛЯ ДЛЯ ВСЕХ ВЫБРАННЫХ МАРКЕТПЛЕЙСОВ
+            <h3 className="text-xl font-bold text-cyan-400">
+              📋 ВСЕ ХАРАКТЕРИСТИКИ ТОВАРА
             </h3>
             <span className="text-sm text-gray-400">
-              ({common.length} полей)
+              ({unifiedCharacteristics.length} полей)
             </span>
+            {requiredChars.length > 0 && (
+              <span className="ml-auto text-xs text-red-400 flex items-center gap-1">
+                <FiStar size={10} />
+                {requiredChars.length} обязательных
+              </span>
+            )}
           </div>
           
-          {/* Обязательные общие */}
-          {commonRequired.length > 0 && (
-            <div className="mb-4">
+          {/* Обязательные поля */}
+          {requiredChars.length > 0 && (
+            <div className="mb-5">
               <h4 className="text-sm font-semibold text-red-400 mb-3 flex items-center gap-2">
                 <FiStar size={12} />
-                Обязательные поля ({commonRequired.length})
+                Обязательные поля ({requiredChars.length})
               </h4>
               <div className="space-y-3">
-                {commonRequired.map(entry => renderCharacteristic(entry, 'common'))}
+                {requiredChars.map(entry => renderCharacteristic(entry))}
               </div>
             </div>
           )}
           
-          {/* Необязательные общие */}
-          {commonOptional.length > 0 && (
+          {/* Дополнительные поля */}
+          {optionalChars.length > 0 && (
             <div>
               <h4 className="text-sm font-semibold text-gray-400 mb-3">
-                Дополнительные поля ({commonOptional.length})
+                Дополнительные поля ({optionalChars.length})
               </h4>
               <div className="space-y-3">
-                {commonOptional.map(entry => renderCharacteristic(entry, 'common'))}
+                {optionalChars.map(entry => renderCharacteristic(entry))}
               </div>
             </div>
           )}
+          
+          {/* Подсказка */}
+          <div className="mt-4 pt-4 border-t border-gray-700">
+            <p className="text-xs text-gray-500 flex items-center gap-2">
+              <FiAlertCircle size={12} />
+              Значения автоматически синхронизируются между всеми маркетплейсами и базовыми характеристиками
+            </p>
+          </div>
         </div>
       )}
-      
-      {/* СПЕЦИФИЧНЫЕ ПОЛЯ ДЛЯ КАЖДОГО МП */}
-      {activeMarketplaces.map(mp => {
-        const specificChars = specific[mp] || []
-        if (specificChars.length === 0) return null
-        
-        const config = mpConfig[mp]
-        const requiredSpecific = specificChars.filter(c => c.requiredIn.includes(mp))
-        const optionalSpecific = specificChars.filter(c => !c.requiredIn.includes(mp))
-        
-        return (
-          <div key={mp} className={`bg-${config.color.bg}/10 border ${config.color.border} border-opacity-30 rounded-lg p-4`}>
-            <div className={`flex items-center gap-3 pb-3 border-b ${config.color.border} border-opacity-30 mb-4`}>
-              <div className={`w-3 h-3 rounded-full ${config.color.bg}`}></div>
-              <h3 className={`text-lg font-bold ${config.color.text}`}>
-                {config.icon} ТОЛЬКО ДЛЯ {config.name.toUpperCase()}
-              </h3>
-              <span className="text-sm text-gray-400">
-                ({specificChars.length} полей)
-              </span>
-              {requiredSpecific.length > 0 && (
-                <span className="ml-auto text-xs text-red-400 flex items-center gap-1">
-                  <FiStar size={10} />
-                  {requiredSpecific.length} обязательных
-                </span>
-              )}
-            </div>
-            
-            {/* Обязательные специфичные */}
-            {requiredSpecific.length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-red-400 mb-3 flex items-center gap-2">
-                  <FiStar size={12} />
-                  Обязательные поля ({requiredSpecific.length})
-                </h4>
-                <div className="space-y-3">
-                  {requiredSpecific.map(entry => renderCharacteristic(entry, 'specific'))}
-                </div>
-              </div>
-            )}
-            
-            {/* Необязательные специфичные */}
-            {optionalSpecific.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-400 mb-3">
-                  Дополнительные поля ({optionalSpecific.length})
-                </h4>
-                <div className="space-y-3">
-                  {optionalSpecific.map(entry => renderCharacteristic(entry, 'specific'))}
-                </div>
-              </div>
-            )}
-          </div>
-        )
-      })}
     </div>
   )
 }
