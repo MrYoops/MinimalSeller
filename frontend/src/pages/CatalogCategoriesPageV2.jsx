@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FiArrowLeft, FiRefreshCw, FiCheck, FiLink, FiSearch, FiAlertCircle } from 'react-icons/fi'
+import { FiArrowLeft, FiRefreshCw, FiCheck, FiLink, FiSearch, FiAlertCircle, FiTrash2 } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
 
 export default function CatalogCategoriesPageV2() {
