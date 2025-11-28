@@ -346,6 +346,7 @@ export default function CatalogProductFormV4() {
     }
     
     setLoadingCharacteristics(prev => ({ ...prev, [marketplace]: true }))
+    setCharacteristicsAttempted(prev => ({ ...prev, [marketplace]: true }))
     
     try {
       // Маппинг кратких названий на полные (для совместимости с БД)
@@ -394,7 +395,7 @@ export default function CatalogProductFormV4() {
         [marketplace]: characteristics
       }))
       
-      console.log(`Загружено ${characteristics.length} характеристик для ${marketplace}`)
+      console.log(`✅ Загружено ${characteristics.length} характеристик для ${marketplace}`)
       
     } catch (error) {
       console.error(`Failed to load ${marketplace} characteristics:`, error)
