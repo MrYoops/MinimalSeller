@@ -59,6 +59,11 @@ export default function CatalogProductFormV4() {
     ozon: false,
     yandex: false
   })
+  const [characteristicsAttempted, setCharacteristicsAttempted] = useState({
+    wb: false,
+    ozon: false,
+    yandex: false
+  })
   
   const [product, setProduct] = useState({
     article: '',
