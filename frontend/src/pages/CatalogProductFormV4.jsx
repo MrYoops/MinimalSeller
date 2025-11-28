@@ -65,6 +65,9 @@ export default function CatalogProductFormV4() {
     yandex: false
   })
   
+  // Текущий выбранный маппинг (для передачи в QuickMatcher)
+  const [currentMapping, setCurrentMapping] = useState(null)
+  
   const [product, setProduct] = useState({
     article: '',
     name: '',
