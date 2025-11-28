@@ -418,8 +418,8 @@ export default function CatalogProductFormV4() {
       
       // Проверяем каждый маркетплейс
       for (const mp of ['ozon', 'wb', 'yandex']) {
-        // Если галочка включена и характеристики еще не загружены
-        if (selectedMarketplaces[mp] && mpCharacteristics[mp].length === 0 && !loadingCharacteristics[mp]) {
+        // Если галочка включена И (характеристики не загружены ИЛИ еще не пытались загрузить)
+        if (selectedMarketplaces[mp] && !characteristicsAttempted[mp] && !loadingCharacteristics[mp]) {
           console.log(`[ProductForm] Loading characteristics for ${mp}`)
           await loadMarketplaceCharacteristics(mp, product.category_mapping_id)
         }
