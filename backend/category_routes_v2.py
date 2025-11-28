@@ -527,7 +527,6 @@ async def quick_update_mapping(
         mapping_id = data.get('mapping_id')
         marketplace = data.get('marketplace')
         category_id = data.get('category_id')
-        category_name = data.get('category_name', '')
         type_id = data.get('type_id')
         
         if not mapping_id or not marketplace or not category_id:
