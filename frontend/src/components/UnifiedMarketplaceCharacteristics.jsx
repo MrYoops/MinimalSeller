@@ -69,24 +69,24 @@ export default function UnifiedMarketplaceCharacteristics({
     return Object.keys(selectedMarketplaces).filter(mp => selectedMarketplaces[mp] && characteristicsByMarketplace[mp]?.length > 0)
   }, [selectedMarketplaces, characteristicsByMarketplace])
   
-  // Анализ характеристик: общие vs специфичные
-  const analysisResult = useMemo(() => {
-    if (activeMarketplaces.length === 0) {
-      return { common: [], specific: {} }
-    }
-    
-    // Получаем список имен базовых характеристик для исключения дублей
-    const baseCharNames = new Set(
-      Object.keys(baseCharacteristics || {})
-        .filter(name => name && name.trim()) // Фильтруем пустые
-        .map(name => name.toLowerCase().trim())
-    )
-    
-    console.log('[UnifiedMarketplaceCharacteristics] Base characteristics:', Array.from(baseCharNames))
-    
-    // Создаем карту: charName -> { marketplaces: [...], data: {...} }
+  // ГЛОБАЛЬНЫЙ анализ ВСЕХ характеристик
+  const unifiedCharacteristics = useMemo(() => {
     const charMap = new Map()
     
+    // 1. Добавляем базовые характеристики
+    Object.keys(baseCharacteristics || {}).forEach(charName => {
+      if (!charName || !charName.trim()) return
+      
+      charMap.set(charName, {
+        name: charName,
+        sources: ['base'],
+        requiredIn: [],
+        isDictionary: false,
+        mpData: {}
+      })
+    })
+    
+    // 2. Добавляем характеристики маркетплейсов
     activeMarketplaces.forEach(mp => {
       const chars = characteristicsByMarketplace[mp] || []
       
@@ -96,26 +96,34 @@ export default function UnifiedMarketplaceCharacteristics({
         const isRequired = char.is_required || char.required
         const isDictionary = char.dictionary_id > 0 || char.type === 'Dictionary'
         
-        // ИСКЛЮЧАЕМ характеристику, если она уже есть в базовых характеристиках
-        if (baseCharNames.has(charName.toLowerCase().trim())) {
-          console.log(`[UnifiedMarketplaceCharacteristics] Skipping "${charName}" - already in base characteristics`)
-          return
-        }
-        
         if (!charMap.has(charName)) {
           charMap.set(charName, {
-            id: charId,
             name: charName,
-            marketplaces: [],
+            sources: [],
             requiredIn: [],
-            isDictionary,
-            originalCharByMp: {}
+            isDictionary: false,
+            mpData: {}
           })
         }
         
         const entry = charMap.get(charName)
-        entry.marketplaces.push(mp)
-        entry.originalCharByMp[mp] = char
+        
+        // Добавляем МП в источники если еще нет
+        if (!entry.sources.includes(mp)) {
+          entry.sources.push(mp)
+        }
+        
+        // Если хотя бы один МП требует dictionary - используем его
+        if (isDictionary) {
+          entry.isDictionary = true
+        }
+        
+        // Сохраняем оригинальные данные характеристики для МП
+        entry.mpData[mp] = {
+          id: charId,
+          isRequired,
+          originalChar: char
+        }
         
         if (isRequired) {
           entry.requiredIn.push(mp)
@@ -123,36 +131,20 @@ export default function UnifiedMarketplaceCharacteristics({
       })
     })
     
-    // Разделяем на общие и специфичные
-    const common = []
-    const specific = {}
-    
-    activeMarketplaces.forEach(mp => { specific[mp] = [] })
-    
-    charMap.forEach((entry, charName) => {
-      if (entry.marketplaces.length > 1) {
-        // Общее поле
-        common.push(entry)
-      } else {
-        // Специфичное для одного МП
-        const mp = entry.marketplaces[0]
-        specific[mp].push(entry)
-      }
-    })
+    // Преобразуем Map в массив
+    const allChars = Array.from(charMap.values())
     
     // Сортировка: обязательные в начало
-    const sortByRequired = (a, b) => {
-      if (a.requiredIn.length > 0 && b.requiredIn.length === 0) return -1
-      if (a.requiredIn.length === 0 && b.requiredIn.length > 0) return 1
+    allChars.sort((a, b) => {
+      const aHasRequired = a.requiredIn.length > 0
+      const bHasRequired = b.requiredIn.length > 0
+      
+      if (aHasRequired && !bHasRequired) return -1
+      if (!aHasRequired && bHasRequired) return 1
       return 0
-    }
-    
-    common.sort(sortByRequired)
-    Object.keys(specific).forEach(mp => {
-      specific[mp].sort(sortByRequired)
     })
     
-    return { common, specific }
+    return allChars
   }, [activeMarketplaces, characteristicsByMarketplace, baseCharacteristics])
   
   const handleChange = (charName, value, affectedMarketplaces) => {
