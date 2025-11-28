@@ -12,7 +12,10 @@ export default function UnifiedMarketplaceCharacteristics({
   valuesByMarketplace = {},
   onChange,
   loading = {},
-  baseCharacteristics = {} // Базовые характеристики товара (чтобы исключить дубли)
+  baseCharacteristics = {}, // Базовые характеристики товара (чтобы исключить дубли)
+  currentMappingId = null, // ID текущего маппинга (для быстрого обновления)
+  currentCategoryName = '', // Название текущей категории (для автопоиска)
+  onMappingUpdated // Callback когда маппинг обновлен
 }) {
   
   const mpConfig = {
