@@ -241,8 +241,34 @@ export default function UnifiedMarketplaceCharacteristics({
   const commonRequired = common.filter(c => c.requiredIn.length > 0)
   const commonOptional = common.filter(c => c.requiredIn.length === 0)
   
+  // Определяем МП без характеристик (нужно показать QuickMatcher)
+  const marketplacesNeedingMapping = activeMarketplaces.filter(mp => {
+    const chars = characteristicsByMarketplace[mp] || []
+    return chars.length === 0
+  })
+  
   return (
     <div className="space-y-6">
+      {/* БЫСТРЫЙ ВЫБОР КАТЕГОРИИ ДЛЯ МП БЕЗ ХАРАКТЕРИСТИК */}
+      {marketplacesNeedingMapping.map(mp => (
+        <QuickCategoryMatcher
+          key={`matcher-${mp}`}
+          marketplace={mp}
+          currentMappingId={currentMappingId}
+          currentCategoryName={currentCategoryName}
+          onCategorySelected={(marketplace, categoryId, categoryName, typeId) => {
+            console.log(`[UnifiedCharacteristics] Category selected for ${marketplace}:`, categoryId)
+            // Уведомляем родителя что маппинг обновлен
+            if (onMappingUpdated) {
+              onMappingUpdated(marketplace, categoryId, categoryName, typeId)
+            }
+          }}
+          onSkip={() => {
+            console.log(`[UnifiedCharacteristics] Skipped ${mp} category selection`)
+          }}
+        />
+      ))}
+      
       {/* ОБЩИЕ ПОЛЯ */}
       {common.length > 0 && (
         <div className="bg-gradient-to-r from-cyan-900/20 to-teal-900/20 border border-cyan-600/30 rounded-lg p-4">
