@@ -1738,6 +1738,28 @@ except Exception as e:
 # except Exception as e:
 #     logger.error(f"Failed to include inventory_routes: {e}")
 
+# NEW: Warehouse module routes (Phase 1)
+try:
+    from warehouse_routes import router as warehouse_router
+    app.include_router(warehouse_router)
+    logger.info("Warehouse routes included")
+except Exception as e:
+    logger.error(f"Failed to include warehouse_routes: {e}")
+
+try:
+    from supplier_routes import router as supplier_router
+    app.include_router(supplier_router)
+    logger.info("Supplier routes included")
+except Exception as e:
+    logger.error(f"Failed to include supplier_routes: {e}")
+
+try:
+    from income_order_routes import router as income_order_router
+    app.include_router(income_order_router)
+    logger.info("Income order routes included")
+except Exception as e:
+    logger.error(f"Failed to include income_order_routes: {e}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
