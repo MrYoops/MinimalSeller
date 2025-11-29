@@ -58,11 +58,17 @@ async def get_income_order(
     
     order = await db.income_orders.find_one({
         "id": order_id,
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])  # Convert to string
     })
     
     if not order:
         raise HTTPException(status_code=404, detail="Income order not found")
+    
+    # Convert ObjectId
+    if "_id" in order:
+        order["_id"] = str(order["_id"])
+    if "user_id" in order:
+        order["user_id"] = str(order["user_id"])
     
     # Обогатить данными
     if order.get("warehouse_id"):
