@@ -21,6 +21,13 @@ async def get_warehouses(
         "user_id": current_user["_id"]
     }).to_list(length=1000)
     
+    # Convert ObjectId to string
+    for wh in warehouses:
+        if "_id" in wh:
+            wh["_id"] = str(wh["_id"])
+        if "user_id" in wh:
+            wh["user_id"] = str(wh["user_id"])
+    
     return warehouses
 
 
