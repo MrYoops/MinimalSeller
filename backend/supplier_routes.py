@@ -12,7 +12,7 @@ from database import get_database
 router = APIRouter(prefix="/api/suppliers", tags=["suppliers"])
 security = HTTPBearer()
 
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-min-32-chars-long-change-me-please")
+SECRET_KEY = "your-secret-key-min-32-chars-long-change-me-please"
 ALGORITHM = "HS256"
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
