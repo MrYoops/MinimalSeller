@@ -41,11 +41,17 @@ async def get_supplier(
     
     supplier = await db.suppliers.find_one({
         "id": supplier_id,
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])
     })
     
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    # Convert ObjectId
+    if "_id" in supplier:
+        supplier["_id"] = str(supplier["_id"])
+    if "user_id" in supplier:
+        supplier["user_id"] = str(supplier["user_id"])
     
     return supplier
 
@@ -95,7 +101,7 @@ async def update_supplier(
     
     supplier = await db.suppliers.find_one({
         "id": supplier_id,
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])
     })
     
     if not supplier:
@@ -140,7 +146,7 @@ async def delete_supplier(
     
     supplier = await db.suppliers.find_one({
         "id": supplier_id,
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])
     })
     
     if not supplier:
