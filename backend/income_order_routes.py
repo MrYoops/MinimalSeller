@@ -205,7 +205,7 @@ async def accept_income_order(
     
     order = await db.income_orders.find_one({
         "id": order_id,
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])  # Convert to string
     })
     
     if not order:
@@ -228,7 +228,7 @@ async def accept_income_order(
         # Find product by article
         product = await db.product_catalog.find_one({
             "article": product_article,
-            "seller_id": current_user["_id"]
+            "seller_id": current_user["_id"]  # Keep as ObjectId for product_catalog
         })
         
         if not product:
