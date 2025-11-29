@@ -21,6 +21,13 @@ async def get_suppliers(
         "user_id": current_user["_id"]
     }).to_list(length=1000)
     
+    # Convert ObjectId to string
+    for s in suppliers:
+        if "_id" in s:
+            s["_id"] = str(s["_id"])
+        if "user_id" in s:
+            s["user_id"] = str(s["user_id"])
+    
     return suppliers
 
 
