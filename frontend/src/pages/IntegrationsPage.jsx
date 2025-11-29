@@ -310,11 +310,31 @@ const IntegrationsPage = () => {
             </div>
 
             <div className="p-6 space-y-4">
+              {/* Help text для Ozon */}
+              {selectedMp.helpText && (
+                <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4">
+                  <p className="text-sm text-yellow-200 mb-2">{selectedMp.helpText}</p>
+                  {selectedMp.docsLink && (
+                    <a
+                      href={selectedMp.docsLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-cyan-400 hover:text-cyan-300 underline"
+                    >
+                      → Создать токен на Ozon Seller
+                    </a>
+                  )}
+                </div>
+              )}
+              
               {selectedMp.fields.map((field) => (
                 <div key={field.name}>
                   <label className="block text-sm font-medium mb-2 text-gray-300">
                     {field.label}
                     {field.name !== 'name' && <span className="text-red-500 ml-1">*</span>}
+                    {field.helpText && (
+                      <span className="ml-2 text-xs text-gray-500">({field.helpText})</span>
+                    )}
                   </label>
                   <input
                     type={field.type}
