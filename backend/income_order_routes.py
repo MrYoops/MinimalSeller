@@ -96,7 +96,7 @@ async def create_income_order(
     if warehouse_id:
         warehouse = await db.warehouses.find_one({
             "id": warehouse_id,
-            "user_id": current_user["_id"]
+            "user_id": str(current_user["_id"])  # Convert to string
         })
         if not warehouse:
             raise HTTPException(status_code=404, detail="Warehouse not found")
@@ -104,14 +104,14 @@ async def create_income_order(
     if supplier_id:
         supplier = await db.suppliers.find_one({
             "id": supplier_id,
-            "user_id": current_user["_id"]
+            "user_id": str(current_user["_id"])  # Convert to string
         })
         if not supplier:
             raise HTTPException(status_code=404, detail="Supplier not found")
     
     order = {
         "id": str(uuid.uuid4()),
-        "user_id": current_user["_id"],
+        "user_id": str(current_user["_id"]),  # Convert to string
         "supplier_id": supplier_id,
         "warehouse_id": warehouse_id,
         "status": "draft",
@@ -130,6 +130,10 @@ async def create_income_order(
         order["total_amount"] += item.get("total", 0)
     
     await db.income_orders.insert_one(order)
+    
+    # Remove _id from response
+    if "_id" in order:
+        del order["_id"]
     
     return {
         "message": "Income order created successfully",
