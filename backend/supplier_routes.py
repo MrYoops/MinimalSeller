@@ -18,7 +18,7 @@ async def get_suppliers(
     db = await get_database()
     
     suppliers = await db.suppliers.find({
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])  # Convert to string for query
     }).to_list(length=1000)
     
     # Convert ObjectId to string
