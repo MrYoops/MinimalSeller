@@ -1,5 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import LoginPage from './pages/LoginPage'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminDashboardV2 from './pages/AdminDashboardV2'
