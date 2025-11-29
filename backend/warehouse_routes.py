@@ -41,11 +41,17 @@ async def get_warehouse(
     
     warehouse = await db.warehouses.find_one({
         "id": warehouse_id,
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])
     })
     
     if not warehouse:
         raise HTTPException(status_code=404, detail="Warehouse not found")
+    
+    # Convert ObjectId
+    if "_id" in warehouse:
+        warehouse["_id"] = str(warehouse["_id"])
+    if "user_id" in warehouse:
+        warehouse["user_id"] = str(warehouse["user_id"])
     
     return warehouse
 
