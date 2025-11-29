@@ -1,19 +1,40 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+from jose import JWTError, jwt
 import uuid
+import os
 from bson import ObjectId
 
 from database import get_database
 
 router = APIRouter(prefix="/api/warehouses", tags=["warehouses"])
+security = HTTPBearer()
 
-# Temporary: use get_current_user from server after import
-get_current_user = None
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-min-32-chars-long-change-me-please")
+ALGORITHM = "HS256"
 
-def set_get_current_user(func):
-    global get_current_user
-    get_current_user = func
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    db = await get_database()
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if user is None:
+        raise credentials_exception
+    return user
 
 
 @router.get("")
