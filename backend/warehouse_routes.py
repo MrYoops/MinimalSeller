@@ -1,40 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from jose import JWTError, jwt
 import uuid
-import os
 from bson import ObjectId
 
 from database import get_database
+from auth_utils import get_current_user
 
 router = APIRouter(prefix="/api/warehouses", tags=["warehouses"])
-security = HTTPBearer()
-
-SECRET_KEY = "your-secret-key-min-32-chars-long-change-me-please"
-ALGORITHM = "HS256"
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    db = await get_database()
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    
-    user = await db.users.find_one({"_id": ObjectId(user_id)})
-    if user is None:
-        raise credentials_exception
-    return user
 
 
 @router.get("")
@@ -82,16 +55,16 @@ async def create_warehouse(
         "id": str(uuid.uuid4()),
         "user_id": current_user["_id"],
         "name": data.get("name"),
-        "type": data.get("type", "main"),  # main, marketplace, transit
+        "type": data.get("type", "main"),
         "address": data.get("address", ""),
         "comment": data.get("comment", ""),
         
         # НОВЫЕ НАСТРОЙКИ (ФАЗА 1)
-        "transfer_stock": data.get("transfer_stock", True),  # Передавать остатки на МП
-        "load_orders": data.get("load_orders", True),  # Загружать заказы
-        "use_for_orders": data.get("use_for_orders", True),  # Использовать для заказов
-        "priority": data.get("priority", 1),  # Приоритет списания
-        "fbo_accounting": data.get("fbo_accounting", False),  # Учёт FBO
+        "transfer_stock": data.get("transfer_stock", True),
+        "load_orders": data.get("load_orders", True),
+        "use_for_orders": data.get("use_for_orders", True),
+        "priority": data.get("priority", 1),
+        "fbo_accounting": data.get("fbo_accounting", False),
         
         # Marketplace-specific
         "marketplace_warehouse_id": data.get("marketplace_warehouse_id"),
@@ -119,7 +92,6 @@ async def update_warehouse(
     """Обновить склад"""
     db = await get_database()
     
-    # Verify ownership
     warehouse = await db.warehouses.find_one({
         "id": warehouse_id,
         "user_id": current_user["_id"]
@@ -128,12 +100,10 @@ async def update_warehouse(
     if not warehouse:
         raise HTTPException(status_code=404, detail="Warehouse not found")
     
-    # Update fields
     update_data = {
         "updated_at": datetime.utcnow().isoformat()
     }
     
-    # Basic fields
     if "name" in data:
         update_data["name"] = data["name"]
     if "address" in data:
@@ -171,7 +141,6 @@ async def delete_warehouse(
     """Удалить склад"""
     db = await get_database()
     
-    # Verify ownership
     warehouse = await db.warehouses.find_one({
         "id": warehouse_id,
         "user_id": current_user["_id"]
@@ -180,7 +149,6 @@ async def delete_warehouse(
     if not warehouse:
         raise HTTPException(status_code=404, detail="Warehouse not found")
     
-    # Don't allow deleting main warehouse if it's the only one
     if warehouse.get("type") == "main":
         count = await db.warehouses.count_documents({
             "user_id": current_user["_id"],

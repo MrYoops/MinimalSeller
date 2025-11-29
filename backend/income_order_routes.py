@@ -1,40 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from jose import JWTError, jwt
 import uuid
-import os
 from bson import ObjectId
 
 from database import get_database
+from auth_utils import get_current_user
 
 router = APIRouter(prefix="/api/income-orders", tags=["income-orders"])
-security = HTTPBearer()
-
-SECRET_KEY = "your-secret-key-min-32-chars-long-change-me-please"
-ALGORITHM = "HS256"
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    db = await get_database()
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    
-    user = await db.users.find_one({"_id": ObjectId(user_id)})
-    if user is None:
-        raise credentials_exception
-    return user
 
 
 @router.get("")
@@ -106,7 +79,6 @@ async def create_income_order(
     """Создать приёмку (черновик)"""
     db = await get_database()
     
-    # Validate warehouse and supplier exist
     warehouse_id = data.get("warehouse_id")
     supplier_id = data.get("supplier_id")
     
@@ -131,7 +103,7 @@ async def create_income_order(
         "user_id": current_user["_id"],
         "supplier_id": supplier_id,
         "warehouse_id": warehouse_id,
-        "status": "draft",  # draft, accepted
+        "status": "draft",
         "items": data.get("items", []),
         "total_quantity": 0,
         "total_amount": 0,
@@ -245,7 +217,7 @@ async def accept_income_order(
         })
         
         if not product:
-            continue  # Skip if product not found
+            continue
         
         product_id = product["_id"]
         
@@ -256,7 +228,6 @@ async def accept_income_order(
         })
         
         if not inventory:
-            # Create new inventory record
             inventory = {
                 "product_id": ObjectId(product_id) if isinstance(product_id, str) else product_id,
                 "seller_id": current_user["_id"],
@@ -368,7 +339,6 @@ async def cancel_income_order(
                 }}
             )
             
-            # Log cancellation
             await db.inventory_history.insert_one({
                 "product_id": ObjectId(product_id) if isinstance(product_id, str) else product_id,
                 "seller_id": current_user["_id"],
