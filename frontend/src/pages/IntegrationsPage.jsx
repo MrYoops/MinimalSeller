@@ -25,12 +25,13 @@ const IntegrationsPage = () => {
       name: 'Ozon',
       logo: '🟠',
       description: 'Интеграция с Ozon для работы с товарами, заказами FBS и аналитикой',
-      helpText: '⚠️ Для полного функционала создайте токен с типом "Product" (не "Admin read only")',
+      helpText: '⚠️ Для ПОЛНОГО функционала создайте токен со ВСЕМИ правами: Admin, Product, Posting, Finance, Analytics, Warehouse, Orders',
+      requiredPermissions: ['Admin', 'Product', 'Posting', 'Finance', 'Analytics', 'Warehouse', 'Orders'],
       docsLink: 'https://seller.ozon.ru/app/settings/api-keys?currentTab=sellerApi',
       fields: [
         { name: 'name', label: 'Название интеграции', type: 'text', placeholder: 'Например: Основной магазин OZON' },
         { name: 'client_id', label: 'Client ID', type: 'text', placeholder: 'Введите Client ID' },
-        { name: 'api_key', label: 'API Key', type: 'password', placeholder: 'Введите API ключ', helpText: 'Токен типа "Product"' }
+        { name: 'api_key', label: 'API Key', type: 'password', placeholder: 'Введите API ключ', helpText: 'Токен со ВСЕМИ правами' }
       ]
     },
     {
