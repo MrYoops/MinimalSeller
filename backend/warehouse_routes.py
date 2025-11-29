@@ -2,10 +2,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import uuid
+from bson import ObjectId
 
-from dependencies import get_current_user, get_database
+from database import get_database
 
 router = APIRouter(prefix="/api/warehouses", tags=["warehouses"])
+
+# Temporary: use get_current_user from server after import
+get_current_user = None
+
+def set_get_current_user(func):
+    global get_current_user
+    get_current_user = func
 
 
 @router.get("")
