@@ -32,6 +32,11 @@ async def get_income_orders(
     
     # Обогатить данными о складе и поставщике
     for order in income_orders:
+        if "_id" in order:
+            order["_id"] = str(order["_id"])
+        if "user_id" in order:
+            order["user_id"] = str(order["user_id"])
+        
         if order.get("warehouse_id"):
             warehouse = await db.warehouses.find_one({"id": order["warehouse_id"]})
             order["warehouse_name"] = warehouse.get("name") if warehouse else ""
