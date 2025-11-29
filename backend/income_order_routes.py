@@ -19,7 +19,7 @@ async def get_income_orders(
     """Получить список приёмок"""
     db = await get_database()
     
-    query = {"user_id": current_user["_id"]}
+    query = {"user_id": str(current_user["_id"])}  # Convert to string
     
     if status:
         query["status"] = status
