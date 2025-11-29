@@ -60,7 +60,7 @@ async def create_warehouse(
     
     warehouse = {
         "id": str(uuid.uuid4()),
-        "user_id": current_user["_id"],
+        "user_id": str(current_user["_id"]),  # Convert to string!
         "name": data.get("name"),
         "type": data.get("type", "main"),
         "address": data.get("address", ""),
@@ -83,6 +83,10 @@ async def create_warehouse(
     }
     
     await db.warehouses.insert_one(warehouse)
+    
+    # Remove _id from response if exists
+    if "_id" in warehouse:
+        del warehouse["_id"]
     
     return {
         "message": "Warehouse created successfully",
