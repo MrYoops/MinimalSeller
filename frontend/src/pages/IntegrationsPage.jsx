@@ -314,15 +314,29 @@ const IntegrationsPage = () => {
               {/* Help text для Ozon */}
               {selectedMp.helpText && (
                 <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4">
-                  <p className="text-sm text-yellow-200 mb-2">{selectedMp.helpText}</p>
+                  <p className="text-sm text-yellow-200 mb-3 font-semibold">{selectedMp.helpText}</p>
+                  
+                  {selectedMp.requiredPermissions && (
+                    <div className="mb-3">
+                      <p className="text-xs text-yellow-300/80 mb-2">Требуемые права доступа:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedMp.requiredPermissions.map(perm => (
+                          <span key={perm} className="px-2 py-1 bg-yellow-600/20 text-yellow-200 text-xs rounded border border-yellow-600/30">
+                            ✓ {perm}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   {selectedMp.docsLink && (
                     <a
                       href={selectedMp.docsLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-cyan-400 hover:text-cyan-300 underline"
+                      className="inline-flex items-center gap-2 text-xs text-cyan-400 hover:text-cyan-300 underline"
                     >
-                      → Создать токен на Ozon Seller
+                      → Создать токен на Ozon Seller (отметьте ВСЕ права!)
                     </a>
                   )}
                 </div>
