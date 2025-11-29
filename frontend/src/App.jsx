@@ -115,6 +115,17 @@ function App() {
     <Router>
       <ThemeProvider>
         <AuthProvider>
+          <Toaster 
+            position="top-right"
+            theme="dark"
+            toastOptions={{
+              style: {
+                background: '#0a0e27',
+                border: '1px solid #00f0ff',
+                color: '#e0e7ff'
+              }
+            }}
+          />
           <AppRoutes />
         </AuthProvider>
       </ThemeProvider>
