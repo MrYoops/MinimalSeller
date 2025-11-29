@@ -88,6 +88,22 @@ function AppRoutes() {
       <Route path="/admin/internal-categories" element={
         <ProtectedRoute requiredRole="admin"><InternalCategoriesPage /></ProtectedRoute>
       } />
+      {/* NEW: Warehouse module routes */}
+      <Route path="/warehouses" element={
+        <ProtectedRoute><WarehousesPageV2 /></ProtectedRoute>
+      } />
+      <Route path="/suppliers" element={
+        <ProtectedRoute><SuppliersPage /></ProtectedRoute>
+      } />
+      <Route path="/income-orders" element={
+        <ProtectedRoute><IncomeOrdersPage /></ProtectedRoute>
+      } />
+      <Route path="/income-orders/new" element={
+        <ProtectedRoute><IncomeOrderFormPage /></ProtectedRoute>
+      } />
+      <Route path="/income-orders/:id/edit" element={
+        <ProtectedRoute><IncomeOrderFormPage /></ProtectedRoute>
+      } />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
