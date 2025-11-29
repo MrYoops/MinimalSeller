@@ -152,7 +152,7 @@ async def update_income_order(
     
     order = await db.income_orders.find_one({
         "id": order_id,
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])  # Convert to string
     })
     
     if not order:
