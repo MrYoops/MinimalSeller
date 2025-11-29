@@ -111,7 +111,7 @@ async def update_warehouse(
     
     warehouse = await db.warehouses.find_one({
         "id": warehouse_id,
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])  # Convert to string
     })
     
     if not warehouse:
@@ -160,7 +160,7 @@ async def delete_warehouse(
     
     warehouse = await db.warehouses.find_one({
         "id": warehouse_id,
-        "user_id": current_user["_id"]
+        "user_id": str(current_user["_id"])  # Convert to string
     })
     
     if not warehouse:
@@ -168,7 +168,7 @@ async def delete_warehouse(
     
     if warehouse.get("type") == "main":
         count = await db.warehouses.count_documents({
-            "user_id": current_user["_id"],
+            "user_id": str(current_user["_id"]),  # Convert to string
             "type": "main"
         })
         if count == 1:
