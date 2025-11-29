@@ -60,7 +60,7 @@ async def create_supplier(
     
     supplier = {
         "id": str(uuid.uuid4()),
-        "user_id": current_user["_id"],
+        "user_id": str(current_user["_id"]),  # Convert to string!
         "name": data.get("name"),
         "contact_person": data.get("contact_person", ""),
         "phone": data.get("phone", ""),
@@ -73,6 +73,10 @@ async def create_supplier(
     }
     
     await db.suppliers.insert_one(supplier)
+    
+    # Remove _id from response
+    if "_id" in supplier:
+        del supplier["_id"]
     
     return {
         "message": "Supplier created successfully",
