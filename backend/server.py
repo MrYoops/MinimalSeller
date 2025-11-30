@@ -1807,6 +1807,52 @@ try:
 except Exception as e:
     logger.error(f"Failed to include inventory_stock_routes: {e}")
 
+# Sync inventory for existing products
+@app.post("/api/inventory/sync-catalog")
+async def sync_inventory_from_catalog(
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Синхронизация inventory с product_catalog
+    Создает записи в inventory для всех товаров, у которых их нет
+    """
+    seller_id = str(current_user["_id"])
+    
+    # Get all products from catalog
+    products = await db.product_catalog.find({"seller_id": seller_id}).to_list(length=10000)
+    
+    created_count = 0
+    
+    for product in products:
+        product_id = product["_id"]
+        article = product.get("article", "")
+        
+        # Check if inventory exists
+        existing = await db.inventory.find_one({
+            "product_id": product_id,
+            "seller_id": seller_id
+        })
+        
+        if not existing:
+            # Create inventory record
+            inventory = {
+                "product_id": product_id,
+                "seller_id": seller_id,
+                "sku": article,
+                "quantity": 0,
+                "reserved": 0,
+                "available": 0,
+                "alert_threshold": 10
+            }
+            await db.inventory.insert_one(inventory)
+            created_count += 1
+    
+    return {
+        "message": f"Синхронизировано {created_count} товаров",
+        "created": created_count,
+        "total_products": len(products)
+    }
+
 # Start stock synchronization scheduler
 @app.on_event("startup")
 async def start_stock_scheduler():
