@@ -40,11 +40,22 @@ async def update_stock(
     if new_quantity < 0:
         raise HTTPException(status_code=400, detail="Quantity cannot be negative")
     
-    # Найти inventory запись
+    # Найти inventory запись (product_id может быть ObjectId или UUID строкой)
+    # Сначала пробуем найти напрямую
     inventory = await db.inventory.find_one({
-        "product_id": ObjectId(product_id) if isinstance(product_id, str) else product_id,
+        "product_id": product_id,
         "seller_id": str(current_user["_id"])
     })
+    
+    # Если не нашли и product_id выглядит как ObjectId, пробуем конвертировать
+    if not inventory and isinstance(product_id, str) and len(product_id) == 24:
+        try:
+            inventory = await db.inventory.find_one({
+                "product_id": ObjectId(product_id),
+                "seller_id": str(current_user["_id"])
+            })
+        except:
+            pass
     
     if not inventory:
         raise HTTPException(status_code=404, detail="Inventory record not found")
@@ -62,10 +73,10 @@ async def update_stock(
         }}
     )
     
-    # Записать в историю
+    # Записать в историю (используем тот же product_id что в inventory)
     quantity_change = new_quantity - old_quantity
     await db.inventory_history.insert_one({
-        "product_id": ObjectId(product_id) if isinstance(product_id, str) else product_id,
+        "product_id": inventory["product_id"],  # Используем из найденной записи
         "seller_id": str(current_user["_id"]),
         "operation_type": "manual_adjustment",
         "quantity_change": quantity_change,
