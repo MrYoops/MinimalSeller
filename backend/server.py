@@ -1760,6 +1760,20 @@ try:
 except Exception as e:
     logger.error(f"Failed to include income_order_routes: {e}")
 
+try:
+    from warehouse_links_routes import router as warehouse_links_router
+    app.include_router(warehouse_links_router)
+    logger.info("Warehouse links routes included")
+except Exception as e:
+    logger.error(f"Failed to include warehouse_links_routes: {e}")
+
+try:
+    from marketplace_warehouse_routes import router as marketplace_warehouse_router
+    app.include_router(marketplace_warehouse_router)
+    logger.info("Marketplace warehouse routes included")
+except Exception as e:
+    logger.error(f"Failed to include marketplace_warehouse_routes: {e}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
