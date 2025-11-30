@@ -76,9 +76,31 @@ async def sync_product_to_marketplace(
                 logger.warning(f"[SYNC] No API key for {marketplace}")
                 continue
             
-            # Получить маркетплейс-специфичный SKU
+            # Получить маркетплейс-специфичный SKU/ID из marketplace_data
             marketplace_data = product.get("marketplace_data", {}).get(marketplace, {})
-            mp_sku = marketplace_data.get("id") or product_article
+            
+            # Если нет данных для этого МП - пропускаем товар
+            if not marketplace_data:
+                logger.warning(f"[SYNC] Product {product_article} не импортирован на {marketplace}, пропускаем")
+                continue
+            
+            # Для каждого МП свой идентификатор
+            if marketplace == "ozon":
+                # Для Ozon используем offer_id (артикул продавца)
+                mp_sku = marketplace_data.get("id") or product_article
+            elif marketplace in ["wb", "wildberries"]:
+                # Для WB используем barcode (штрихкод)
+                mp_sku = marketplace_data.get("barcode") or marketplace_data.get("id")
+                if not mp_sku:
+                    logger.warning(f"[SYNC] No barcode for {product_article} on WB, пропускаем")
+                    continue
+            elif marketplace == "yandex":
+                # Для Yandex используем SKU
+                mp_sku = marketplace_data.get("id") or product_article
+            else:
+                mp_sku = product_article
+            
+            logger.info(f"[SYNC] {marketplace.upper()}: {product_article} → MP SKU: {mp_sku}")
             
             # Создать коннектор
             connector = get_connector(
