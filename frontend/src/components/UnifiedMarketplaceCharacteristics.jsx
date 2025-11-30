@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { FiStar, FiAlertCircle } from 'react-icons/fi'
 import QuickCategoryMatcher from './QuickCategoryMatcher'
+import DictionaryAutocomplete from './DictionaryAutocomplete'
 
 /**
  * Компонент для отображения ВСЕХ характеристик товара
