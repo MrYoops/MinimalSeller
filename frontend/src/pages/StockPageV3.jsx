@@ -134,6 +134,23 @@ function StockPageV3() {
     }
   }
 
+  const handleSyncCatalog = async () => {
+    setLoading(true)
+    try {
+      const result = await syncInventory()
+      if (result && result.created > 0) {
+        toast.success(`Добавлено ${result.created} новых товаров в остатки`)
+      } else {
+        toast.success('Каталог синхронизирован')
+      }
+      await loadStocks()
+    } catch (error) {
+      toast.error('Ошибка синхронизации каталога')
+      console.error(error)
+    }
+    setLoading(false)
+  }
+
   const syncAllStocks = async () => {
     if (!selectedWarehouse) {
       toast.error('Выберите склад для синхронизации')
