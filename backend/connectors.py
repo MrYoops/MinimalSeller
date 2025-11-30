@@ -1003,6 +1003,49 @@ class YandexMarketConnector(BaseConnector):
             logger.error(f"[Yandex] Unexpected error: {str(e)}")
             raise MarketplaceError(f"Failed to fetch Yandex warehouses: {str(e)}", 500)
 
+
+    async def update_stock(self, warehouse_id: str, stocks: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Обновить остатки на Yandex.Market
+        
+        Args:
+            warehouse_id: ID склада на Yandex
+            stocks: [{sku: str, count: int}, ...]
+        """
+        url = f"{self.base_url}/campaigns/{self.campaign_id}/offers/stocks"
+        headers = self._get_headers()
+        
+        payload = {
+            "skus": [
+                {
+                    "sku": item["sku"],
+                    "warehouseId": int(warehouse_id),
+                    "items": [
+                        {
+                            "count": item["count"],
+                            "type": "FIT",
+                            "updatedAt": datetime.utcnow().isoformat()
+                        }
+                    ]
+                }
+                for item in stocks
+            ]
+        }
+        
+        logger.info(f"[Yandex] Updating {len(stocks)} products stock on warehouse {warehouse_id}")
+        
+        try:
+            response = await self._make_request("PUT", url, headers, json_data=payload)
+            logger.info(f"[Yandex] ✅ Stock updated: {response}")
+            return {
+                "success": True,
+                "updated": len(stocks),
+                "response": response
+            }
+        except MarketplaceError as e:
+            logger.error(f"[Yandex] Failed to update stock: {e.message}")
+            raise
+
 def get_connector(marketplace: str, client_id: str, api_key: str) -> BaseConnector:
     """Factory function to get appropriate connector"""
     connectors = {
