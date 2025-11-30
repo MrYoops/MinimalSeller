@@ -1,0 +1,290 @@
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { FiDownload, FiRefreshCw, FiSearch, FiUpload, FiCheck, FiX, FiEdit2 } from 'react-icons/fi'
+import { toast } from 'sonner'
+
+function StockPageV3() {
+  const { api } = useAuth()
+  const [stocks, setStocks] = useState([])
+  const [warehouses, setWarehouses] = useState([])
+  const [selectedWarehouse, setSelectedWarehouse] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [editingRow, setEditingRow] = useState(null)
+  const [editValue, setEditValue] = useState('')
+
+  useEffect(() => {
+    loadWarehouses()
+  }, [])
+
+  useEffect(() => {
+    if (selectedWarehouse) {
+      loadStocks()
+    }
+  }, [selectedWarehouse])
+
+  const loadWarehouses = async () => {
+    try {
+      const response = await api.get('/api/warehouses')
+      const warehousesData = response.data
+      setWarehouses(warehousesData)
+      
+      // Попытаться загрузить сохранённый выбор
+      const savedWarehouseId = localStorage.getItem('selectedWarehouseId')
+      
+      if (savedWarehouseId) {
+        const savedWarehouse = warehousesData.find(wh => wh.id === savedWarehouseId)
+        if (savedWarehouse) {
+          setSelectedWarehouse(savedWarehouse)
+        } else if (warehousesData.length > 0) {
+          setSelectedWarehouse(warehousesData[0])
+        }
+      } else if (warehousesData.length > 0) {
+        // Выбрать первый склад по умолчанию
+        setSelectedWarehouse(warehousesData[0])
+      }
+    } catch (error) {
+      toast.error('Ошибка загрузки складов')
+      console.error(error)
+    }
+  }
+
+  const loadStocks = async () => {
+    setLoading(true)
+    try {
+      const response = await api.get('/api/inventory/fbs')
+      setStocks(response.data)
+    } catch (error) {
+      toast.error('Ошибка загрузки остатков')
+      console.error(error)
+    }
+    setLoading(false)
+  }
+
+  const handleWarehouseChange = (warehouseId) => {
+    const warehouse = warehouses.find(wh => wh.id === warehouseId)
+    if (warehouse) {
+      setSelectedWarehouse(warehouse)
+      localStorage.setItem('selectedWarehouseId', warehouseId)
+    }
+  }
+
+  const startEdit = (stock) => {
+    setEditingRow(stock.id)
+    setEditValue(stock.quantity.toString())
+  }
+
+  const cancelEdit = () => {
+    setEditingRow(null)
+    setEditValue('')
+  }
+
+  const saveStock = async (stock) => {
+    const newQuantity = parseInt(editValue, 10)
+    
+    if (isNaN(newQuantity) || newQuantity < 0) {
+      toast.error('Некорректное значение')
+      return
+    }
+
+    if (!selectedWarehouse) {
+      toast.error('Выберите склад')
+      return
+    }
+
+    try {
+      const response = await api.put('/api/inventory/update-stock', {
+        product_id: stock.product_id,
+        article: stock.sku,
+        new_quantity: newQuantity,
+        warehouse_id: selectedWarehouse.id
+      })
+
+      toast.success(response.data.message || 'Остаток обновлён')
+      
+      // Обновить локальные данные
+      setStocks(stocks.map(s => 
+        s.id === stock.id 
+          ? { ...s, quantity: newQuantity, available: newQuantity - s.reserved }
+          : s
+      ))
+      
+      cancelEdit()
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Ошибка обновления остатка')
+      console.error(error)
+    }
+  }
+
+  const syncAllStocks = async () => {
+    if (!selectedWarehouse) {
+      toast.error('Выберите склад для синхронизации')
+      return
+    }
+
+    if (!confirm(`Отправить все остатки на склад "${selectedWarehouse.name}"?`)) {
+      return
+    }
+
+    setSyncing(true)
+    try {
+      const response = await api.post('/api/inventory/sync-all-stocks', {
+        warehouse_id: selectedWarehouse.id
+      })
+      
+      toast.success(response.data.message || 'Остатки синхронизированы')
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Ошибка синхронизации')
+      console.error(error)
+    }
+    setSyncing(false)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl text-mm-cyan uppercase mb-2" data-testid="stocks-title">Остатки на складах</h2>
+          <p className="text-mm-text-secondary text-sm">Управление остатками товаров и синхронизация с МП</p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={syncAllStocks}
+            disabled={!selectedWarehouse || syncing}
+            className="btn-primary flex items-center space-x-2 disabled:opacity-50"
+            data-testid="sync-all-btn"
+          >
+            <FiUpload />
+            <span>{syncing ? 'СИНХРОНИЗАЦИЯ...' : 'ОТПРАВИТЬ ОСТАТКИ НА МП'}</span>
+          </button>
+          <button
+            onClick={loadStocks}
+            disabled={loading}
+            className="btn-secondary flex items-center space-x-2"
+            data-testid="refresh-btn"
+          >
+            <FiRefreshCw className={loading ? 'animate-spin' : ''} />
+            <span>ОБНОВИТЬ</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Выбор склада */}
+      <div className="card-neon p-4">
+        <label className="block text-sm mb-2 text-mm-text-secondary uppercase">Склад для синхронизации</label>
+        <select
+          value={selectedWarehouse?.id || ''}
+          onChange={(e) => handleWarehouseChange(e.target.value)}
+          className="input-neon w-full max-w-md"
+          data-testid="warehouse-select"
+        >
+          <option value="">Выберите склад...</option>
+          {warehouses.map(wh => (
+            <option key={wh.id} value={wh.id}>
+              {wh.name} {wh.sends_stock ? '(Отправляет остатки)' : ''}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-mm-text-tertiary mt-2">
+          {selectedWarehouse 
+            ? `Выбран склад: ${selectedWarehouse.name}. Изменения будут синхронизированы на связанные МП.`
+            : 'Выберите склад для работы с остатками'
+          }
+        </p>
+      </div>
+
+      {/* Таблица остатков */}
+      {!selectedWarehouse ? (
+        <div className="card-neon text-center py-16">
+          <p className="text-mm-text-secondary text-lg">Выберите склад для работы с остатками</p>
+        </div>
+      ) : loading ? (
+        <div className="text-center py-12">
+          <p className="text-mm-cyan animate-pulse">// LOADING...</p>
+        </div>
+      ) : stocks.length === 0 ? (
+        <div className="card-neon text-center py-16">
+          <p className="text-mm-text-secondary text-lg mb-2">Нет остатков</p>
+          <p className="text-sm text-mm-text-tertiary">Создайте приёмку товара для добавления остатков</p>
+        </div>
+      ) : (
+        <div className="card-neon overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-mm-border">
+                <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">SKU</th>
+                <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Название</th>
+                <th className="text-center py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Всего</th>
+                <th className="text-center py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Резерв</th>
+                <th className="text-center py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Доступно</th>
+                <th className="text-center py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stocks.map((item) => (
+                <tr key={item.id} className="border-b border-mm-border hover:bg-mm-gray transition-colors">
+                  <td className="py-4 px-4 font-mono text-sm text-mm-cyan">{item.sku}</td>
+                  <td className="py-4 px-4 text-sm">{item.product_name || '—'}</td>
+                  <td className="py-4 px-4 text-center">
+                    {editingRow === item.id ? (
+                      <input
+                        type="number"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="input-neon w-24 text-center"
+                        autoFocus
+                        data-testid={`edit-input-${item.sku}`}
+                      />
+                    ) : (
+                      <span className="font-mono font-bold">{item.quantity}</span>
+                    )}
+                  </td>
+                  <td className="py-4 px-4 text-center font-mono text-mm-yellow">{item.reserved}</td>
+                  <td className="py-4 px-4 text-center font-mono font-bold text-mm-green">{item.available}</td>
+                  <td className="py-4 px-4 text-center">
+                    {editingRow === item.id ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <button
+                          onClick={() => saveStock(item)}
+                          className="text-mm-green hover:text-mm-cyan transition-colors"
+                          data-testid={`save-btn-${item.sku}`}
+                        >
+                          <FiCheck size={20} />
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="text-mm-red hover:text-mm-text-secondary transition-colors"
+                          data-testid={`cancel-btn-${item.sku}`}
+                        >
+                          <FiX size={20} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startEdit(item)}
+                        className="text-mm-cyan hover:text-mm-green transition-colors"
+                        data-testid={`edit-btn-${item.sku}`}
+                      >
+                        <FiEdit2 size={18} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Информация о автосинхронизации */}
+      <div className="card-neon p-4 bg-mm-dark-secondary/30">
+        <p className="text-sm text-mm-text-secondary">
+          <span className="text-mm-cyan font-bold">ℹ️ АВТОСИНХРОНИЗАЦИЯ:</span> Остатки автоматически отправляются на МП каждые 15 минут.
+          При изменении остатка вручную, синхронизация происходит сразу на выбранный склад.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default StockPageV3
