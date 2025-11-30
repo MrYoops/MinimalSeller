@@ -494,7 +494,8 @@ async def add_api_key(
         "id": key_id,
         "marketplace": key_data.marketplace,
         "client_id": key_data.client_id,
-        "api_key": key_data.api_key,  # In production, encrypt this
+        "api_key": key_data.api_key,
+        "name": key_data.name or f"{key_data.marketplace.upper()} Integration",  # Default name
         "created_at": datetime.utcnow().isoformat()
     }
     
