@@ -457,6 +457,98 @@ function WarehouseModal({ warehouse, onClose, onSuccess }) {
             </div>
           </div>
 
+          {/* Warehouse Links Section - Only for existing warehouses */}
+          {warehouse && (
+            <div className="border-t border-mm-border pt-6">
+              <h4 className="text-mm-cyan uppercase text-sm mb-4">// Связи со складами маркетплейсов</h4>
+              <p className="text-xs text-mm-text-tertiary mb-4">
+                Выберите склады FBS на маркетплейсах, куда будут передаваться остатки
+              </p>
+              
+              {/* Existing Links */}
+              {links.length > 0 && (
+                <div className="mb-4 space-y-2">
+                  {links.map((link) => (
+                    <div key={link.id} className="flex items-center justify-between p-3 bg-mm-darker border border-mm-border">
+                      <div>
+                        <div className="font-semibold text-sm">
+                          <span className="text-mm-purple uppercase">{link.marketplace_name}</span>
+                          {' → '}
+                          {link.marketplace_warehouse_name}
+                        </div>
+                        <div className="text-xs text-mm-text-tertiary font-mono">ID: {link.marketplace_warehouse_id}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteLink(link.id)}
+                        className="px-3 py-1 border border-mm-red text-mm-red hover:bg-mm-red/10 text-xs"
+                      >
+                        УДАЛИТЬ
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Add New Link */}
+              <div className="space-y-3 p-4 bg-mm-darker border border-mm-border">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs mb-1 text-mm-text-tertiary uppercase">Шаг 1: Маркетплейс</label>
+                    <select
+                      value={selectedMarketplace}
+                      onChange={(e) => {
+                        setSelectedMarketplace(e.target.value)
+                        setMpWarehouses([])
+                      }}
+                      className="input-neon w-full text-sm"
+                      data-testid="marketplace-select"
+                    >
+                      <option value="">Выберите...</option>
+                      {integrations.map(int => (
+                        <option key={int.id} value={int.marketplace}>
+                          {int.marketplace.toUpperCase()}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={loadMPWarehouses}
+                      disabled={!selectedMarketplace || loadingMPWarehouses}
+                      className="btn-secondary w-full text-xs disabled:opacity-50"
+                      data-testid="load-mp-warehouses-btn"
+                    >
+                      {loadingMPWarehouses ? 'Загрузка...' : 'Шаг 2: Загрузить склады'}
+                    </button>
+                  </div>
+                </div>
+                
+                {/* MP Warehouses List */}
+                {mpWarehouses.length > 0 && (
+                  <div className="mt-3 max-h-48 overflow-y-auto border border-mm-border">
+                    {mpWarehouses.map((mpWh) => (
+                      <button
+                        key={mpWh.id}
+                        type="button"
+                        onClick={() => addLink(mpWh)}
+                        className="w-full text-left px-3 py-2 hover:bg-mm-gray transition-colors border-b border-mm-border last:border-b-0"
+                        data-testid={`add-link-${mpWh.id}`}
+                      >
+                        <div className="text-sm font-semibold">{mpWh.name}</div>
+                        <div className="text-xs text-mm-text-tertiary">
+                          Тип: {mpWh.type} | ID: {mpWh.id}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex space-x-4">
             <button
