@@ -192,6 +192,13 @@ function WarehouseModal({ warehouse, onClose, onSuccess }) {
     priority: 1,
     fbo_accounting: false
   })
+  
+  // NEW: Links management
+  const [links, setLinks] = useState([])
+  const [integrations, setIntegrations] = useState([])
+  const [selectedMarketplace, setSelectedMarketplace] = useState('')
+  const [mpWarehouses, setMpWarehouses] = useState([])
+  const [loadingMPWarehouses, setLoadingMPWarehouses] = useState(false)
 
   useEffect(() => {
     if (warehouse) {
@@ -206,8 +213,88 @@ function WarehouseModal({ warehouse, onClose, onSuccess }) {
         priority: warehouse.priority || 1,
         fbo_accounting: warehouse.fbo_accounting || false
       })
+      
+      // Load links and integrations
+      loadLinks()
+      loadIntegrations()
     }
   }, [warehouse])
+  
+  const loadLinks = async () => {
+    if (!warehouse) return
+    try {
+      const response = await api.get(`/api/warehouse-links/${warehouse.id}/links`)
+      setLinks(response.data)
+    } catch (error) {
+      console.error('Failed to load links:', error)
+    }
+  }
+  
+  const loadIntegrations = async () => {
+    try {
+      const response = await api.get('/api/seller/api-keys')
+      setIntegrations(response.data)
+    } catch (error) {
+      console.error('Failed to load integrations:', error)
+    }
+  }
+  
+  const loadMPWarehouses = async () => {
+    if (!selectedMarketplace) {
+      toast.error('Выберите маркетплейс')
+      return
+    }
+    
+    setLoadingMPWarehouses(true)
+    try {
+      const response = await api.get(`/api/marketplace/${selectedMarketplace}/warehouses`)
+      setMpWarehouses(response.data.warehouses || [])
+      
+      if (response.data.warehouses?.length === 0) {
+        toast.error('Не найдено FBS складов на маркетплейсе')
+      } else {
+        toast.success(`Найдено ${response.data.warehouses.length} складов`)
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Ошибка загрузки складов')
+      setMpWarehouses([])
+    }
+    setLoadingMPWarehouses(false)
+  }
+  
+  const addLink = async (mpWarehouse) => {
+    if (!warehouse) return
+    
+    try {
+      const integration = integrations.find(i => i.marketplace === selectedMarketplace)
+      
+      await api.post(`/api/warehouse-links/${warehouse.id}/links`, {
+        integration_id: integration.id,
+        marketplace_name: selectedMarketplace,
+        marketplace_warehouse_id: mpWarehouse.id,
+        marketplace_warehouse_name: mpWarehouse.name
+      })
+      
+      toast.success('Связь создана')
+      loadLinks()
+      setMpWarehouses([])
+      setSelectedMarketplace('')
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Ошибка создания связи')
+    }
+  }
+  
+  const deleteLink = async (linkId) => {
+    if (!confirm('Удалить связь?')) return
+    
+    try {
+      await api.delete(`/api/warehouse-links/${warehouse.id}/links/${linkId}`)
+      toast.success('Связь удалена')
+      loadLinks()
+    } catch (error) {
+      toast.error('Ошибка удаления связи')
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
