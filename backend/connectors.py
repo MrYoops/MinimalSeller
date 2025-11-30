@@ -848,6 +848,42 @@ class WildberriesConnector(BaseConnector):
             raise
 
 
+    async def update_stock(self, warehouse_id: str, stocks: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Обновить остатки на Wildberries
+        
+        Args:
+            warehouse_id: ID склада на WB
+            stocks: [{sku: str, amount: int}, ...]
+        """
+        url = f"{self.base_url}/api/v3/stocks/{warehouse_id}"
+        headers = self._get_headers()
+        
+        payload = {
+            "stocks": [
+                {
+                    "sku": item["sku"],
+                    "amount": item["amount"]
+                }
+                for item in stocks
+            ]
+        }
+        
+        logger.info(f"[WB] Updating {len(stocks)} products stock on warehouse {warehouse_id}")
+        
+        try:
+            response = await self._make_request("PUT", url, headers, json_data=payload)
+            logger.info(f"[WB] ✅ Stock updated: {response}")
+            return {
+                "success": True,
+                "updated": len(stocks),
+                "response": response
+            }
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to update stock: {e.message}")
+            raise
+
+
 class YandexMarketConnector(BaseConnector):
     """Yandex.Market connector - REAL API with full headers"""
     
