@@ -47,7 +47,7 @@ async def get_marketplace_warehouses(
     try:
         if marketplace == "yandex":
             warehouses = await fetch_yandex_warehouses(mp_key)
-        elif marketplace == "wildberries":
+        elif marketplace in ["wildberries", "wb"]:  # Support both names
             warehouses = await fetch_wb_warehouses(mp_key)
         elif marketplace == "ozon":
             warehouses = await fetch_ozon_warehouses(mp_key)
