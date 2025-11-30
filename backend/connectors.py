@@ -474,12 +474,47 @@ class OzonConnector(BaseConnector):
         # VAT должен быть в формате 0..1 (0.2 = 20%)
         vat_decimal = product_data.get('vat', 0) / 100 if product_data.get('vat', 0) > 1 else product_data.get('vat', 0)
         
+        # ВАЛИДАЦИЯ: description_category_id и type_id ДОЛЖНЫ быть int
+        category_id = product_data.get('ozon_category_id')
+        type_id = product_data.get('ozon_type_id')
+        
+        # Преобразовать в int если возможно
+        if isinstance(category_id, str):
+            try:
+                category_id = int(category_id) if category_id.isdigit() else 15621048
+            except:
+                category_id = 15621048
+        elif not category_id or not isinstance(category_id, int):
+            category_id = 15621048
+        
+        if isinstance(type_id, str):
+            try:
+                type_id = int(type_id) if type_id.isdigit() else 91248
+            except:
+                type_id = 91248
+        elif not type_id or not isinstance(type_id, int):
+            type_id = 91248
+        
+        logger.info(f"[Ozon] Validated category_id={category_id}, type_id={type_id}")
+        
+        # ЦЕНЫ: Ozon ожидает цены в рублях (не копейках)
+        # Если price > 1000, вероятно в копейках - делим на 100
+        # Если price < 1000, вероятно уже в рублях
+        price = product_data.get('price', 0)
+        old_price = product_data.get('price_without_discount', 0)
+        
+        # Умная конвертация
+        price_rubles = str(int(price / 100)) if price > 1000 else str(int(price))
+        old_price_rubles = str(int(old_price / 100)) if old_price > 1000 else str(int(old_price))
+        
+        logger.info(f"[Ozon] Price conversion: {price} → {price_rubles}₽, Old: {old_price} → {old_price_rubles}₽")
+        
         payload = {
             "items": [{
                 "offer_id": product_data.get('article', ''),
                 "name": product_data.get('name', ''),
-                "price": str(int(product_data.get('price', 0) / 100)),
-                "old_price": str(int(product_data.get('price_without_discount', 0) / 100)),
+                "price": price_rubles,
+                "old_price": old_price_rubles,
                 "vat": str(vat_decimal),  # В формате 0.2 для 20%
                 "height": product_data.get('dimensions', {}).get('height', 0),
                 "width": product_data.get('dimensions', {}).get('width', 0),
@@ -487,16 +522,16 @@ class OzonConnector(BaseConnector):
                 "weight": product_data.get('weight', 0),
                 "images": product_data.get('photos', [])[:10],  # Максимум 10 фото
                 "description": product_data.get('description', ''),
-                "description_category_id": product_data.get('ozon_category_id'),  # ИСПРАВЛЕНО: description_category_id!
-                "type_id": product_data.get('ozon_type_id') or 91248,  # Кроссовки
+                "description_category_id": category_id,  # ВАЛИДИРОВАННЫЙ int
+                "type_id": type_id,  # ВАЛИДИРОВАННЫЙ int
                 "attributes": self._prepare_ozon_attributes(product_data)
             }]
         }
         
         logger.info(f"[Ozon] Creating product: {product_data.get('name')}")
         logger.info(f"[Ozon] Article: {product_data.get('article')}")
-        logger.info(f"[Ozon] Category: {product_data.get('ozon_category_id')}")
-        logger.info(f"[Ozon] Price: {payload['items'][0]['price']}₽")
+        logger.info(f"[Ozon] Category: {category_id}, Type: {type_id}")
+        logger.info(f"[Ozon] Price: {price_rubles}₽, Old price: {old_price_rubles}₽")
         
         try:
             response = await self._make_request("POST", url, headers, json_data=payload)
