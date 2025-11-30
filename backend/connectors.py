@@ -189,12 +189,10 @@ class OzonConnector(BaseConnector):
         """Get products from Ozon with full details (images, attributes)"""
         logger.info("[Ozon] Fetching products with full details")
         
-        # CORRECT endpoint to get ALL products: /v3/product/list (not /v3/product/info/list)
-        # /v3/product/info/list requires specific IDs, while /v3/product/list can get all products
+        # Step 1: Get list of all products
         list_url = f"{self.base_url}/v3/product/list"
         headers = self._get_headers()
         
-        # Correct payload format for v3/product/list
         list_payload = {
             "filter": {
                 "visibility": "ALL"
@@ -203,42 +201,94 @@ class OzonConnector(BaseConnector):
             "limit": 100
         }
         
-        logger.info(f"[Ozon] Payload being sent: {list_payload}")
+        logger.info(f"[Ozon] Step 1: Getting product list")
         
         all_products = []
         
         try:
-            # Get product list with full info
+            # Get product list
             list_response = await self._make_request("POST", list_url, headers, json_data=list_payload)
             items = list_response.get('result', {}).get('items', [])
             logger.info(f"[Ozon] Received {len(items)} products")
             
-            if items:
-                logger.info(f"[Ozon] Sample item from /v3/product/list: {items[0]}")
-            
             if not items:
                 return all_products
             
-            # For now, just use the data from /v3/product/list
-            # TODO: Fix /v3/product/info/list to get full details (images, attributes)
-            for item in items:
-                all_products.append({
-                    "id": str(item.get('product_id', '')),
-                    "sku": item.get('offer_id', ''),
-                    "name": item.get('offer_id', 'Unnamed product'),  # /v3/product/list doesn't return name
-                    "description": '',
-                    "price": 0,  # /v3/product/list doesn't return price
-                    "stock": 0,
-                    "images": [],
-                    "attributes": {},
-                    "category": '',
-                    "marketplace": "ozon",
-                    "status": 'archived' if item.get('archived') else 'active',
-                    "barcode": ''
-                })
+            # Step 2: Get full info for each product (in batches)
+            info_url = f"{self.base_url}/v2/product/info/list"
             
-            logger.info(f"[Ozon] Successfully transformed {len(all_products)} products (basic info only)")
-            return all_products
+            # Prepare product IDs
+            product_ids = [item.get('product_id') for item in items if item.get('product_id')]
+            offer_ids = [item.get('offer_id') for item in items if item.get('offer_id')]
+            
+            logger.info(f"[Ozon] Step 2: Getting full info for {len(offer_ids)} products")
+            
+            # Get full info
+            info_payload = {
+                "offer_id": offer_ids[:100],  # Max 100 per request
+                "product_id": [],
+                "sku": []
+            }
+            
+            try:
+                info_response = await self._make_request("POST", info_url, headers, json_data=info_payload)
+                detailed_items = info_response.get('result', {}).get('items', [])
+                logger.info(f"[Ozon] Received full info for {len(detailed_items)} products")
+                
+                # Transform to standard format
+                for detailed in detailed_items:
+                    # Extract images
+                    images = []
+                    for img in detailed.get('images', []):
+                        img_url = img.get('file_name') or img.get('url')
+                        if img_url:
+                            images.append(img_url)
+                    
+                    # Extract primary image
+                    primary_image = detailed.get('primary_image', '')
+                    if primary_image and primary_image not in images:
+                        images.insert(0, primary_image)
+                    
+                    all_products.append({
+                        "id": str(detailed.get('id', '')),
+                        "sku": detailed.get('offer_id', ''),
+                        "name": detailed.get('name', 'Unnamed product'),
+                        "description": detailed.get('description', ''),
+                        "price": 0,
+                        "stock": 0,
+                        "images": images,
+                        "attributes": detailed.get('attributes', []),
+                        "category": detailed.get('category_name', ''),
+                        "marketplace": "ozon",
+                        "status": 'archived' if detailed.get('archived') else 'active',
+                        "barcode": detailed.get('barcode', '')
+                    })
+                
+                logger.info(f"[Ozon] Successfully transformed {len(all_products)} products with full details")
+                return all_products
+                
+            except MarketplaceError as e:
+                # If /v2/product/info/list fails, fallback to basic data
+                logger.warning(f"[Ozon] Failed to get full info: {e.message}, using basic data")
+                
+                for item in items:
+                    all_products.append({
+                        "id": str(item.get('product_id', '')),
+                        "sku": item.get('offer_id', ''),
+                        "name": item.get('offer_id', 'Unnamed product'),
+                        "description": '',
+                        "price": 0,
+                        "stock": 0,
+                        "images": [],
+                        "attributes": {},
+                        "category": '',
+                        "marketplace": "ozon",
+                        "status": 'archived' if item.get('archived') else 'active',
+                        "barcode": ''
+                    })
+                
+                logger.info(f"[Ozon] Successfully transformed {len(all_products)} products (basic info only)")
+                return all_products
             
         except MarketplaceError as e:
             logger.error(f"[Ozon] Failed to fetch products: {e.message}")
