@@ -20,21 +20,30 @@ class WarehouseLinkCreate(BaseModel):
 @router.get("/{warehouse_id}/links")
 async def get_warehouse_links(
     warehouse_id: str,
-    current_user: dict = Depends(dependencies.get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Получить все связи склада с маркетплейсами"""
     try:
-        warehouse = await dependencies.db.warehouses.find_one({
+        db = await get_database()
+        
+        warehouse = await db.warehouses.find_one({
             "id": warehouse_id,
-            "user_id": current_user["_id"]
+            "user_id": str(current_user["_id"])
         })
         
         if not warehouse:
             raise HTTPException(status_code=404, detail="Warehouse not found")
         
-        links = await dependencies.db.warehouse_links.find({
+        links = await db.warehouse_links.find({
             "warehouse_id": warehouse_id
         }).to_list(length=100)
+        
+        # Convert ObjectId
+        for link in links:
+            if "_id" in link:
+                link["_id"] = str(link["_id"])
+            if "user_id" in link:
+                link["user_id"] = str(link["user_id"])
         
         return links
     except Exception as e:
