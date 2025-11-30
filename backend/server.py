@@ -393,6 +393,7 @@ async def get_api_keys(current_user: dict = Depends(require_role(UserRole.SELLER
             marketplace=key["marketplace"],
             client_id=key.get("client_id", ""),
             api_key_masked="***" + key["api_key"][-4:] if len(key.get("api_key", "")) > 4 else "***",
+            name=key.get("name"),  # Add name field
             created_at=created_at
         ))
     
