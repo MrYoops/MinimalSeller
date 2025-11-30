@@ -1800,6 +1800,32 @@ try:
 except Exception as e:
     logger.error(f"Failed to include inventory_routes: {e}")
 
+try:
+    from inventory_stock_routes import router as inventory_stock_router
+    app.include_router(inventory_stock_router)
+    logger.info("Inventory stock routes included")
+except Exception as e:
+    logger.error(f"Failed to include inventory_stock_routes: {e}")
+
+# Start stock synchronization scheduler
+@app.on_event("startup")
+async def start_stock_scheduler():
+    try:
+        from stock_scheduler import start_scheduler
+        start_scheduler()
+        logger.info("Stock synchronization scheduler started")
+    except Exception as e:
+        logger.error(f"Failed to start stock scheduler: {e}")
+
+@app.on_event("shutdown")
+async def stop_stock_scheduler():
+    try:
+        from stock_scheduler import stop_scheduler
+        stop_scheduler()
+        logger.info("Stock synchronization scheduler stopped")
+    except Exception as e:
+        logger.error(f"Failed to stop stock scheduler: {e}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
