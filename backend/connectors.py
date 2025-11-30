@@ -566,6 +566,40 @@ class OzonConnector(BaseConnector):
             logger.error(f"[Ozon] Failed to update stock: {e.message}")
             raise
 
+    async def get_stocks(self, warehouse_id: str = None) -> List[Dict[str, Any]]:
+        """
+        Получить остатки с Ozon
+        
+        Args:
+            warehouse_id: ID склада FBS (опционально)
+        
+        Returns:
+            [{offer_id: str, product_id: int, stock: int, warehouse_id: int}, ...]
+        """
+        url = f"{self.base_url}/v3/product/info/stocks"
+        headers = self._get_headers()
+        
+        payload = {
+            "filter": {},
+            "last_id": "",
+            "limit": 1000
+        }
+        
+        if warehouse_id:
+            payload["filter"]["warehouse_id"] = int(warehouse_id)
+        
+        logger.info(f"[Ozon] Getting stocks from warehouse {warehouse_id or 'all'}")
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            stocks = response.get("result", {}).get("stocks", [])
+            logger.info(f"[Ozon] ✅ Got {len(stocks)} stock records")
+            return stocks
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Failed to get stocks: {e.message}")
+            raise
+
+
 
 
 class WildberriesConnector(BaseConnector):
