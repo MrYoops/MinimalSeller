@@ -918,6 +918,31 @@ class WildberriesConnector(BaseConnector):
             raise
 
 
+
+    async def get_stocks(self, warehouse_id: str = None) -> List[Dict[str, Any]]:
+        """
+        Получить остатки с Wildberries
+        
+        Args:
+            warehouse_id: ID склада (опционально)
+        
+        Returns:
+            [{sku: str, amount: int, warehouseId: int}, ...]
+        """
+        url = f"{self.base_url}/api/v3/stocks/{warehouse_id}" if warehouse_id else f"{self.base_url}/api/v3/stocks"
+        headers = self._get_headers()
+        
+        logger.info(f"[WB] Getting stocks from warehouse {warehouse_id or 'all'}")
+        
+        try:
+            response = await self._make_request("GET", url, headers)
+            stocks = response.get("stocks", []) if isinstance(response, dict) else response
+            logger.info(f"[WB] ✅ Got {len(stocks)} stock records")
+            return stocks
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to get stocks: {e.message}")
+            raise
+
 class YandexMarketConnector(BaseConnector):
     """Yandex.Market connector - REAL API with full headers"""
     
