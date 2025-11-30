@@ -1135,6 +1135,7 @@ export default function CatalogProductFormV4() {
                     baseCharacteristics={product.characteristics || {}}
                     currentMappingId={product.category_mapping_id}
                     currentCategoryName={currentMapping?.internal_name || ''}
+                    categoryMappings={categoryMappings}
                     onMappingUpdated={async (marketplace, categoryId, categoryName, typeId) => {
                       console.log(`[ProductForm] Mapping updated for ${marketplace}:`, categoryId)
                       // Перезагрузить характеристики для этого МП
