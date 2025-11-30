@@ -18,7 +18,8 @@ export default function UnifiedMarketplaceCharacteristics({
   currentMappingId = null,
   currentCategoryName = '',
   onMappingUpdated,
-  onBaseCharacteristicChange // Новый callback для обновления базовых характеристик
+  onBaseCharacteristicChange, // Новый callback для обновления базовых характеристик
+  categoryMappings = {} // НОВЫЙ: Маппинги категорий {ozon: {category_id, type_id}, wb: {...}}
 }) {
   
   const mpConfig = {
