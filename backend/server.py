@@ -532,6 +532,7 @@ async def add_api_key(
             "marketplace": new_key["marketplace"],
             "client_id": new_key["client_id"],
             "api_key_masked": "***" + new_key["api_key"][-4:] if len(new_key["api_key"]) > 4 else "***",
+            "name": new_key["name"],  # Include name
             "created_at": new_key["created_at"]
         }
     }
