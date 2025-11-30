@@ -14,8 +14,14 @@ function StockPageV3() {
   const [editValue, setEditValue] = useState('')
 
   useEffect(() => {
-    loadWarehouses()
-    syncInventory() // Auto-sync on mount
+    const init = async () => {
+      await loadWarehouses()
+      await syncInventory() // Wait for sync
+      if (selectedWarehouse) {
+        await loadStocks() // Then load stocks
+      }
+    }
+    init()
   }, [])
 
   useEffect(() => {
