@@ -94,7 +94,7 @@ function WarehousesSection() {
         {subTab === 'warehouses' && <WarehousesPageV2 />}
         {subTab === 'suppliers' && <SuppliersPage />}
         {subTab === 'income' && <IncomeOrdersPage />}
-        {subTab === 'stock' && <StockPage />}
+        {subTab === 'stock' && <StockPageV2 />}
         {subTab === 'inventory' && <InventoryPage />}
         {subTab === 'sync' && <StockSyncHistoryPage />}
       </div>
