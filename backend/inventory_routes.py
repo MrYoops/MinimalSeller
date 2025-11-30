@@ -122,10 +122,10 @@ async def get_fbs_inventory(
 async def adjust_fbs_inventory(
     product_id: str,
     adjustment: InventoryAdjustment,
-    current_user: dict = Depends(get_current_user),
-    
+    current_user: dict = Depends(get_current_user)
 ):
     """Ручная корректировка остатков FBS"""
+    db = await get_database()
     seller_id = str(current_user["_id"])
     user_id = str(current_user["_id"])
     
