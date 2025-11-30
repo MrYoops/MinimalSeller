@@ -111,7 +111,7 @@ async def fetch_yandex_warehouses(api_key: Dict[str, Any]) -> List[Dict[str, Any
 
 
 async def fetch_wb_warehouses(api_key: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Получить склады с Wildberries"""
+    """Получить склады с Wildberries (2025 API)"""
     
     token = api_key.get("api_key")
     
@@ -120,11 +120,10 @@ async def fetch_wb_warehouses(api_key: Dict[str, Any]) -> List[Dict[str, Any]]:
     
     warehouses = []
     
-    # Новые endpoints WB 2025 (домены изменились)
+    # Новые endpoints WB 2025
     endpoints = [
-        ("https://content-api.wildberries.ru/api/v3/offices", "offices"),
-        ("https://suppliers-api.wildberries.ru/api/v3/offices", "offices_old"),
-        ("https://suppliers-api.wildberries.ru/api/v3/warehouses", "warehouses_old")
+        ("https://marketplace-api.wildberries.ru/api/v3/warehouses", "warehouses"),
+        ("https://marketplace-api.wildberries.ru/api/v3/offices", "offices")
     ]
     
     for url, endpoint_type in endpoints:
@@ -140,25 +139,40 @@ async def fetch_wb_warehouses(api_key: Dict[str, Any]) -> List[Dict[str, Any]]:
                 
                 if response.status_code == 200:
                     data = response.json()
-                    logger.info(f"[WB] ✅ Response from {endpoint_type}: {type(data)}")
+                    logger.info(f"[WB] ✅ Response from {endpoint_type}: {len(data) if isinstance(data, list) else 'not list'}")
                     
-                    # Обработка ответа
-                    items = data if isinstance(data, list) else data.get("data", [])
+                    if not isinstance(data, list):
+                        logger.warning(f"[WB] Expected list, got {type(data)}")
+                        continue
                     
-                    for item in items:
-                        warehouses.append({
-                            "id": str(item.get("id") or item.get("ID") or item.get("officeId", "")),
-                            "name": item.get("name") or item.get("officeName", ""),
-                            "type": "FBS",
-                            "address": item.get("address", "")
-                        })
+                    # Warehouses endpoint - склады продавца
+                    if endpoint_type == "warehouses":
+                        for wh in data:
+                            warehouses.append({
+                                "id": str(wh.get("id")),
+                                "name": wh.get("name", ""),
+                                "type": "FBS",
+                                "address": "",
+                                "office_id": wh.get("officeId")
+                            })
+                    
+                    # Offices endpoint - офисы WB для связи
+                    elif endpoint_type == "offices":
+                        for office in data:
+                            warehouses.append({
+                                "id": str(office.get("id")),
+                                "name": office.get("name", ""),
+                                "type": "FBS",
+                                "address": office.get("address", ""),
+                                "city": office.get("city", "")
+                            })
                     
                     if warehouses:
                         logger.info(f"[WB] ✅ Found {len(warehouses)} warehouses from {endpoint_type}")
                         return warehouses
                         
                 else:
-                    logger.warning(f"[WB] {endpoint_type} returned {response.status_code}: {response.text[:100]}")
+                    logger.warning(f"[WB] {endpoint_type} returned {response.status_code}: {response.text[:200]}")
                     
         except Exception as e:
             logger.warning(f"[WB] Failed {endpoint_type}: {str(e)}")
