@@ -237,14 +237,19 @@ export default function UnifiedMarketplaceCharacteristics({
         </label>
         
         {isDictionary ? (
-          <select
+          <DictionaryAutocomplete
+            marketplace={sources.find(s => s !== 'base') || 'ozon'}
+            categoryId={entry.mpData?.[sources.find(s => s !== 'base')]?.categoryId}
+            typeId={entry.mpData?.[sources.find(s => s !== 'base')]?.typeId}
+            attributeId={entry.mpData?.[sources.find(s => s !== 'base')]?.id}
+            attributeName={name}
             value={currentValue}
-            onChange={(e) => handleChange(name, e.target.value, sources)}
-            className="w-full px-3 py-2 bg-[#0F172A] border border-[#334155] rounded text-white focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/50 outline-none"
-          >
-            <option value="">Выберите значение</option>
-            {/* TODO: Загрузить значения словаря */}
-          </select>
+            onChange={(selectedItem) => {
+              // selectedItem = {value_id, value}
+              handleChange(name, selectedItem.value, sources)
+            }}
+            placeholder="Начните вводить..."
+          />
         ) : (
           <input
             type="text"
