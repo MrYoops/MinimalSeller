@@ -3,11 +3,17 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import uuid
 from bson import ObjectId
+import logging
 
 from database import get_database
 from auth_utils import get_current_user
 
+# Import sync function (будет в stock_sync_routes)
+import sys
+sys.path.append('/app/backend')
+
 router = APIRouter(prefix="/api/income-orders", tags=["income-orders"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("")
