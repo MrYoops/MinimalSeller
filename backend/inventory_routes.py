@@ -85,10 +85,10 @@ async def sync_stock_to_marketplaces(db, product_id: str, seller_id: str, new_qu
 
 @router.get("/fbs", response_model=List[InventoryResponse])
 async def get_fbs_inventory(
-    current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    current_user: dict = Depends(get_current_user)
 ):
     """Получить все остатки FBS (собственный склад) продавца"""
+    db = await get_database()
     seller_id = str(current_user["_id"])
     
     # Получить все записи inventory
@@ -104,8 +104,8 @@ async def get_fbs_inventory(
         
         result.append(InventoryResponse(
             id=str(inv["_id"]),
-            product_id=inv["product_id"],
-            seller_id=inv["seller_id"],
+            product_id=str(inv["product_id"]),
+            seller_id=str(inv["seller_id"]),
             sku=inv["sku"],
             quantity=inv["quantity"],
             reserved=inv["reserved"],
