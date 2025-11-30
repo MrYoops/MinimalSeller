@@ -101,9 +101,26 @@ async def get_fbs_inventory(
     # Обогатить данными о товарах
     result = []
     for inv in inventory_list:
-        product = await db.products.find_one({"_id": ObjectId(inv["product_id"])})
-        product_name = product.get("minimalmod", {}).get("name", "") if product else ""
-        product_image = product.get("minimalmod", {}).get("images", [""])[0] if product else ""
+        # product_id может быть ObjectId или UUID строкой
+        product_id = inv["product_id"]
+        
+        # Пробуем найти в product_catalog (новая схема с UUID)
+        product = await db.product_catalog.find_one({"_id": product_id})
+        
+        # Если не нашли, пробуем в старой коллекции products
+        if not product:
+            try:
+                product = await db.products.find_one({"_id": ObjectId(product_id) if isinstance(product_id, str) else product_id})
+            except:
+                product = None
+        
+        # Получить имя товара из разных источников
+        if product:
+            product_name = product.get("name") or product.get("minimalmod", {}).get("name", "")
+            product_image = product.get("photos", [None])[0] or product.get("minimalmod", {}).get("images", [""])[0]
+        else:
+            product_name = ""
+            product_image = ""
         
         result.append(InventoryResponse(
             id=str(inv["_id"]),
