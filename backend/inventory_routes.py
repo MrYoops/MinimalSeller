@@ -123,7 +123,7 @@ async def adjust_fbs_inventory(
     product_id: str,
     adjustment: InventoryAdjustment,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    
 ):
     """Ручная корректировка остатков FBS"""
     seller_id = str(current_user["_id"])
@@ -186,7 +186,7 @@ async def update_alert_threshold(
     product_id: str,
     threshold: int,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    
 ):
     """Обновить порог алерта для товара"""
     seller_id = str(current_user["_id"])
@@ -210,7 +210,7 @@ async def update_alert_threshold(
 async def get_fbo_inventory(
     marketplace: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    
 ):
     """Получить остатки FBO (склады маркетплейсов)"""
     seller_id = str(current_user["_id"])
@@ -247,7 +247,7 @@ async def get_fbo_inventory(
 async def sync_fbo_inventory(
     marketplace: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    
 ):
     """Принудительная синхронизация остатков FBO с маркетплейсами"""
     seller_id = str(current_user["_id"])
@@ -274,7 +274,7 @@ async def sync_fbo_inventory(
 async def create_fbo_shipment(
     shipment: FBOShipment,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    
 ):
     """Создать поставку на склад маркетплейса (FBO)"""
     seller_id = str(current_user["_id"])
@@ -354,7 +354,7 @@ async def create_fbo_shipment(
 @router.get("/fbo/shipments", response_model=List[FBOShipmentResponse])
 async def get_fbo_shipments(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    
 ):
     """Получить список поставок FBO"""
     seller_id = str(current_user["_id"])
@@ -390,7 +390,7 @@ async def get_inventory_history(
     operation_type: Optional[str] = None,
     limit: int = 100,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    
 ):
     """Получить историю движений по складу"""
     seller_id = str(current_user["_id"])
