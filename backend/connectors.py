@@ -890,7 +890,7 @@ class WildberriesConnector(BaseConnector):
             warehouse_id: ID склада на WB
             stocks: [{sku: str, amount: int}, ...]
         """
-        url = f"{self.base_url}/api/v3/stocks/{warehouse_id}"
+        url = f"{self.marketplace_api_url}/api/v3/stocks/{warehouse_id}"
         headers = self._get_headers()
         
         payload = {
