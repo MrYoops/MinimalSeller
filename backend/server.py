@@ -1962,6 +1962,19 @@ async def import_product_from_marketplace(
     # Insert product
     await db.product_catalog.insert_one(new_product)
     
+    # Auto-create inventory record with zero quantity
+    inventory_record = {
+        "product_id": ObjectId(product_id),
+        "seller_id": str(current_user["_id"]),
+        "sku": sku,
+        "quantity": 0,
+        "reserved": 0,
+        "available": 0,
+        "alert_threshold": 10
+    }
+    await db.inventory.insert_one(inventory_record)
+    logger.info(f"✅ Auto-created inventory record for {sku}")
+    
     logger.info(f"✅ Product imported with auto-category: {new_product['name']} (SKU: {sku})")
     logger.info(f"   Photos: {len(new_product.get('photos', []))}, Characteristics: {len(characteristics_dict)}")
     logger.info(f"   Category: {category_name}, Mapping ID: {mapping_id}")
