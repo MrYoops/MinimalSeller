@@ -3,7 +3,7 @@ import { FiBox, FiPackage, FiLayers, FiUser, FiDownload, FiActivity } from 'reac
 import { BsBoxSeam } from 'react-icons/bs';
 import WarehousesPageV2 from './WarehousesPageV2';
 import InventoryPage from './InventoryPage';
-import StockPageV2 from './StockPageV2';
+import StockPageV3 from './StockPageV3';
 import SuppliersPage from './SuppliersPage';
 import IncomeOrdersPage from './IncomeOrdersPage';
 import StockSyncHistoryPage from './StockSyncHistoryPage';
