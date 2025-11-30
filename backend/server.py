@@ -1779,6 +1779,13 @@ try:
 except Exception as e:
     logger.error(f"Failed to include marketplace_warehouse_routes: {e}")
 
+try:
+    from stock_sync_routes import router as stock_sync_router
+    app.include_router(stock_sync_router)
+    logger.info("Stock sync routes included")
+except Exception as e:
+    logger.error(f"Failed to include stock_sync_routes: {e}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
