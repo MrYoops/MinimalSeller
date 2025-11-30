@@ -507,7 +507,7 @@ function WarehouseModal({ warehouse, onClose, onSuccess }) {
                       <option value="">Выберите...</option>
                       {integrations.map(int => (
                         <option key={int.id} value={int.marketplace}>
-                          {int.marketplace.toUpperCase()}
+                          {int.name || int.marketplace.toUpperCase()}
                         </option>
                       ))}
                     </select>
