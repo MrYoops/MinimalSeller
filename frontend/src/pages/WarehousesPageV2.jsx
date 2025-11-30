@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Link } from 'react-router-dom'
-import { FiPlus, FiEdit, FiTrash2, FiCheck, FiX } from 'react-icons/fi'
+import { FiPlus, FiEdit, FiTrash2, FiCheck, FiX, FiLink } from 'react-icons/fi'
 import { BsBoxSeam } from 'react-icons/bs'
 import { toast } from 'sonner'
 
