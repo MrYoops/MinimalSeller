@@ -73,7 +73,7 @@ class BaseConnector:
                 logger.info(f"[{self.marketplace_name}] Response status: {response.status_code}")
                 
                 # Handle non-200 responses
-                if response.status_code not in [200, 201]:
+                if response.status_code not in [200, 201, 204]:
                     error_text = response.text
                     try:
                         error_json = response.json()
