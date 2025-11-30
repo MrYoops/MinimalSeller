@@ -62,6 +62,14 @@ function StockPageV3() {
     setLoading(false)
   }
 
+  const syncInventory = async () => {
+    try {
+      await api.post('/api/inventory/sync-catalog')
+    } catch (error) {
+      console.error('Failed to sync inventory:', error)
+    }
+  }
+
   const handleWarehouseChange = (warehouseId) => {
     const warehouse = warehouses.find(wh => wh.id === warehouseId)
     if (warehouse) {
