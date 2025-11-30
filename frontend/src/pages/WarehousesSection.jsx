@@ -75,6 +75,18 @@ function WarehousesSection() {
           <FiLayers className="inline mr-2" />
           ИНВЕНТАРЬ
         </button>
+        <button
+          onClick={() => setSubTab('sync')}
+          className={`px-4 py-3 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
+            subTab === 'sync'
+              ? 'text-mm-cyan border-b-2 border-mm-cyan'
+              : 'text-mm-text-secondary hover:text-mm-cyan'
+          }`}
+          data-testid="tab-sync"
+        >
+          <FiActivity className="inline mr-2" />
+          СИНХРОНИЗАЦИЯ
+        </button>
       </div>
 
       {/* Content */}
@@ -84,6 +96,7 @@ function WarehousesSection() {
         {subTab === 'income' && <IncomeOrdersPage />}
         {subTab === 'stock' && <StockPage />}
         {subTab === 'inventory' && <InventoryPage />}
+        {subTab === 'sync' && <StockSyncHistoryPage />}
       </div>
     </div>
   );
