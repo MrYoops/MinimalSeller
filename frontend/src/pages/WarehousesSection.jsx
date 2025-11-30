@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { FiBox, FiPackage, FiLayers, FiUser, FiDownload } from 'react-icons/fi';
+import { FiBox, FiPackage, FiLayers, FiUser, FiDownload, FiActivity } from 'react-icons/fi';
 import { BsBoxSeam } from 'react-icons/bs';
 import WarehousesPageV2 from './WarehousesPageV2';
 import InventoryPage from './InventoryPage';
 import StockPage from './StockPage';
 import SuppliersPage from './SuppliersPage';
 import IncomeOrdersPage from './IncomeOrdersPage';
+import StockSyncHistoryPage from './StockSyncHistoryPage';
 
 function WarehousesSection() {
   const [subTab, setSubTab] = useState('warehouses');
