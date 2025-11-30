@@ -1,153 +1,179 @@
 <analysis>**original_problem_statement:**
-The user wants to build an admin panel to manage products on marketplaces (Ozon, Wildberries, Yandex), with a focus on replicating the functionality of . The core features revolve around a robust system for handling categories and their associated characteristics, streamlining the process of listing a product on multiple marketplaces.
+The user wants to replicate the Склад (Warehouse) module from . The core functionality to be implemented includes:
+1.  **Приёмка на склад (Income Orders):** Full functionality from the SelsUp page .
+2.  **Остатки на складе (Stock Balances):** Full functionality from the SelsUp page .
+3.  **Склады (Warehouses):** Full functionality from the SelsUp page , including the ability to view and manage individual warehouses ().
+4.  **Связь со складами маркетплейса (Linking to Marketplace Warehouses):** A critical feature where an internal warehouse can be linked to multiple marketplace warehouses (e.g., Ozon FBS, Ozon RFBS, WB). The stock from the internal warehouse should be synchronized to all linked marketplace warehouses.
+5.  **Synchronization Logic:** When an order arrives, the stock should be reduced in the central base warehouse, and this new stock level must be pushed to all linked marketplace warehouses.
 
-**PRODUCT REQUIREMENTS:**
-1.  **Category-Specific Characteristics:** Each product category must have its own unique set of characteristics.
-2.  **Required Characteristics:** Characteristics that are mandatory for a marketplace must be clearly marked.
-3.  **Dynamic Forms:** When a user selects a category, the form should dynamically display the fields for that category's characteristics.
-4.  **Marketplace-Specific Fields:** When a user selects a marketplace (e.g., Send to WB), the form must show all required characteristics for that marketplace.
-5.  **Category Suggestion/Mapping:** The system must simplify the process of mapping a single internal category to its equivalents on different marketplaces. This should be as automated as possible.
-6.  **Flexible Category Selection:** A user should be able to select a category from *any* marketplace (e.g., a WB category), and the system should automatically find or create the corresponding mapping for other marketplaces.
-7.  **Data Unification:** Avoid forcing the user to enter the same information (e.g., Color, Brand) multiple times for different marketplaces.
-8.  **Full Marketplace Management:** The long-term vision is to manage not just products, but also inventory, orders, promotions, and marketing, creating a full-featured management tool.
+The user provided credentials for SelsUp for reference:
+-   **URL:** 
+-   **Login:** 
+-   **Password:** 
+
+The user also reported that custom names for integrations were not working and that loading warehouses from Wildberries (WB) was failing.
 
 **User's preferred language**: Russian. The next agent MUST respond in Russian.
 
 **what currently exists?**
-A FARM (FastAPI, React, MongoDB) stack application. The initial version had significant usability issues related to category mapping and duplicated characteristic fields. The agent has completed a major overhaul of the product editing and category management experience.
-
-- **Admin Access:** The  user now has the full functionality of a  user, plus access to a Sellers Management tab, resolving a critical navigation blocker.
-- **Unified Characteristics Form:** The product edit form no longer has separate, repetitive sections for each marketplace. A new component, , displays a single, de-duplicated list of all required fields. Badges (e.g., 📦, 🟠, 🟣) clearly indicate if a characteristic is a base attribute, Ozon-specific, WB-specific, or common to multiple platforms. Entering data in one shared field automatically applies it to all relevant marketplaces.
-- **Inline Category Mapping:** A new Quick Category Matcher UI appears directly in the product form. If a user tries to send a product to a marketplace for which it's not yet mapped, the system automatically searches for and suggests relevant categories, allowing the user to create the mapping in a single click without leaving the page.
-- **Simplified Category Management:** The dedicated  page has been streamlined. It now primarily serves as an audit log, showing a simple table of all existing mappings, how many products use them, and a button to delete them. The complex creation modal has been removed in favor of the new inline workflow.
-- **Ozon Integration Guidance:** The Integrations page has been updated with clear, detailed instructions on which API permissions (e.g., Admin, Product, Warehouse) are required when creating an Ozon API token for full application functionality.
+The agent has implemented a comprehensive Warehouse module based on the user's request to replicate SelsUp. This includes:
+-   **Backend:**
+    -   CRUD API endpoints for Warehouses, Suppliers, and Income Orders.
+    -   Refactored authentication logic into a central  to fix critical bugs.
+    -   Corrected database connection issues ( vs ) and  serialization errors.
+    -   API endpoints for linking internal warehouses to marketplace warehouses ().
+    -   API endpoints for fetching available marketplace warehouses (Ozon, WB, Yandex).
+    -   Methods in  for updating stock levels on Ozon, WB, and Yandex.
+    -   A new  and logic in  to automatically trigger stock synchronization to all linked marketplaces after an income order is accepted.
+    -   Mass stock operation endpoints, including fetching stock levels from marketplaces ().
+-   **Frontend:**
+    -   A main Склад (Warehouse) section in the dashboard with sub-tabs for Склады, Поставщики, Приёмка на склад, Остатки, and Синхронизация.
+    -   Pages for viewing lists and creating/editing warehouses, suppliers, and income orders.
+    -   A modal in the warehouse edit form to manage Связи со складами маркетплейсов (Marketplace Warehouse Links), allowing users to load and link to real marketplace warehouses.
+    -   A page for Остатки () which includes a feature to Перенести остатки с МП (Transfer stocks from MP).
+    -   The  library for toast notifications has been installed and configured.
 
 **Last working item**:
--   **Last item agent was working:** Updating the Integrations page to provide the user with a comprehensive list of all required Ozon API permissions for full-fledged marketplace management (products, orders, warehouse, etc.).
+-   **Last item agent was working:** Fixing a critical bug where loading Wildberries (WB) FBS warehouses failed. The agent identified that the API domain  was outdated and inaccessible from the container. After research, the agent found the correct domain () and updated .
 -   **Status:** USER VERIFICATION PENDING
 -   **Agent Testing Done:** Y
--   **Which testing method agent to use?** Manual testing. The user should navigate to the Интеграции (Integrations) page, click to add an Ozon integration, and verify the informational text in the modal window provides the correct guidance.
+-   **Which testing method agent to use?** Frontend testing. The agent must log in, navigate to the Склады tab, edit a warehouse, open the Связи со складами section, select a WB integration, and click Загрузить склады to confirm the list of warehouses now loads correctly in the UI.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1:** Ozon photo upload is not working (P2)
--   **Issue 2:** The list of Wildberries (WB) categories is incomplete (P3)
--   **Issue 3:** After importing a product, the product form does not show the automatically assigned category (P3)
+-   **Issue 1:** Verify the fix for loading Wildberries (WB) warehouses in the UI (P0)
+-   **Issue 2:** Verify custom integration names work correctly (P1)
+-   **Issue 3:** Investigate potential underlying container DNS/network issues (P3)
+-   **Issue 4:** Clarify the UI/UX distinction between Остатки and Инвентарь (P3)
 
 **Issues Detail:**
--   **Issue 1: Ozon photo upload is not working**
-    -   **Attempted fixes:** None. This issue was noted in a previous summary but has not been addressed.
+-   **Issue 1: Verify the fix for loading Wildberries (WB) warehouses in the UI**
+    -   **Attempted fixes:** The agent identified the old WB API domain was incorrect. The code in  was updated to use the new  domain. A  test confirmed the backend now successfully fetches data.
     -   **Next debug checklist:**
-        1.  Isolate the photo upload logic in  within the .
-        2.  Create a dedicated backend test script to reproduce the failure.
-        3.  Consult the Ozon Seller API documentation for the correct method/endpoint for uploading images and update the connector.
-    -   **Why fix this issue and what will be achieved with the fix?** Products cannot be successfully listed on marketplaces without images. This is essential functionality.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Backend first, then end-to-end.
-    -   **Blocked on other issue:** None.
-
--   **Issue 2: The list of Wildberries (WB) categories is incomplete**
-    -   **Attempted fixes:** None. The current system relies on populating the WB category cache from imported products, but a full pre-loading mechanism is still missing.
-    -   **Next debug checklist:**
-        1.  Research a new, working Wildberries API endpoint for fetching a full category list.
-        2.  Update the  in the backend to use this new endpoint for pre-loading.
-    -   **Why fix this issue and what will be achieved with the fix?** A complete category list is crucial for accurate mapping and product creation.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend.
-    -   **Blocked on other issue:** None.
-
--   **Issue 3: After importing a product, the product form does not show the automatically assigned category**
-    -   **Attempted fixes:** Previous work was done to include  in API responses and have the  use an  prop. However, with the major UI overhaul, this specific flow has not been re-verified.
-    -   **Next debug checklist:**
-        1.  Perform a product import from a marketplace.
-        2.  Immediately open the newly imported product for editing.
-        3.  Verify that the category selector component correctly displays the name of the category that was just imported.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a UX issue that causes confusion, making the user think the import failed to assign a category.
+        1.  Log in to the application as .
+        2.  Navigate to  -> .
+        3.  Edit an existing warehouse.
+        4.  In the modal, scroll down to Связи со складами маркетплейсов.
+        5.  Select the Wildberries integration.
+        6.  Click ЗАГРУЗИТЬ СКЛАДЫ.
+        7.  Confirm that the list of WB warehouses appears, resolving the bug.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical blocker for the user, as they cannot link their internal warehouses to WB without this functionality.
     -   **Status:** USER VERIFICATION PENDING
     -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend.
-    -   **Blocked on other issue:** None.
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on other issue:** None
+
+-   **Issue 2: Verify custom integration names work correctly**
+    -   **Attempted fixes:** The agent updated the backend () to save a  field for API key integrations and updated the frontend () to display this custom name in the warehouse linking dropdown.
+    -   **Next debug checklist:**
+        1.  Navigate to the Интеграции page.
+        2.  Create a new integration (e.g., for Ozon) and give it a custom name like Мой основной магазин Озон.
+        3.  Go to the warehouse linking modal.
+        4.  Verify that the dropdown shows Мой основной магазин Озон instead of just ozon.
+    -   **Why fix this issue and what will be achieved with the fix?** It improves user experience by allowing users to easily identify their different marketplace accounts.
+    -   **Status:** USER VERIFICATION PENDING
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on other issue:** None
+
+-   **Issue 3: Investigate potential underlying container DNS/network issues**
+    -   **Attempted fixes:** The agent identified a DNS resolution failure for . While the immediate problem was solved by switching to a new domain, the root cause (why the old, valid domain didn't resolve) was not found.  and  tools were not available in the container.
+    -   **Next debug checklist:** Check if other external domains can be resolved. This might be an environment limitation that needs to be kept in mind for future integrations. No immediate action is required if other APIs are working.
+    -   **Why fix this issue and what will be achieved with the fix?** Prevents future integration failures and reduces debugging time.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Backend
+    -   **Blocked on other issue:** None
+
+-   **Issue 4: Clarify the UI/UX distinction between Остатки and Инвентарь**
+    -   **Attempted fixes:** None. The user expressed confusion about the purpose of Остатки (Stock Balances) and a previously existing Инвентарь (Inventory) tab. The agent implemented the requested Остатки page but the user's confusion remains.
+    -   **Next debug checklist:** Review the functionality of the Остатки page and compare it to the user's expectations from SelsUp. Potentially rename or add tooltips to clarify the purpose of each section. This is a low-priority UX task.
+    -   **Why fix this issue and what will be achieved with the fix?** Improves usability and clarity of the interface.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on other issue:** None
 
 **In progress Task List**:
 *There are no in-progress tasks.*
 
 **Upcoming and Future Tasks**
-*   **Upcoming Tasks:**
-    *   (P0) Implement Yandex Marketplace Integration: Add a  and UI support for Yandex categories, characteristics, and mappings.
-*   **Future Tasks:**
-    *   (P1) Warehouse/Inventory Management Module.
-    *   (P1) Order Management Module.
-    *   (P2) Promotions and Marketing Module.
+*   No new features have been requested by the user. The next steps would logically be to either refine the existing Warehouse module or begin work on another major module from SelsUp (e.g., Orders, Analytics) after user confirmation.
 
 **Completed work in this session**
-- **Admin Access Fix:** Resolved the critical bug where the admin user was redirected and couldn't access product pages by creating . (DONE)
-- **Unified Characteristics UI:** Implemented a single, de-duplicated characteristics table in  that uses badges to show where each field is used, solving the user's primary complaint about data entry. (DONE)
-- **Inline Category Mapping Workflow:** Created  to allow users to map categories on-the-fly directly within the product form, vastly improving the UX. (DONE)
-- **Simplified Category Page:** Replaced the old category page with , which acts as a simple audit log for existing mappings. (DONE)
-- **Ozon Characteristics Loading Fix:** Debugged and fixed a multi-part issue preventing Ozon characteristics from loading, which involved correcting data loading logic ( flag) and fixing incorrect test data () in MongoDB. (DONE)
-- **Ozon Integration Guidance Update:** Updated the  modal with a comprehensive list of required API permissions for full Ozon functionality. (DONE)
-- **Bugfix - Category Page Crash:** Fixed a frontend crash on  caused by a missing  icon import. (DONE)
-- **Bugfix - Backend Import Logic:** Updated  to correctly find existing mappings by marketplace  during import, preventing duplicates. (DONE)
+-   **Warehouse Module (Phase 1):** Implemented backend and frontend for CRUD operations on Warehouses, Suppliers, and Income Orders.
+-   **Authentication & DB Fixes:** Created , fixed cross-module authentication issues, and corrected database connection strings and  serialization errors across all new routes.
+-   **Marketplace Warehouse Linking:** Restored and fixed the functionality to link internal warehouses to real marketplace warehouses.
+-   **Stock Sync (Phase 2):** Implemented backend logic in  and a new  to automatically update marketplace stock levels when an income order is accepted.
+-   **Inventory Reservation (Phase 3):** Integrated the existing inventory reservation logic in  with the new warehouse model.
+-   **Mass Operations (Phase 4):** Added backend routes and a frontend UI () to support transferring stock data from marketplaces.
+-   **Bugfix - Integration Names:** Implemented the ability to add custom names to integrations and display them in the UI.
+-   **Bugfix - Wildberries Warehouse Loading:** Debugged a critical network/API issue, identified the correct updated WB API domain, and implemented the fix in .
 
 **Earlier issues found/mentioned but not fixed**
-*   **Issue 1: Ozon photo upload fails.** (Details in All Pending/In progress Issue list)
-*   **Issue 2: The list of Wildberries (WB) categories is incomplete.** (Details in All Pending/In progress Issue list)
+-   **Issue 1: Ozon photo upload fails.** This was noted in the initial summary but was not addressed as the user prioritized the Warehouse module.
+-   **Issue 2: The list of Wildberries (WB) categories is incomplete.** Similar to the photo issue, this was deferred.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Component-Driven Refactoring:** The product form was heavily refactored into smaller, smarter components (, ) to handle complex state and logic, making the code more modular and maintainable.
--   **Inline User Workflows:** The category mapping process was moved from a separate, modal-driven page into an inline workflow directly within the product form, significantly improving user experience.
--   **Data-Driven UI:** The UI dynamically renders based on the combination of selected marketplaces and existing data. For example, the  only appears if a mapping is missing for a selected marketplace.
--   **Data De-duplication:** A core achievement was creating a single source of truth for characteristic data entry. The UI now intelligently merges fields from base characteristics and multiple marketplaces into one unified view.
+-   **Modular Backend:** The backend is organized into separate route files for each resource (warehouses, suppliers, etc.), improving maintainability.
+-   **Centralized Authentication:** A critical refactor involved creating  to provide a single source of truth for user authentication, solving numerous  errors.
+-   **Abstracted Connectors:** The  file abstracts away the specifics of each marketplace's API for actions like updating stock, making the core logic cleaner.
+-   **Event-Driven Synchronization:** Stock updates are automatically triggered after a business event (accepting an income order), ensuring data consistency.
+-   **Iterative Debugging:** The agent systematically diagnosed complex issues ranging from authentication and database mismatches to external API domain changes and DNS resolution failures.
 
 **key DB schema**
--    (in  DB): 
--    (in  DB): 
+-   ****: Stores internal warehouses with settings like , , .
+-   ****: Stores supplier information.
+-   ****: Stores incoming goods orders, linked to a supplier and warehouse, with a list of items and a status (, ).
+-   ****: (Updated) Now includes a  field to store a custom user-defined name for the integration.
+-   ****: Stores the mapping between an internal warehouse  and a .
+-   ****: Stores stock levels (, ) for each product on each warehouse.
+-   ****: Logs the results of synchronization attempts to marketplaces.
 
 **All files**
--   **Created:**
-    -   : New dashboard for the admin role, providing full seller functionality.
-    -   : The new core component for displaying all product characteristics in a unified, de-duplicated table.
-    -   : The new inline component for suggesting and creating category mappings on the fly.
-    -   : A new, simplified page for viewing and managing existing mappings.
--   **Updated:**
-    -   : Updated routes to point to  and .
-    -   : Heavily refactored to remove old characteristic sections and integrate the new  component.
-    -   : Updated the Ozon integration modal to include detailed instructions on required API permissions.
-    -   : Added a new endpoint () to support the inline mapping workflow.
-    -   : Improved  to prevent creating duplicate mappings on import.
+- **Created:**
+  - : Centralized authentication helpers.
+  - , , , , : New API route modules.
+  - , , , , , : New frontend pages for the warehouse module.
+- **Updated:**
+  - : To include all new API routers and fix integration name handling.
+  - : To add  and  methods for all marketplaces.
+  - : To fix the Wildberries API domain.
+  - : To add routes for the new pages and the  component.
+  - : To serve as the main tabbed interface for the new warehouse module.
+  - : Logic was already present to handle , but the backend was fixed to support it.
 
 **Critical Info for New Agent**
--   **The user's main pain point was data duplication and a clunky workflow.** The new unified characteristics table () and inline category mapper () are the solutions. Understand how they work, as they are central to the application's value.
--   **Data integrity is key.** A previous bug where Ozon characteristics failed to load was caused by an incorrect  in the test database. When debugging, always verify the data in the MongoDB  collection is correct and complete for the relevant marketplace.
--   **The long-term goal is a full SelsUp clone.** The user has explicitly stated that work will expand to inventory, orders, and promotions. Keep this larger scope in mind.
+-   The user's primary goal is to clone . Always refer back to its logic when in doubt.
+-   The core stock synchronization logic is paramount:  -> . A change in the base stock (from an income order or a sale) must propagate everywhere.
+-   The environment has shown signs of network instability or DNS issues (e.g.,  not resolving). When debugging external API calls, first  the endpoint from the shell to confirm basic network connectivity before digging into code.
+-   Authentication for new routes should use the helpers from  and  to avoid repeating past bugs.
 
 **Last 5 User Messages and any pending user messages**
-1.  **User approved the plan** for the inline category matcher and the simplified categories page. *(Status: Implemented)*
-2.  **User asked if the separate Categories page is still needed.** The agent recommended keeping a simplified version for auditing and managing mappings, which the user agreed to. *(Status: Implemented)*
-3.  **User expressed frustration with the manual/confusing mapping process**, which prompted the agent to design the new automated, inline workflow. *(Status: Resolved)*
-4.  **User asked for guidance on Ozon API permissions** for full functionality, shifting the agent's focus to the Integrations page. *(Status: Implemented)*
-5.  **User confirmed the long-term vision** is to build a full-featured management tool for Ozon, including inventory, orders, and promotions, not just product cards. *(Status: Acknowledged, upcoming work)*
+1.  **User:** Go ahead with phase 2, 3. *(Status: Implemented)*
+2.  **User:** Do we have a phase 4? *(Status: Agent proposed options)*
+3.  **User:** Chose option 1 for Phase 4 (Mass operations + Transfer stocks from MP). *(Status: Implemented)*
+4.  **User:** Loading FBS warehouses from WB is not working, please fix it. Also, custom integration names are not working. *(Status: Fixes implemented, pending verification)*
+5.  **User:** Provided a new API key for Wildberries to help with debugging. *(Status: Acknowledged and used for testing)*
 
 **Project Health Check:**
--   **Mocked:** No mocked components. The system relies on live (pre-loaded) data.
--   **Broken:** Core functionality is working. The previously critical admin routing issue is resolved. The main broken pieces are un-implemented features like Ozon photo upload.
+-   **Broken:** The WB warehouse loading functionality was broken and has been fixed by the agent. This fix is now pending UI verification.
+-   **Mocked:** No mocked components.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. The agent used the testing agent to validate the new category matching workflow, which helped identify the root cause of the Ozon characteristics issue (a data problem, not a code problem).
--   **Troubleshoot agent used after agent stuck in loop:** NO.
--   **Test files created:** None.
+-   **Testing agent used after significant changes:** NO
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:** The agent created temporary bash scripts with  commands to test the backend API endpoints extensively. No permanent test files were created.
 -   **Known regressions:** None.
 
 **Credentials to test flow:**
--   **Seller:**  / 
--   **Admin:**  / 
+-   **Application Admin:**  / 
+-   **Application Seller:**  / 
+-   **Wildberries API Key (provided by user):** 
 
 **What agent forgot to execute**
--   The agent did not address the pre-existing Ozon photo upload fails issue.
--   The agent did not address the pre-existing Incomplete WB category list issue.
--   The agent did not explicitly re-verify that a newly imported product shows its category correctly in the form, though the underlying components were fixed.</analysis>
+-   The agent did not address the pre-existing issues from the previous fork (Ozon photo upload fails, Incomplete WB category list) as the user gave a new, higher priority task.
+-   The user's confusion about the Остатки vs Инвентарь tabs was noted but not fully addressed with a UI/UX change.</analysis>
