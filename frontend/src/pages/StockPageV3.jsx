@@ -184,6 +184,15 @@ function StockPageV3() {
         </div>
         <div className="flex items-center space-x-3">
           <button
+            onClick={handleSyncCatalog}
+            disabled={loading}
+            className="btn-secondary flex items-center space-x-2 disabled:opacity-50"
+            data-testid="sync-catalog-btn"
+          >
+            <FiRefreshCw className={loading ? 'animate-spin' : ''} />
+            <span>СИНХРОНИЗИРОВАТЬ КАТАЛОГ</span>
+          </button>
+          <button
             onClick={syncAllStocks}
             disabled={!selectedWarehouse || syncing}
             className="btn-primary flex items-center space-x-2 disabled:opacity-50"
