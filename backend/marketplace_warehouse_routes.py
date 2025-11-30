@@ -120,10 +120,11 @@ async def fetch_wb_warehouses(api_key: Dict[str, Any]) -> List[Dict[str, Any]]:
     
     warehouses = []
     
-    # Попробуем оба endpoint: warehouses и offices
+    # Новые endpoints WB 2025 (домены изменились)
     endpoints = [
-        ("https://suppliers-api.wildberries.ru/api/v3/offices", "offices"),
-        ("https://suppliers-api.wildberries.ru/api/v3/warehouses", "warehouses")
+        ("https://content-api.wildberries.ru/api/v3/offices", "offices"),
+        ("https://suppliers-api.wildberries.ru/api/v3/offices", "offices_old"),
+        ("https://suppliers-api.wildberries.ru/api/v3/warehouses", "warehouses_old")
     ]
     
     for url, endpoint_type in endpoints:
@@ -133,48 +134,37 @@ async def fetch_wb_warehouses(api_key: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "Content-Type": "application/json"
             }
             
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 logger.info(f"[WB] Trying {endpoint_type}: {url}")
-                response = await client.get(url, headers=headers, timeout=30.0)
+                response = await client.get(url, headers=headers)
                 
                 if response.status_code == 200:
                     data = response.json()
-                    logger.info(f"[WB] ✅ Got response from {endpoint_type}: {len(data) if isinstance(data, list) else 'dict'}")
+                    logger.info(f"[WB] ✅ Response from {endpoint_type}: {type(data)}")
                     
-                    # Offices endpoint возвращает список офисов
-                    if endpoint_type == "offices" and isinstance(data, list):
-                        for office in data:
-                            warehouses.append({
-                                "id": str(office.get("id")),
-                                "name": office.get("name", ""),
-                                "type": "FBS",
-                                "address": office.get("address", "")
-                            })
+                    # Обработка ответа
+                    items = data if isinstance(data, list) else data.get("data", [])
                     
-                    # Warehouses endpoint
-                    elif endpoint_type == "warehouses" and isinstance(data, list):
-                        for wh in data:
-                            warehouses.append({
-                                "id": str(wh.get("ID") or wh.get("id")),
-                                "name": wh.get("name", ""),
-                                "type": "FBS",
-                                "address": wh.get("address", "")
-                            })
+                    for item in items:
+                        warehouses.append({
+                            "id": str(item.get("id") or item.get("ID") or item.get("officeId", "")),
+                            "name": item.get("name") or item.get("officeName", ""),
+                            "type": "FBS",
+                            "address": item.get("address", "")
+                        })
                     
-                    # Если нашли - выходим
                     if warehouses:
                         logger.info(f"[WB] ✅ Found {len(warehouses)} warehouses from {endpoint_type}")
                         return warehouses
                         
                 else:
-                    logger.warning(f"[WB] {endpoint_type} returned {response.status_code}")
+                    logger.warning(f"[WB] {endpoint_type} returned {response.status_code}: {response.text[:100]}")
                     
         except Exception as e:
-            logger.warning(f"[WB] Failed to fetch {endpoint_type}: {e}")
+            logger.warning(f"[WB] Failed {endpoint_type}: {str(e)}")
             continue
     
-    # Если ничего не получилось
-    logger.error("[WB] Failed to fetch warehouses from all endpoints")
+    logger.error("[WB] All endpoints failed")
     return warehouses
 
 
