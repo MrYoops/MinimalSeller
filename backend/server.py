@@ -1793,6 +1793,13 @@ try:
 except Exception as e:
     logger.error(f"Failed to include stock_operations_routes: {e}")
 
+try:
+    from inventory_routes import router as inventory_router
+    app.include_router(inventory_router)
+    logger.info("Inventory routes included")
+except Exception as e:
+    logger.error(f"Failed to include inventory_routes: {e}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
