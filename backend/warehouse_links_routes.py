@@ -107,21 +107,23 @@ async def create_warehouse_link(
 async def delete_warehouse_link(
     warehouse_id: str,
     link_id: str,
-    current_user: dict = Depends(dependencies.get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Удалить связь склада с маркетплейсом"""
     try:
+        db = await get_database()
+        
         # Verify warehouse exists and belongs to user
-        warehouse = await dependencies.db.warehouses.find_one({
+        warehouse = await db.warehouses.find_one({
             "id": warehouse_id,
-            "user_id": current_user["_id"]
+            "user_id": str(current_user["_id"])
         })
         
         if not warehouse:
             raise HTTPException(status_code=404, detail="Warehouse not found")
         
         # Delete link
-        result = await dependencies.db.warehouse_links.delete_one({
+        result = await db.warehouse_links.delete_one({
             "id": link_id,
             "warehouse_id": warehouse_id
         })
