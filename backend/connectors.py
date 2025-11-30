@@ -929,7 +929,7 @@ class WildberriesConnector(BaseConnector):
         Returns:
             [{sku: str, amount: int, warehouseId: int}, ...]
         """
-        url = f"{self.base_url}/api/v3/stocks/{warehouse_id}" if warehouse_id else f"{self.base_url}/api/v3/stocks"
+        url = f"{self.marketplace_api_url}/api/v3/stocks/{warehouse_id}" if warehouse_id else f"{self.marketplace_api_url}/api/v3/stocks"
         headers = self._get_headers()
         
         logger.info(f"[WB] Getting stocks from warehouse {warehouse_id or 'all'}")
