@@ -118,28 +118,63 @@ async def fetch_wb_warehouses(api_key: Dict[str, Any]) -> List[Dict[str, Any]]:
     if not token:
         raise ValueError("Missing API token")
     
-    url = "https://suppliers-api.wildberries.ru/api/v3/warehouses"
-    
-    headers = {
-        "Authorization": token,
-        "Content-Type": "application/json"
-    }
-    
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, timeout=30.0)
-        response.raise_for_status()
-        data = response.json()
-    
     warehouses = []
-    for wh in data:
-        # WB не возвращает тип склада явно, считаем все FBS
-        warehouses.append({
-            "id": str(wh.get("ID") or wh.get("id")),
-            "name": wh.get("name", ""),
-            "type": "FBS",
-            "address": wh.get("address", ""),
-        })
     
+    # Попробуем оба endpoint: warehouses и offices
+    endpoints = [
+        ("https://suppliers-api.wildberries.ru/api/v3/offices", "offices"),
+        ("https://suppliers-api.wildberries.ru/api/v3/warehouses", "warehouses")
+    ]
+    
+    for url, endpoint_type in endpoints:
+        try:
+            headers = {
+                "Authorization": token,
+                "Content-Type": "application/json"
+            }
+            
+            async with httpx.AsyncClient() as client:
+                logger.info(f"[WB] Trying {endpoint_type}: {url}")
+                response = await client.get(url, headers=headers, timeout=30.0)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    logger.info(f"[WB] ✅ Got response from {endpoint_type}: {len(data) if isinstance(data, list) else 'dict'}")
+                    
+                    # Offices endpoint возвращает список офисов
+                    if endpoint_type == "offices" and isinstance(data, list):
+                        for office in data:
+                            warehouses.append({
+                                "id": str(office.get("id")),
+                                "name": office.get("name", ""),
+                                "type": "FBS",
+                                "address": office.get("address", "")
+                            })
+                    
+                    # Warehouses endpoint
+                    elif endpoint_type == "warehouses" and isinstance(data, list):
+                        for wh in data:
+                            warehouses.append({
+                                "id": str(wh.get("ID") or wh.get("id")),
+                                "name": wh.get("name", ""),
+                                "type": "FBS",
+                                "address": wh.get("address", "")
+                            })
+                    
+                    # Если нашли - выходим
+                    if warehouses:
+                        logger.info(f"[WB] ✅ Found {len(warehouses)} warehouses from {endpoint_type}")
+                        return warehouses
+                        
+                else:
+                    logger.warning(f"[WB] {endpoint_type} returned {response.status_code}")
+                    
+        except Exception as e:
+            logger.warning(f"[WB] Failed to fetch {endpoint_type}: {e}")
+            continue
+    
+    # Если ничего не получилось
+    logger.error("[WB] Failed to fetch warehouses from all endpoints")
     return warehouses
 
 
