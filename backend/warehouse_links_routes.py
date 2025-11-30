@@ -4,7 +4,8 @@ from pydantic import BaseModel
 import uuid
 from datetime import datetime
 
-import dependencies
+from auth_utils import get_current_user
+from database import get_database
 
 router = APIRouter(prefix="/api/warehouses", tags=["warehouse-links"])
 
