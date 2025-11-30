@@ -54,21 +54,23 @@ async def get_warehouse_links(
 async def create_warehouse_link(
     warehouse_id: str,
     link_data: WarehouseLinkCreate,
-    current_user: dict = Depends(dependencies.get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Создать связь склада с маркетплейсом"""
     try:
+        db = await get_database()
+        
         # Verify warehouse exists and belongs to user
-        warehouse = await dependencies.db.warehouses.find_one({
+        warehouse = await db.warehouses.find_one({
             "id": warehouse_id,
-            "user_id": current_user["_id"]
+            "user_id": str(current_user["_id"])
         })
         
         if not warehouse:
             raise HTTPException(status_code=404, detail="Warehouse not found")
         
         # Check if link already exists
-        existing = await dependencies.db.warehouse_links.find_one({
+        existing = await db.warehouse_links.find_one({
             "warehouse_id": warehouse_id,
             "marketplace_warehouse_id": link_data.marketplace_warehouse_id
         })
@@ -85,10 +87,14 @@ async def create_warehouse_link(
             "marketplace_warehouse_id": link_data.marketplace_warehouse_id,
             "marketplace_warehouse_name": link_data.marketplace_warehouse_name,
             "created_at": datetime.utcnow().isoformat(),
-            "user_id": current_user["_id"]
+            "user_id": str(current_user["_id"])
         }
         
-        await dependencies.db.warehouse_links.insert_one(link)
+        await db.warehouse_links.insert_one(link)
+        
+        # Remove _id
+        if "_id" in link:
+            del link["_id"]
         
         return {"message": "Link created successfully", "link": link}
     except HTTPException:
