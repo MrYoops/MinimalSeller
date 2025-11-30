@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
 from datetime import datetime
 from bson import ObjectId
-from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from models import (
     Inventory, FBOInventory, InventoryHistory, FBOShipment, FBOShipmentItem,
     InventoryAdjustment, InventoryResponse, FBOInventoryResponse,
     InventoryHistoryResponse, FBOShipmentResponse
 )
-from dependencies import get_current_user, get_database
+from auth_utils import get_current_user
+from database import get_database
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
