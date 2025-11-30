@@ -297,6 +297,45 @@ async def accept_income_order(
         }}
     )
     
+    # НОВОЕ: Автоматическая синхронизация остатков на МП (ФАЗА 2)
+    warehouse_id = order.get("warehouse_id")
+    if warehouse_id:
+        logger.info(f"[ACCEPT] Starting auto-sync for warehouse {warehouse_id}")
+        
+        # Импорт функции синхронизации
+        from stock_sync_routes import sync_product_to_marketplace
+        
+        # Синхронизировать каждый товар
+        for item in order.get("items", []):
+            product_article = item.get("article")
+            if not product_article:
+                continue
+            
+            # Получить актуальный остаток из inventory
+            product = await db.product_catalog.find_one({
+                "article": product_article,
+                "seller_id": current_user["_id"]
+            })
+            
+            if product:
+                inventory = await db.inventory.find_one({
+                    "product_id": ObjectId(product["_id"]) if isinstance(product["_id"], str) else product["_id"]
+                })
+                
+                if inventory:
+                    # Запустить синхронизацию в фоне (не блокируем ответ)
+                    try:
+                        await sync_product_to_marketplace(
+                            db,
+                            current_user["_id"],
+                            warehouse_id,
+                            product_article,
+                            inventory.get("available", 0)
+                        )
+                    except Exception as e:
+                        logger.error(f"[ACCEPT] Sync failed for {product_article}: {e}")
+                        # Не падаем если синхронизация не удалась
+    
     return {
         "message": "Income order accepted successfully",
         "items_processed": len(order.get("items", []))
