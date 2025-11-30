@@ -240,8 +240,8 @@ export default function UnifiedMarketplaceCharacteristics({
         {isDictionary ? (
           <DictionaryAutocomplete
             marketplace={sources.find(s => s !== 'base') || 'ozon'}
-            categoryId={entry.mpData?.[sources.find(s => s !== 'base')]?.categoryId}
-            typeId={entry.mpData?.[sources.find(s => s !== 'base')]?.typeId}
+            categoryId={categoryMappings[sources.find(s => s !== 'base')]?.category_id}
+            typeId={categoryMappings[sources.find(s => s !== 'base')]?.type_id}
             attributeId={entry.mpData?.[sources.find(s => s !== 'base')]?.id}
             attributeName={name}
             value={currentValue}
