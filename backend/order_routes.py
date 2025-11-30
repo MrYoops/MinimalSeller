@@ -67,6 +67,34 @@ def calculate_order_totals(items: list, shipping_cost: float, marketplace_commis
         total=total
     )
 
+
+async def find_warehouse_for_order(db, user_id, required_quantity: int) -> str:
+    """
+    Найти склад для заказа по приоритету списания (ФАЗА 3)
+    
+    Логика:
+    1. Получить все склады с use_for_orders=True
+    2. Отсортировать по priority (1, 2, 3...)
+    3. Найти первый склад с достаточным остатком
+    """
+    warehouses = await db.warehouses.find({
+        "user_id": str(user_id),
+        "use_for_orders": True
+    }).sort("priority", 1).to_list(length=100)
+    
+    if not warehouses:
+        raise HTTPException(
+            status_code=400,
+            detail="No warehouses configured for orders"
+        )
+    
+    for wh in warehouses:
+        # TODO: Проверить доступный остаток на этом складе
+        # Для MVP возвращаем первый склад
+        return wh["id"]
+    
+    return warehouses[0]["id"] if warehouses else None
+
 async def reserve_inventory(db, items: list, seller_id: str):
     """
     Резервирует товары на складе при создании заказа
