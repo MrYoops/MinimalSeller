@@ -70,9 +70,12 @@ function StockPageV3() {
 
   const syncInventory = async () => {
     try {
-      await api.post('/api/inventory/sync-catalog')
+      const response = await api.post('/api/inventory/sync-catalog')
+      console.log('Inventory synced:', response.data)
+      return response.data
     } catch (error) {
       console.error('Failed to sync inventory:', error)
+      return null
     }
   }
 
