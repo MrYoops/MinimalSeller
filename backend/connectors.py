@@ -530,6 +530,43 @@ class OzonConnector(BaseConnector):
         logger.info(f"[Ozon] Prepared {len(attributes)} attributes for product")
         return attributes
 
+    async def update_stock(self, warehouse_id: str, stocks: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Обновить остатки на Ozon
+        
+        Args:
+            warehouse_id: ID склада FBS на Ozon
+            stocks: [{offer_id: str, stock: int}, ...]
+        """
+        url = f"{self.base_url}/v2/products/stocks"
+        headers = self._get_headers()
+        
+        payload = {
+            "stocks": [
+                {
+                    "offer_id": item["offer_id"],
+                    "stock": item["stock"],
+                    "warehouse_id": int(warehouse_id)
+                }
+                for item in stocks
+            ]
+        }
+        
+        logger.info(f"[Ozon] Updating {len(stocks)} products stock on warehouse {warehouse_id}")
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            logger.info(f"[Ozon] ✅ Stock updated: {response}")
+            return {
+                "success": True,
+                "updated": len(stocks),
+                "response": response
+            }
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Failed to update stock: {e.message}")
+            raise
+
+
 
 class WildberriesConnector(BaseConnector):
     """Wildberries marketplace connector - REAL API with full headers"""
