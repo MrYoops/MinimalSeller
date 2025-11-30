@@ -20,6 +20,7 @@ router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
 async def update_available_quantity(db, product_id: str, seller_id: str):
     """Пересчитать available = quantity - reserved"""
+    db = await get_database()
     inventory = await db.inventory.find_one({"product_id": product_id, "seller_id": seller_id})
     if inventory:
         available = inventory["quantity"] - inventory["reserved"]
@@ -43,6 +44,7 @@ async def log_inventory_movement(
     shipment_id: Optional[str] = None
 ):
     """Записать движение в историю"""
+    db = await get_database()
     movement = {
         "product_id": product_id,
         "seller_id": seller_id,
@@ -62,6 +64,7 @@ async def sync_stock_to_marketplaces(db, product_id: str, seller_id: str, new_qu
     Синхронизировать остатки на все маркетплейсы (FBS)
     TODO: Реализовать вызовы API маркетплейсов через connectors
     """
+    db = await get_database()
     # Получить список активных маркетплейсов продавца
     seller_profile = await db.seller_profiles.find_one({"user_id": ObjectId(seller_id)})
     if not seller_profile:
