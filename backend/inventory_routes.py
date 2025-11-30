@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 # HELPER FUNCTIONS
 # ============================================================================
 
-async def update_available_quantity(db: AsyncIOMotorDatabase, product_id: str, seller_id: str):
+async def update_available_quantity(db, product_id: str, seller_id: str):
     """Пересчитать available = quantity - reserved"""
     inventory = await db.inventory.find_one({"product_id": product_id, "seller_id": seller_id})
     if inventory:
@@ -32,7 +32,7 @@ async def update_available_quantity(db: AsyncIOMotorDatabase, product_id: str, s
 
 
 async def log_inventory_movement(
-    db: AsyncIOMotorDatabase,
+    db,
     product_id: str,
     seller_id: str,
     operation_type: str,
@@ -57,7 +57,7 @@ async def log_inventory_movement(
     await db.inventory_history.insert_one(movement)
 
 
-async def sync_stock_to_marketplaces(db: AsyncIOMotorDatabase, product_id: str, seller_id: str, new_quantity: int):
+async def sync_stock_to_marketplaces(db, product_id: str, seller_id: str, new_quantity: int):
     """
     Синхронизировать остатки на все маркетплейсы (FBS)
     TODO: Реализовать вызовы API маркетплейсов через connectors
@@ -76,12 +76,6 @@ async def sync_stock_to_marketplaces(db: AsyncIOMotorDatabase, product_id: str, 
     marketplaces = product.get("marketplaces", {})
     
     # TODO: Вызвать API каждого маркетплейса для обновления остатков
-    # Пример:
-    # if marketplaces.get("ozon", {}).get("enabled"):
-    #     await ozon_connector.update_stock(sku=product["sku"], quantity=new_quantity)
-    # if marketplaces.get("wildberries", {}).get("enabled"):
-    #     await wb_connector.update_stock(sku=product["sku"], quantity=new_quantity)
-    
     print(f"[SYNC] Product {product['sku']} stock updated to {new_quantity} on all marketplaces")
 
 
