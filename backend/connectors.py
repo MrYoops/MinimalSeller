@@ -90,6 +90,11 @@ class BaseConnector:
                         details=error_text
                     )
                 
+                # Handle 204 No Content (success with empty body)
+                if response.status_code == 204:
+                    logger.info(f"[{self.marketplace_name}] Success (204 No Content)")
+                    return {"success": True, "message": "Updated successfully"}
+                
                 # Try to parse as JSON
                 try:
                     return response.json()
