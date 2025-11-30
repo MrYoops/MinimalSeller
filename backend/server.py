@@ -5231,6 +5231,34 @@ async def save_product_with_marketplaces(
                         mp_category = category_mappings.get(mp, {})
                         mp_required_attrs = required_attributes.get(mp, {})
                         
+                        # ИСПРАВЛЕНИЕ: Валидация category_id - должно быть целое число
+                        ozon_category_id = None
+                        ozon_type_id = None
+                        
+                        if mp == 'ozon':
+                            # Попытка получить category_id
+                            cat_id_raw = mp_category.get('category_id')
+                            type_id_raw = mp_category.get('type_id')
+                            
+                            # Преобразовать в int, если это строка с числом
+                            if cat_id_raw:
+                                try:
+                                    ozon_category_id = int(cat_id_raw)
+                                except (ValueError, TypeError):
+                                    logger.warning(f"[Ozon] Invalid category_id: {cat_id_raw}, using default")
+                                    ozon_category_id = 15621048  # Default
+                            else:
+                                ozon_category_id = 15621048
+                            
+                            if type_id_raw:
+                                try:
+                                    ozon_type_id = int(type_id_raw)
+                                except (ValueError, TypeError):
+                                    logger.warning(f"[Ozon] Invalid type_id: {type_id_raw}, using default")
+                                    ozon_type_id = 91248  # Default
+                            else:
+                                ozon_type_id = 91248
+                        
                         # Данные товара для создания на МП
                         mp_product_data = {
                             "article": product_doc['article'],
@@ -5246,8 +5274,8 @@ async def save_product_with_marketplaces(
                             "manufacturer": product_doc.get('manufacturer', ''),
                             "photos": photo_urls,
                             "characteristics": product_doc.get('characteristics', {}),
-                            "ozon_category_id": mp_category.get('category_id') or product_doc.get('marketplace_category_id') or 15621048,
-                            "ozon_type_id": mp_category.get('type_id') or product_doc.get('marketplace_type_id') or 91248,
+                            "ozon_category_id": ozon_category_id,
+                            "ozon_type_id": ozon_type_id,
                             "required_attributes": mp_required_attrs  # Передаём обязательные атрибуты!
                         }
                         
