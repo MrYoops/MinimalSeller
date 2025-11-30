@@ -15,6 +15,7 @@ function StockPageV3() {
 
   useEffect(() => {
     loadWarehouses()
+    syncInventory() // Auto-sync on mount
   }, [])
 
   useEffect(() => {
