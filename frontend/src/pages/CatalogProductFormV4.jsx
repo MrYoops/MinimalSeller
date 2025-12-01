@@ -899,9 +899,19 @@ export default function CatalogProductFormV4() {
                           }
                         })
                         
-                        // Сбросить флаги загрузки при смене категории
+                        // КРИТИЧНО: ПОЛНОСТЬЮ СБРОСИТЬ все данные характеристик при смене категории!
                         setCharacteristicsAttempted({ wb: false, ozon: false, yandex: false })
                         setMpCharacteristics({ wb: [], ozon: [], yandex: [] })
+                        
+                        // ОЧИСТИТЬ значения характеристик в marketplace_data
+                        setProduct(prev => ({
+                          ...prev,
+                          marketplace_data: {
+                            wb: { ...prev.marketplace_data?.wb, characteristics: {} },
+                            ozon: { ...prev.marketplace_data?.ozon, characteristics: {} },
+                            yandex: { ...prev.marketplace_data?.yandex, characteristics: {} }
+                          }
+                        }))
                       } else {
                         setProduct(prev => ({ ...prev, category_mapping_id: null }))
                         setCurrentMapping(null)
