@@ -5480,6 +5480,720 @@ async def save_product_with_marketplaces(
                                 "linked_at": datetime.utcnow().isoformat()
                             }
                         
+
+
+# ============================================================================
+# PRICING MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@app.get("/api/catalog/products/pricing")
+async def get_all_products_pricing(
+    current_user: dict = Depends(require_role(UserRole.SELLER))
+):
+    """Получить все товары с информацией о ценах на маркетплейсах"""
+    try:
+        products = await db.product_catalog.find({"user_id": current_user["_id"]}).to_list(length=None)
+        
+        result = []
+        for product in products:
+            pricing_data = {
+                "product_id": str(product["_id"]),
+                "article": product.get("article", ""),
+                "name": product.get("name", ""),
+                "photo": product.get("photos", [""])[0] if product.get("photos") else "",
+                "ozon": None,
+                "wb": None,
+                "min_allowed_price": product.get("min_allowed_price", 0),
+                "cost_price": product.get("cost_price", 0)
+            }
+            
+            # Получить цены из pricing объекта
+            pricing = product.get("pricing", {})
+            
+            if pricing.get("ozon"):
+                pricing_data["ozon"] = pricing["ozon"]
+            
+            if pricing.get("wb"):
+                pricing_data["wb"] = pricing["wb"]
+            
+            # Проверить привязки к МП
+            marketplace_data = product.get("marketplace_data", {})
+            pricing_data["ozon_linked"] = bool(marketplace_data.get("ozon"))
+            pricing_data["wb_linked"] = bool(marketplace_data.get("wb"))
+            
+            result.append(pricing_data)
+        
+        return {"success": True, "products": result}
+        
+    except Exception as e:
+        logger.error(f"Failed to get products pricing: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get products pricing: {str(e)}"
+        )
+
+
+@app.get("/api/catalog/products/{product_id}/pricing")
+async def get_product_pricing(
+    product_id: str,
+    current_user: dict = Depends(require_role(UserRole.SELLER))
+):
+    """Получить информацию о ценах конкретного товара"""
+    try:
+        import uuid
+        
+        product = await db.product_catalog.find_one({
+            "_id": product_id,
+            "user_id": current_user["_id"]
+        })
+        
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found"
+            )
+        
+        pricing = product.get("pricing", {})
+        marketplace_data = product.get("marketplace_data", {})
+        
+        return {
+            "success": True,
+            "product_id": str(product["_id"]),
+            "article": product.get("article", ""),
+            "name": product.get("name", ""),
+            "pricing": pricing,
+            "marketplace_data": marketplace_data,
+            "min_allowed_price": product.get("min_allowed_price", 0),
+            "cost_price": product.get("cost_price", 0)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get product pricing: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get product pricing: {str(e)}"
+        )
+
+
+@app.put("/api/catalog/products/{product_id}/pricing/{marketplace}")
+async def update_product_pricing(
+    product_id: str,
+    marketplace: str,
+    pricing_update: PricingUpdate,
+    current_user: dict = Depends(require_role(UserRole.SELLER))
+):
+    """Обновить цены товара на конкретном маркетплейсе"""
+    try:
+        from connectors import get_connector, MarketplaceError
+        import uuid
+        
+        # Валидация marketplace
+        if marketplace not in ["ozon", "wb"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid marketplace. Use: ozon or wb"
+            )
+        
+        # Получить товар
+        product = await db.product_catalog.find_one({
+            "_id": product_id,
+            "user_id": current_user["_id"]
+        })
+        
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found"
+            )
+        
+        # Проверить привязку к МП
+        marketplace_data = product.get("marketplace_data", {})
+        if not marketplace_data.get(marketplace):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Товар не привязан к {marketplace.upper()}. Сначала создайте карточку на маркетплейсе."
+            )
+        
+        # Получить API ключи
+        profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+        if not profile or not profile.get("api_keys"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No API keys found. Add marketplace integration first."
+            )
+        
+        # Найти нужный ключ
+        api_key_data = None
+        for key in profile["api_keys"]:
+            if key["marketplace"] == marketplace:
+                api_key_data = key
+                break
+        
+        if not api_key_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"No API key found for {marketplace.upper()}"
+            )
+        
+        # Создать connector
+        connector = get_connector(
+            marketplace=marketplace,
+            client_id=api_key_data["client_id"],
+            api_key=api_key_data["api_key"]
+        )
+        
+        # Обновить цены на МП
+        if marketplace == "ozon":
+            # Валидация обязательных полей для Ozon
+            if not pricing_update.price or not pricing_update.old_price:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Для Ozon обязательны поля: price (цена со скидкой) и old_price (цена до скидки)"
+                )
+            
+            offer_id = marketplace_data["ozon"].get("offer_id") or product.get("article")
+            result = await connector.update_product_prices(
+                offer_id=offer_id,
+                price=pricing_update.price,
+                old_price=pricing_update.old_price
+            )
+            
+            # Сохранить в БД
+            await db.product_catalog.update_one(
+                {"_id": product_id},
+                {
+                    "$set": {
+                        "pricing.ozon": {
+                            "price": pricing_update.price,
+                            "old_price": pricing_update.old_price,
+                            "last_updated": datetime.utcnow().isoformat()
+                        }
+                    }
+                }
+            )
+            
+        elif marketplace == "wb":
+            # Валидация полей для WB
+            if not pricing_update.regular_price:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Для Wildberries обязательно поле: regular_price (обычная цена)"
+                )
+            
+            nm_id = marketplace_data["wb"].get("id") or marketplace_data["wb"].get("nm_id")
+            if not nm_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Не найден ID товара на Wildberries"
+                )
+            
+            result = await connector.update_product_prices(
+                nm_id=int(nm_id),
+                regular_price=pricing_update.regular_price,
+                discount_price=pricing_update.discount_price
+            )
+            
+            # Сохранить в БД
+            await db.product_catalog.update_one(
+                {"_id": product_id},
+                {
+                    "$set": {
+                        "pricing.wb": {
+                            "regular_price": pricing_update.regular_price,
+                            "discount_price": pricing_update.discount_price,
+                            "last_updated": datetime.utcnow().isoformat()
+                        }
+                    }
+                }
+            )
+        
+        # Записать в историю
+        history_entry = {
+            "_id": str(uuid.uuid4()),
+            "product_id": product_id,
+            "marketplace": marketplace,
+            "changed_by": str(current_user["_id"]),
+            "reason": "manual_update",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        if marketplace == "ozon":
+            history_entry["new_price"] = pricing_update.price
+            history_entry["new_old_price"] = pricing_update.old_price
+        else:
+            history_entry["new_regular_price"] = pricing_update.regular_price
+            history_entry["new_discount_price"] = pricing_update.discount_price
+        
+        await db.price_history.insert_one(history_entry)
+        
+        return {
+            "success": True,
+            "message": result.get("message"),
+            "marketplace": marketplace
+        }
+        
+    except MarketplaceError as e:
+        logger.error(f"Marketplace error: {e.message}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.message
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update product pricing: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update product pricing: {str(e)}"
+        )
+
+
+@app.post("/api/catalog/products/{product_id}/pricing/sync")
+async def sync_product_pricing(
+    product_id: str,
+    current_user: dict = Depends(require_role(UserRole.SELLER))
+):
+    """Синхронизировать цены с маркетплейсами (получить актуальные цены)"""
+    try:
+        from connectors import get_connector, MarketplaceError
+        
+        # Получить товар
+        product = await db.product_catalog.find_one({
+            "_id": product_id,
+            "user_id": current_user["_id"]
+        })
+        
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found"
+            )
+        
+        # Получить API ключи
+        profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+        if not profile or not profile.get("api_keys"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No API keys found"
+            )
+        
+        marketplace_data = product.get("marketplace_data", {})
+        synced_prices = {}
+        alerts = []
+        
+        # Синхронизация с Ozon
+        if marketplace_data.get("ozon"):
+            ozon_key = next((k for k in profile["api_keys"] if k["marketplace"] == "ozon"), None)
+            if ozon_key:
+                try:
+                    connector = get_connector("ozon", ozon_key["client_id"], ozon_key["api_key"])
+                    offer_id = marketplace_data["ozon"].get("offer_id") or product.get("article")
+                    
+                    prices = await connector.get_product_prices(offer_id)
+                    synced_prices["ozon"] = {
+                        "price": prices.get("price"),
+                        "old_price": prices.get("old_price"),
+                        "last_synced": datetime.utcnow().isoformat()
+                    }
+                    
+                    # Проверить на алерты
+                    min_price = product.get("min_allowed_price", 0)
+                    if min_price > 0 and prices.get("price", 0) < min_price:
+                        alerts.append({
+                            "marketplace": "ozon",
+                            "current_price": prices.get("price"),
+                            "min_price": min_price,
+                            "message": f"⚠️ Цена на Ozon ({prices.get('price')}₽) ниже минимальной ({min_price}₽)"
+                        })
+                    
+                    # Обновить в БД
+                    await db.product_catalog.update_one(
+                        {"_id": product_id},
+                        {"$set": {"pricing.ozon": synced_prices["ozon"]}}
+                    )
+                    
+                except MarketplaceError as e:
+                    logger.error(f"Failed to sync Ozon prices: {e.message}")
+                    synced_prices["ozon"] = {"error": e.message}
+        
+        # Синхронизация с WB
+        if marketplace_data.get("wb"):
+            wb_key = next((k for k in profile["api_keys"] if k["marketplace"] == "wb"), None)
+            if wb_key:
+                try:
+                    connector = get_connector("wb", wb_key["client_id"], wb_key["api_key"])
+                    nm_id = marketplace_data["wb"].get("id") or marketplace_data["wb"].get("nm_id")
+                    
+                    if nm_id:
+                        prices = await connector.get_product_prices(int(nm_id))
+                        synced_prices["wb"] = {
+                            "regular_price": prices.get("price"),
+                            "discount_price": prices.get("discount_price"),
+                            "last_synced": datetime.utcnow().isoformat()
+                        }
+                        
+                        # Проверить на алерты
+                        min_price = product.get("min_allowed_price", 0)
+                        if min_price > 0 and prices.get("discount_price", 0) < min_price:
+                            alerts.append({
+                                "marketplace": "wb",
+                                "current_price": prices.get("discount_price"),
+                                "min_price": min_price,
+                                "message": f"⚠️ Цена на WB ({prices.get('discount_price')}₽) ниже минимальной ({min_price}₽)"
+                            })
+                        
+                        # Обновить в БД
+                        await db.product_catalog.update_one(
+                            {"_id": product_id},
+                            {"$set": {"pricing.wb": synced_prices["wb"]}}
+                        )
+                    
+                except MarketplaceError as e:
+                    logger.error(f"Failed to sync WB prices: {e.message}")
+                    synced_prices["wb"] = {"error": e.message}
+        
+        # Сохранить алерты если есть
+        if alerts:
+            for alert in alerts:
+                import uuid
+                alert_doc = {
+                    "_id": str(uuid.uuid4()),
+                    "product_id": product_id,
+                    "product_name": product.get("name", ""),
+                    "article": product.get("article", ""),
+                    "marketplace": alert["marketplace"],
+                    "alert_type": "price_below_minimum",
+                    "current_mp_price": alert["current_price"],
+                    "our_min_price": alert["min_price"],
+                    "is_in_promo": False,
+                    "detected_at": datetime.utcnow().isoformat(),
+                    "is_resolved": False,
+                    "user_id": current_user["_id"]
+                }
+                await db.price_alerts.insert_one(alert_doc)
+        
+        return {
+            "success": True,
+            "message": "✅ Цены синхронизированы",
+            "synced_prices": synced_prices,
+            "alerts": alerts
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to sync product pricing: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to sync product pricing: {str(e)}"
+        )
+
+
+@app.post("/api/catalog/products/pricing/bulk")
+async def bulk_update_pricing(
+    bulk_update: BulkPricingUpdate,
+    current_user: dict = Depends(require_role(UserRole.SELLER))
+):
+    """Массовое обновление цен товаров"""
+    try:
+        from connectors import get_connector, MarketplaceError
+        import uuid
+        
+        # Валидация
+        if bulk_update.action not in ["increase_percent", "decrease_percent", "set_fixed"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid action. Use: increase_percent, decrease_percent, set_fixed"
+            )
+        
+        if bulk_update.marketplace not in ["ozon", "wb", "all"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid marketplace. Use: ozon, wb, all"
+            )
+        
+        # Получить товары для обновления
+        query = {"user_id": current_user["_id"]}
+        
+        if bulk_update.product_ids:
+            query["_id"] = {"$in": bulk_update.product_ids}
+        
+        products = await db.product_catalog.find(query).to_list(length=None)
+        
+        if not products:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No products found"
+            )
+        
+        # Получить API ключи
+        profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+        if not profile or not profile.get("api_keys"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No API keys found"
+            )
+        
+        updated_count = 0
+        failed_count = 0
+        errors = []
+        
+        for product in products:
+            product_id = str(product["_id"])
+            marketplace_data = product.get("marketplace_data", {})
+            pricing = product.get("pricing", {})
+            
+            # Определить маркетплейсы для обновления
+            marketplaces_to_update = []
+            if bulk_update.marketplace == "all":
+                if marketplace_data.get("ozon"):
+                    marketplaces_to_update.append("ozon")
+                if marketplace_data.get("wb"):
+                    marketplaces_to_update.append("wb")
+            else:
+                if marketplace_data.get(bulk_update.marketplace):
+                    marketplaces_to_update.append(bulk_update.marketplace)
+            
+            if not marketplaces_to_update:
+                continue
+            
+            # Обновить цены для каждого МП
+            for mp in marketplaces_to_update:
+                try:
+                    # Найти API ключ
+                    api_key_data = next((k for k in profile["api_keys"] if k["marketplace"] == mp), None)
+                    if not api_key_data:
+                        continue
+                    
+                    connector = get_connector(mp, api_key_data["client_id"], api_key_data["api_key"])
+                    
+                    if mp == "ozon":
+                        current_prices = pricing.get("ozon", {})
+                        current_price = current_prices.get("price", 0)
+                        current_old_price = current_prices.get("old_price", 0)
+                        
+                        if current_price == 0 or current_old_price == 0:
+                            continue
+                        
+                        # Рассчитать новые цены
+                        if bulk_update.action == "increase_percent":
+                            new_price = current_price * (1 + bulk_update.value / 100)
+                            new_old_price = current_old_price * (1 + bulk_update.value / 100)
+                        elif bulk_update.action == "decrease_percent":
+                            new_price = current_price * (1 - bulk_update.value / 100)
+                            new_old_price = current_old_price * (1 - bulk_update.value / 100)
+                        else:  # set_fixed
+                            new_price = bulk_update.value
+                            new_old_price = bulk_update.value
+                        
+                        # Округлить
+                        new_price = round(new_price, 2)
+                        new_old_price = round(new_old_price, 2)
+                        
+                        # Обновить на МП
+                        offer_id = marketplace_data["ozon"].get("offer_id") or product.get("article")
+                        await connector.update_product_prices(offer_id, new_price, new_old_price)
+                        
+                        # Обновить в БД
+                        await db.product_catalog.update_one(
+                            {"_id": product_id},
+                            {
+                                "$set": {
+                                    "pricing.ozon.price": new_price,
+                                    "pricing.ozon.old_price": new_old_price,
+                                    "pricing.ozon.last_updated": datetime.utcnow().isoformat()
+                                }
+                            }
+                        )
+                        
+                        updated_count += 1
+                    
+                    elif mp == "wb":
+                        current_prices = pricing.get("wb", {})
+                        current_regular = current_prices.get("regular_price", 0)
+                        current_discount = current_prices.get("discount_price", 0)
+                        
+                        if current_regular == 0:
+                            continue
+                        
+                        # Рассчитать новые цены
+                        if bulk_update.action == "increase_percent":
+                            new_regular = current_regular * (1 + bulk_update.value / 100)
+                            new_discount = current_discount * (1 + bulk_update.value / 100) if current_discount else None
+                        elif bulk_update.action == "decrease_percent":
+                            new_regular = current_regular * (1 - bulk_update.value / 100)
+                            new_discount = current_discount * (1 - bulk_update.value / 100) if current_discount else None
+                        else:  # set_fixed
+                            new_regular = bulk_update.value
+                            new_discount = None
+                        
+                        # Округлить
+                        new_regular = round(new_regular, 2)
+                        if new_discount:
+                            new_discount = round(new_discount, 2)
+                        
+                        # Обновить на МП
+                        nm_id = marketplace_data["wb"].get("id") or marketplace_data["wb"].get("nm_id")
+                        if nm_id:
+                            await connector.update_product_prices(int(nm_id), new_regular, new_discount)
+                            
+                            # Обновить в БД
+                            await db.product_catalog.update_one(
+                                {"_id": product_id},
+                                {
+                                    "$set": {
+                                        "pricing.wb.regular_price": new_regular,
+                                        "pricing.wb.discount_price": new_discount,
+                                        "pricing.wb.last_updated": datetime.utcnow().isoformat()
+                                    }
+                                }
+                            )
+                            
+                            updated_count += 1
+                
+                except MarketplaceError as e:
+                    failed_count += 1
+                    errors.append({
+                        "product_id": product_id,
+                        "article": product.get("article"),
+                        "marketplace": mp,
+                        "error": e.message
+                    })
+                except Exception as e:
+                    failed_count += 1
+                    errors.append({
+                        "product_id": product_id,
+                        "article": product.get("article"),
+                        "marketplace": mp,
+                        "error": str(e)
+                    })
+        
+        return {
+            "success": True,
+            "message": f"✅ Обновлено: {updated_count}, Ошибок: {failed_count}",
+            "updated_count": updated_count,
+            "failed_count": failed_count,
+            "errors": errors if errors else None
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to bulk update pricing: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to bulk update pricing: {str(e)}"
+        )
+
+
+@app.get("/api/catalog/products/pricing/alerts")
+async def get_pricing_alerts(
+    current_user: dict = Depends(require_role(UserRole.SELLER))
+):
+    """Получить все активные алерты о ценах"""
+    try:
+        alerts = await db.price_alerts.find({
+            "user_id": current_user["_id"],
+            "is_resolved": False
+        }).sort("detected_at", -1).to_list(length=100)
+        
+        return {
+            "success": True,
+            "alerts": alerts,
+            "count": len(alerts)
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get pricing alerts: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get pricing alerts: {str(e)}"
+        )
+
+
+@app.post("/api/catalog/products/pricing/alerts/{alert_id}/resolve")
+async def resolve_pricing_alert(
+    alert_id: str,
+    current_user: dict = Depends(require_role(UserRole.SELLER))
+):
+    """Отметить алерт как решённый"""
+    try:
+        result = await db.price_alerts.update_one(
+            {
+                "_id": alert_id,
+                "user_id": current_user["_id"]
+            },
+            {
+                "$set": {
+                    "is_resolved": True,
+                    "resolved_at": datetime.utcnow().isoformat()
+                }
+            }
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Alert not found"
+            )
+        
+        return {
+            "success": True,
+            "message": "✅ Алерт отмечен как решённый"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to resolve alert: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to resolve alert: {str(e)}"
+        )
+
+
+@app.get("/api/catalog/products/{product_id}/pricing/history")
+async def get_product_pricing_history(
+    product_id: str,
+    limit: int = Query(default=10, ge=1, le=100),
+    current_user: dict = Depends(require_role(UserRole.SELLER))
+):
+    """Получить историю изменения цен товара"""
+    try:
+        # Проверить что товар принадлежит пользователю
+        product = await db.product_catalog.find_one({
+            "_id": product_id,
+            "user_id": current_user["_id"]
+        })
+        
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found"
+            )
+        
+        # Получить историю
+        history = await db.price_history.find({
+            "product_id": product_id
+        }).sort("timestamp", -1).limit(limit).to_list(length=limit)
+        
+        return {
+            "success": True,
+            "history": history,
+            "count": len(history)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get pricing history: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get pricing history: {str(e)}"
+        )
+
                         # Обновляем документ в БД со связью
                         await db.product_catalog.update_one(
                             {"_id": product_id},
