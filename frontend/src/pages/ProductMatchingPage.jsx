@@ -73,24 +73,37 @@ export default function ProductMatchingPage() {
     const matchedList = []
     const unmatchedList = []
 
+    console.log(`🔍 Matching ${mpProds.length} MP products with ${localProds.length} local products`)
+    console.log(`📌 Selected marketplace: ${selectedMarketplace}`)
+
     mpProds.forEach(mpProd => {
       // Проверяем есть ли уже связь в базе
       const linkedLocal = localProds.find(local => {
-        const mpData = local.marketplace_data || {}
+        // ИСПРАВЛЕНО: поле называется marketplace_specific_data в API response
+        const mpData = local.marketplace_specific_data || local.marketplace_data || {}
         const mpInfo = mpData[selectedMarketplace]
+        
+        console.log(`  Checking ${local.article}: mpInfo =`, mpInfo)
         
         // Проверяем по ID товара на МП
         if (selectedMarketplace === 'ozon') {
-          return mpInfo?.id === mpProd.id || mpInfo?.offer_id === mpProd.sku
+          const matched = mpInfo?.id === mpProd.id || mpInfo?.offer_id === mpProd.sku
+          if (matched) console.log(`    ✅ Matched Ozon: ${mpInfo.id} === ${mpProd.id}`)
+          return matched
         } else if (selectedMarketplace === 'wb') {
-          return mpInfo?.nm_id === mpProd.id || mpInfo?.vendor_code === mpProd.sku
+          const matched = mpInfo?.nm_id === mpProd.id || mpInfo?.vendor_code === mpProd.sku
+          if (matched) console.log(`    ✅ Matched WB: ${mpInfo.nm_id} === ${mpProd.id}`)
+          return matched
         } else if (selectedMarketplace === 'yandex') {
-          return mpInfo?.offer_id === mpProd.sku
+          const matched = mpInfo?.offer_id === mpProd.sku
+          if (matched) console.log(`    ✅ Matched Yandex: ${mpInfo.offer_id} === ${mpProd.sku}`)
+          return matched
         }
         return false
       })
 
       if (linkedLocal) {
+        console.log(`  ✅ Found link: ${mpProd.sku} ↔ ${linkedLocal.article}`)
         matchedList.push({
           mpProduct: mpProd,
           localProduct: linkedLocal,
