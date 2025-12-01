@@ -279,11 +279,12 @@ export default function CatalogProductsPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       {(() => {
-                        const mpData = product.marketplace_data || {}
+                        // ИСПРАВЛЕНО: поле может называться marketplace_data или marketplace_specific_data
+                        const mpData = product.marketplace_specific_data || product.marketplace_data || {}
                         const marketplaces = []
                         
                         // Проверяем Ozon
-                        if (mpData.ozon?.product_id || mpData.ozon?.offer_id) {
+                        if (mpData.ozon?.product_id || mpData.ozon?.offer_id || mpData.ozon?.id) {
                           marketplaces.push(
                             <div key="ozon" className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold" title="Ozon (создано)">O</div>
                           )
