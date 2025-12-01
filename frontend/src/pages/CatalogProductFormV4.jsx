@@ -879,6 +879,25 @@ export default function CatalogProductFormV4() {
                     onCategorySelected={(mapping) => {
                       console.log('[ProductForm] Category selected:', mapping)
                       if (mapping) {
+                        setCurrentMapping(mapping) // Сохраняем маппинг
+                        
+                        // ИСПРАВЛЕНИЕ: Обновить categoryMappings для каждого МП
+                        setCategoryMappings({
+                          ozon: {
+                            category_id: mapping.marketplace_categories?.ozon,
+                            category_name: mapping.internal_name,
+                            type_id: mapping.marketplace_type_ids?.ozon
+                          },
+                          wb: {
+                            category_id: mapping.marketplace_categories?.wildberries,
+                            category_name: mapping.internal_name
+                          },
+                          yandex: {
+                            category_id: mapping.marketplace_categories?.yandex,
+                            category_name: mapping.internal_name
+                          }
+                        })
+                        
                         // КРИТИЧНО: ПОЛНОСТЬЮ СБРОСИТЬ все данные характеристик при смене категории!
                         setCharacteristicsAttempted({ wb: false, ozon: false, yandex: false })
                         setMpCharacteristics({ wb: [], ozon: [], yandex: [] })
