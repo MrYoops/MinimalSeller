@@ -109,6 +109,56 @@ class APIKey(BaseModel):
     name: Optional[str] = None  # Название интеграции
     created_at: datetime
 
+# Pricing Models
+class MarketplacePrices(BaseModel):
+    """Цены для конкретного маркетплейса"""
+    price: Optional[float] = None  # Цена со скидкой (Ozon) или обычная цена (WB)
+    old_price: Optional[float] = None  # Цена до скидки (Ozon)
+    regular_price: Optional[float] = None  # Обычная цена (WB)
+    discount_price: Optional[float] = None  # Цена со скидкой (WB)
+    last_updated: Optional[datetime] = None
+    last_synced: Optional[datetime] = None
+
+class ProductPricing(BaseModel):
+    """Полная информация о ценах товара"""
+    product_id: str
+    article: str
+    name: str
+    ozon: Optional[MarketplacePrices] = None
+    wb: Optional[MarketplacePrices] = None
+    min_allowed_price: Optional[float] = None
+    cost_price: Optional[float] = None
+
+class PricingUpdate(BaseModel):
+    """Обновление цен для маркетплейса"""
+    marketplace: str  # "ozon" или "wb"
+    price: Optional[float] = None
+    old_price: Optional[float] = None
+    regular_price: Optional[float] = None
+    discount_price: Optional[float] = None
+
+class BulkPricingUpdate(BaseModel):
+    """Массовое обновление цен"""
+    action: str  # "increase_percent", "decrease_percent", "set_fixed"
+    value: float  # Процент или фиксированная сумма
+    marketplace: str  # "ozon", "wb", "all"
+    product_ids: Optional[List[str]] = None  # None = все товары
+
+class PriceAlert(BaseModel):
+    """Алерт о цене"""
+    id: str
+    product_id: str
+    product_name: str
+    article: str
+    marketplace: str
+    alert_type: str  # "price_below_minimum", "price_changed"
+    current_mp_price: float
+    our_min_price: float
+    is_in_promo: bool = False
+    promo_name: Optional[str] = None
+    detected_at: datetime
+    is_resolved: bool = False
+
 # Utility functions
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
