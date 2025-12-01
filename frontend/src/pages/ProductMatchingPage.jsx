@@ -91,8 +91,9 @@ export default function ProductMatchingPage() {
           if (matched) console.log(`    ✅ Matched Ozon: ${mpInfo.id} === ${mpProd.id}`)
           return matched
         } else if (selectedMarketplace === 'wb') {
-          const matched = mpInfo?.nm_id === mpProd.id || mpInfo?.vendor_code === mpProd.sku
-          if (matched) console.log(`    ✅ Matched WB: ${mpInfo.nm_id} === ${mpProd.id}`)
+          // ИСПРАВЛЕНО: проверяем все варианты полей для WB
+          const matched = mpInfo?.nm_id === mpProd.id || mpInfo?.id === mpProd.id || mpInfo?.vendor_code === mpProd.sku
+          if (matched) console.log(`    ✅ Matched WB: ${mpInfo.nm_id || mpInfo.id} === ${mpProd.id}`)
           return matched
         } else if (selectedMarketplace === 'yandex') {
           const matched = mpInfo?.offer_id === mpProd.sku
