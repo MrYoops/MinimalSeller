@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FiSearch, FiDollarSign, FiTrendingUp, FiAlertTriangle, FiSettings, FiRefreshCw } from 'react-icons/fi';
+import { FiSearch, FiDollarSign, FiTrendingUp, FiAlertTriangle, FiSettings, FiRefreshCw, FiPlus } from 'react-icons/fi';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import CatalogNavDropdown from '../components/CatalogNavDropdown';
 import PriceEditModal from '../components/PriceEditModal';
 import BulkPriceUpdateModal from '../components/BulkPriceUpdateModal';
 import PriceAlertBadge from '../components/PriceAlertBadge';
@@ -135,17 +136,15 @@ const PricingPage = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6" data-testid="pricing-page">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <FiDollarSign className="w-8 h-8" />
-            Управление ценами
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Управляйте ценами товаров на маркетплейсах
-          </p>
+    <div className="space-y-6" data-testid="pricing-page">
+      {/* Header with Dropdown */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <CatalogNavDropdown />
+          <div>
+            <h1 className="text-3xl font-bold text-mm-cyan">ЦЕНЫ</h1>
+            <p className="text-sm text-mm-text-secondary mt-1">Управление ценами на маркетплейсах</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
