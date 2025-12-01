@@ -378,37 +378,11 @@ export default function UnifiedMarketplaceCharacteristics({
               ({unifiedCharacteristics.length} полей)
             </span>
             {requiredChars.length > 0 && (
-              <span className="text-xs text-red-400 flex items-center gap-1">
+              <span className="ml-auto text-xs text-red-400 flex items-center gap-1">
                 <FiStar size={10} />
                 {requiredChars.length} обязательных
               </span>
             )}
-            
-            {/* КНОПКА ПЕРЕСОПОСТАВЛЕНИЯ */}
-            <button
-              type="button"
-              onClick={() => {
-                const shouldRematch = confirm(
-                  `⚠️ ПЕРЕСОПОСТАВИТЬ КАТЕГОРИИ?\n\n` +
-                  `Текущие категории будут сброшены и вам нужно будет заново выбрать категорию для каждого маркетплейса.\n\n` +
-                  `Это очистит ВСЕ характеристики!\n\nПродолжить?`
-                )
-                
-                if (shouldRematch) {
-                  // Сбросить характеристики для всех МП
-                  if (onMappingUpdated) {
-                    activeMarketplaces.forEach(mp => {
-                      onMappingUpdated(mp, null, null, null)
-                    })
-                  }
-                }
-              }}
-              className="ml-auto px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded flex items-center gap-1.5 transition"
-              title="Пересопоставить категории маркетплейсов"
-            >
-              <FiAlertCircle size={14} />
-              Изменить категории МП
-            </button>
           </div>
           
           {/* Обязательные поля */}
