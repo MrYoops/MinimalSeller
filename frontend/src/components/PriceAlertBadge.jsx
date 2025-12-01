@@ -1,35 +1,20 @@
 import React, { useState } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FiAlertTriangle, FiX } from 'react-icons/fi';
 import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
 
-const PriceAlertBadge = ({ alerts }) => {
+const PriceAlertBadge = ({ alerts, onUpdate }) => {
+  const { api } = useAuth();
   const [showDetails, setShowDetails] = useState(false);
   const [resolvingId, setResolvingId] = useState(null);
-
-  const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
 
   const handleResolve = async (alertId) => {
     try {
       setResolvingId(alertId);
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(
-        `${backendUrl}/api/catalog/products/pricing/alerts/${alertId}/resolve`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to resolve alert');
-
+      await api.post(`/api/catalog/products/pricing/alerts/${alertId}/resolve`);
       toast.success('✅ Алерт отмечен как решённый');
       setShowDetails(false);
+      if (onUpdate) onUpdate();
     } catch (error) {
       console.error('Error resolving alert:', error);
       toast.error('Ошибка решения алерта');
@@ -44,35 +29,29 @@ const PriceAlertBadge = ({ alerts }) => {
     <div className="relative">
       <button
         onClick={() => setShowDetails(!showDetails)}
-        className="relative"
+        className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium animate-pulse flex items-center gap-1"
         data-testid="alert-badge"
       >
-        <Badge variant="destructive" className="animate-pulse">
-          <AlertTriangle className="w-3 h-3 mr-1" />
-          {alerts.length}
-        </Badge>
+        <FiAlertTriangle className="w-3 h-3" />
+        {alerts.length}
       </button>
 
       {showDetails && (
-        <div className="absolute right-0 top-8 z-50" style={{ minWidth: '320px' }}>
-          <Card className="shadow-lg border-2 border-orange-200">
-            <CardHeader className="pb-3 bg-orange-50">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-orange-900 flex items-center gap-1">
-                  <AlertTriangle className="w-4 h-4" />
-                  Алерты о ценах
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  onClick={() => setShowDetails(false)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-3 space-y-2">
+        <div className="absolute right-0 top-8 z-50 min-w-[320px]">
+          <div className="bg-white rounded-lg shadow-xl border-2 border-orange-200">
+            <div className="flex items-center justify-between p-3 bg-orange-50 border-b border-orange-200">
+              <h4 className="text-sm font-semibold text-orange-900 flex items-center gap-1">
+                <FiAlertTriangle className="w-4 h-4" />
+                Алерты о ценах
+              </h4>
+              <button
+                onClick={() => setShowDetails(false)}
+                className="p-1 hover:bg-orange-100 rounded"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
               {alerts.map((alert) => (
                 <div
                   key={alert._id}
@@ -85,14 +64,12 @@ const PriceAlertBadge = ({ alerts }) => {
                     </p>
                     <div className="text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Наша цена:</span>
+                        <span className="text-gray-600">Наша цена:</span>
                         <span className="font-semibold">{alert.our_min_price}₽</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Цена в акции:</span>
-                        <span className="font-semibold text-red-600">
-                          {alert.current_mp_price}₽ 🔴
-                        </span>
+                        <span className="text-gray-600">Цена в акции:</span>
+                        <span className="font-semibold text-red-600">{alert.current_mp_price}₽ 🔴</span>
                       </div>
                     </div>
                   </div>
@@ -105,27 +82,24 @@ const PriceAlertBadge = ({ alerts }) => {
                     </p>
                   )}
                   <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
+                    <button
                       onClick={() => handleResolve(alert._id)}
                       disabled={resolvingId === alert._id}
-                      className="flex-1 h-7 text-xs"
+                      className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 disabled:bg-gray-100"
                     >
                       ❌ Игнорировать
-                    </Button>
-                    <Button
-                      size="sm"
+                    </button>
+                    <button
                       onClick={() => setShowDetails(false)}
-                      className="flex-1 h-7 text-xs"
+                      className="flex-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
                     >
                       🔧 Изменить цену
-                    </Button>
+                    </button>
                   </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       )}
     </div>

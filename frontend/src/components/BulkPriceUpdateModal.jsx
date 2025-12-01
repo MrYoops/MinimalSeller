@@ -1,23 +1,16 @@
 import React, { useState } from 'react';
-import { X, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FiX, FiTrendingUp, FiTrendingDown, FiDollarSign } from 'react-icons/fi';
 import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
 
 const BulkPriceUpdateModal = ({ products, onClose, onUpdate }) => {
+  const { api } = useAuth();
   const [loading, setLoading] = useState(false);
   const [marketplace, setMarketplace] = useState('all');
   const [action, setAction] = useState('increase_percent');
   const [value, setValue] = useState('');
   const [scope, setScope] = useState('all');
 
-  const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
-
-  // Calculate affected products
   const getAffectedProducts = () => {
     let affected = products;
     
@@ -40,42 +33,24 @@ const BulkPriceUpdateModal = ({ products, onClose, onUpdate }) => {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const response = await api.post('/api/catalog/products/pricing/bulk', {
+        action,
+        value: parseFloat(value),
+        marketplace,
+        product_ids: scope === 'selected' ? products.map(p => p.product_id) : null
+      });
       
-      const response = await fetch(
-        `${backendUrl}/api/catalog/products/pricing/bulk`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            action,
-            value: parseFloat(value),
-            marketplace,
-            product_ids: scope === 'selected' ? products.map(p => p.product_id) : null
-          })
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to update prices');
-      }
-
-      const data = await response.json();
-      toast.success(data.message);
+      toast.success(response.data.message);
       
-      if (data.errors && data.errors.length > 0) {
-        console.error('Some updates failed:', data.errors);
-        toast.warning(`Ошибок: ${data.failed_count}`);
+      if (response.data.errors && response.data.errors.length > 0) {
+        console.error('Some updates failed:', response.data.errors);
+        toast.warning(`Ошибок: ${response.data.failed_count}`);
       }
       
       onUpdate();
     } catch (error) {
       console.error('Error bulk updating prices:', error);
-      toast.error(error.message || 'Ошибка массового обновления');
+      toast.error(error.response?.data?.detail || 'Ошибка массового обновления');
     } finally {
       setLoading(false);
     }
@@ -83,112 +58,91 @@ const BulkPriceUpdateModal = ({ products, onClose, onUpdate }) => {
 
   const getActionLabel = () => {
     switch (action) {
-      case 'increase_percent':
-        return 'Увеличить на %';
-      case 'decrease_percent':
-        return 'Уменьшить на %';
-      case 'set_fixed':
-        return 'Установить фиксированную';
-      default:
-        return '';
+      case 'increase_percent': return 'Увеличить на %';
+      case 'decrease_percent': return 'Уменьшить на %';
+      case 'set_fixed': return 'Установить фиксированную';
+      default: return '';
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="bulk-price-modal">
-      <Card className="w-full max-w-xl">
-        <CardHeader className="border-b">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <DollarSign className="w-6 h-6" />
-              Массовое изменение цен
-            </CardTitle>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-        </CardHeader>
+      <div className="bg-white rounded-lg w-full max-w-xl">
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <FiDollarSign className="w-6 h-6" />
+            Массовое изменение цен
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
+            <FiX className="w-5 h-5" />
+          </button>
+        </div>
 
-        <CardContent className="p-6 space-y-6">
+        <div className="p-6 space-y-6">
           {/* Marketplace Selection */}
           <div className="space-y-2">
-            <Label>Маркетплейс</Label>
-            <RadioGroup value={marketplace} onValueChange={setMarketplace}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="ozon" id="mp-ozon" />
-                <Label htmlFor="mp-ozon" className="cursor-pointer">Ozon</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="wb" id="mp-wb" />
-                <Label htmlFor="mp-wb" className="cursor-pointer">Wildberries</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="all" id="mp-all" />
-                <Label htmlFor="mp-all" className="cursor-pointer">Оба маркетплейса</Label>
-              </div>
-            </RadioGroup>
+            <label className="block text-sm font-medium">Маркетплейс</label>
+            <div className="space-y-2">
+              {['ozon', 'wb', 'all'].map(mp => (
+                <label key={mp} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={marketplace === mp}
+                    onChange={() => setMarketplace(mp)}
+                    className="w-4 h-4"
+                  />
+                  <span>{mp === 'ozon' ? 'Ozon' : mp === 'wb' ? 'Wildberries' : 'Оба маркетплейса'}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Action Selection */}
           <div className="space-y-2">
-            <Label>Действие</Label>
-            <Select value={action} onValueChange={setAction}>
-              <SelectTrigger data-testid="action-select">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="increase_percent">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-green-600" />
-                    Увеличить на %
-                  </div>
-                </SelectItem>
-                <SelectItem value="decrease_percent">
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="w-4 h-4 text-red-600" />
-                    Уменьшить на %
-                  </div>
-                </SelectItem>
-                <SelectItem value="set_fixed">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" />
-                    Установить фиксированную цену
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <label className="block text-sm font-medium">Действие</label>
+            <select
+              value={action}
+              onChange={(e) => setAction(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              data-testid="action-select"
+            >
+              <option value="increase_percent">📈 Увеличить на %</option>
+              <option value="decrease_percent">📉 Уменьшить на %</option>
+              <option value="set_fixed">💵 Установить фиксированную цену</option>
+            </select>
           </div>
 
           {/* Value Input */}
           <div className="space-y-2">
-            <Label htmlFor="value">
+            <label className="block text-sm font-medium">
               {action === 'set_fixed' ? 'Цена (₽)' : 'Процент (%)'}
-            </Label>
-            <Input
-              id="value"
+            </label>
+            <input
               type="number"
               value={value}
               onChange={(e) => setValue(e.target.value)}
               placeholder={action === 'set_fixed' ? '1990' : '10'}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               data-testid="value-input"
             />
           </div>
 
           {/* Scope Selection */}
           <div className="space-y-2">
-            <Label>Применить к</Label>
-            <RadioGroup value={scope} onValueChange={setScope}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="all" id="scope-all" />
-                <Label htmlFor="scope-all" className="cursor-pointer">Всем товарам</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="selected" id="scope-selected" />
-                <Label htmlFor="scope-selected" className="cursor-pointer">
-                  Выбранным товарам ({products.length})
-                </Label>
-              </div>
-            </RadioGroup>
+            <label className="block text-sm font-medium">Применить к</label>
+            <div className="space-y-2">
+              {['all', 'selected'].map(sc => (
+                <label key={sc} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={scope === sc}
+                    onChange={() => setScope(sc)}
+                    className="w-4 h-4"
+                  />
+                  <span>{sc === 'all' ? 'Всем товарам' : `Выбранным товарам (${products.length})`}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Summary */}
@@ -205,20 +159,23 @@ const BulkPriceUpdateModal = ({ products, onClose, onUpdate }) => {
 
           {/* Actions */}
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
               Отмена
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handleApply}
               disabled={loading || !value || affectedCount === 0}
-              className="flex-1"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
               data-testid="apply-bulk-btn"
             >
               ✅ Применить
-            </Button>
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };

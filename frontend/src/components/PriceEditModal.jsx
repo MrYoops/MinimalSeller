@@ -1,30 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, TrendingUp, History, Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { FiX, FiDollarSign, FiClock, FiSave } from 'react-icons/fi';
 import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
 
 const PriceEditModal = ({ product, onClose, onUpdate }) => {
+  const { api } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [history, setHistory] = useState([]);
   
-  // Ozon prices
   const [ozonPrice, setOzonPrice] = useState(product.ozon?.price || '');
   const [ozonOldPrice, setOzonOldPrice] = useState(product.ozon?.old_price || '');
-  
-  // WB prices
   const [wbRegularPrice, setWbRegularPrice] = useState(product.wb?.regular_price || '');
   const [wbDiscountPrice, setWbDiscountPrice] = useState(product.wb?.discount_price || '');
-  
-  // Settings
   const [minAllowedPrice, setMinAllowedPrice] = useState(product.min_allowed_price || '');
   const [costPrice, setCostPrice] = useState(product.cost_price || '');
-
-  const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
 
   useEffect(() => {
     fetchHistory();
@@ -33,20 +23,8 @@ const PriceEditModal = ({ product, onClose, onUpdate }) => {
   const fetchHistory = async () => {
     try {
       setLoadingHistory(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${backendUrl}/api/catalog/products/${product.product_id}/pricing/history?limit=5`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to fetch history');
-
-      const data = await response.json();
-      setHistory(data.history || []);
+      const response = await api.get(`/api/catalog/products/${product.product_id}/pricing/history?limit=5`);
+      setHistory(response.data.history || []);
     } catch (error) {
       console.error('Error fetching history:', error);
     } finally {
@@ -77,33 +55,16 @@ const PriceEditModal = ({ product, onClose, onUpdate }) => {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${backendUrl}/api/catalog/products/${product.product_id}/pricing/ozon`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            marketplace: 'ozon',
-            price: parseFloat(ozonPrice),
-            old_price: parseFloat(ozonOldPrice)
-          })
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to update prices');
-      }
-
+      await api.put(`/api/catalog/products/${product.product_id}/pricing/ozon`, {
+        marketplace: 'ozon',
+        price: parseFloat(ozonPrice),
+        old_price: parseFloat(ozonOldPrice)
+      });
       toast.success('✅ Цены на Ozon обновлены');
       await fetchHistory();
     } catch (error) {
       console.error('Error updating Ozon prices:', error);
-      toast.error(error.message || 'Ошибка обновления цен на Ozon');
+      toast.error(error.response?.data?.detail || 'Ошибка обновления цен на Ozon');
     } finally {
       setLoading(false);
     }
@@ -127,33 +88,16 @@ const PriceEditModal = ({ product, onClose, onUpdate }) => {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${backendUrl}/api/catalog/products/${product.product_id}/pricing/wb`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            marketplace: 'wb',
-            regular_price: parseFloat(wbRegularPrice),
-            discount_price: wbDiscountPrice ? parseFloat(wbDiscountPrice) : null
-          })
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to update prices');
-      }
-
+      await api.put(`/api/catalog/products/${product.product_id}/pricing/wb`, {
+        marketplace: 'wb',
+        regular_price: parseFloat(wbRegularPrice),
+        discount_price: wbDiscountPrice ? parseFloat(wbDiscountPrice) : null
+      });
       toast.success('✅ Цены на Wildberries обновлены');
       await fetchHistory();
     } catch (error) {
       console.error('Error updating WB prices:', error);
-      toast.error(error.message || 'Ошибка обновления цен на WB');
+      toast.error(error.response?.data?.detail || 'Ошибка обновления цен на WB');
     } finally {
       setLoading(false);
     }
@@ -166,10 +110,6 @@ const PriceEditModal = ({ product, onClose, onUpdate }) => {
     if (product.wb_linked && wbRegularPrice) {
       await handleSaveWB();
     }
-    
-    // Update min price and cost price in product
-    // (This would need a separate endpoint, but for now we'll just close)
-    
     onUpdate();
   };
 
@@ -187,73 +127,68 @@ const PriceEditModal = ({ product, onClose, onUpdate }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="price-edit-modal">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="border-b">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <DollarSign className="w-6 h-6" />
-                Изменить цены
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {product.name} ({product.article})
-              </p>
-            </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-5 h-5" />
-            </Button>
+      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <div>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <FiDollarSign className="w-6 h-6" />
+              Изменить цены
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {product.name} ({product.article})
+            </p>
           </div>
-        </CardHeader>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
+            <FiX className="w-5 h-5" />
+          </button>
+        </div>
 
-        <CardContent className="p-6 space-y-6">
+        <div className="p-6 space-y-6">
           {/* Ozon Section */}
           {product.ozon_linked && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                  📊 Ozon
-                </Badge>
+                <span className="px-3 py-1 text-sm rounded bg-blue-100 text-blue-800">📊 Ozon</span>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="ozon-price">Цена со скидкой (₽)</Label>
-                  <Input
-                    id="ozon-price"
+                  <label className="block text-sm font-medium mb-1">Цена со скидкой (₽)</label>
+                  <input
                     type="number"
                     value={ozonPrice}
                     onChange={(e) => setOzonPrice(e.target.value)}
                     placeholder="1990"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     data-testid="ozon-price-input"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="ozon-old-price">Цена до скидки (₽)</Label>
-                  <Input
-                    id="ozon-old-price"
+                  <label className="block text-sm font-medium mb-1">Цена до скидки (₽)</label>
+                  <input
                     type="number"
                     value={ozonOldPrice}
                     onChange={(e) => setOzonOldPrice(e.target.value)}
                     placeholder="2490"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     data-testid="ozon-old-price-input"
                   />
                 </div>
               </div>
               {ozonPrice && ozonOldPrice && (
-                <div className="text-sm text-muted-foreground">
-                  Скидка: <span className="font-semibold text-green-600">
-                    {calculateDiscount(ozonPrice, ozonOldPrice)}%
-                  </span>
+                <div className="text-sm text-gray-600">
+                  Скидка: <span className="font-semibold text-green-600">{calculateDiscount(ozonPrice, ozonOldPrice)}%</span>
                 </div>
               )}
-              <Button
+              <button
                 onClick={handleSaveOzon}
                 disabled={loading || !ozonPrice || !ozonOldPrice}
-                className="w-full"
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center justify-center gap-2"
                 data-testid="save-ozon-btn"
               >
-                <Save className="w-4 h-4 mr-2" />
+                <FiSave className="w-4 h-4" />
                 Сохранить цены Ozon
-              </Button>
+              </button>
             </div>
           )}
 
@@ -261,81 +196,73 @@ const PriceEditModal = ({ product, onClose, onUpdate }) => {
           {product.wb_linked && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Badge className="bg-purple-100 text-purple-800 border-purple-200">
-                  📊 Wildberries
-                </Badge>
+                <span className="px-3 py-1 text-sm rounded bg-purple-100 text-purple-800">📊 Wildberries</span>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="wb-regular">Обычная цена (₽)</Label>
-                  <Input
-                    id="wb-regular"
+                  <label className="block text-sm font-medium mb-1">Обычная цена (₽)</label>
+                  <input
                     type="number"
                     value={wbRegularPrice}
                     onChange={(e) => setWbRegularPrice(e.target.value)}
                     placeholder="2490"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     data-testid="wb-regular-price-input"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="wb-discount">Цена со скидкой (₽)</Label>
-                  <Input
-                    id="wb-discount"
+                  <label className="block text-sm font-medium mb-1">Цена со скидкой (₽)</label>
+                  <input
                     type="number"
                     value={wbDiscountPrice}
                     onChange={(e) => setWbDiscountPrice(e.target.value)}
                     placeholder="1990"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     data-testid="wb-discount-price-input"
                   />
                 </div>
               </div>
               {wbDiscountPrice && wbRegularPrice && (
-                <div className="text-sm text-muted-foreground">
-                  Скидка: <span className="font-semibold text-green-600">
-                    {calculateDiscount(wbDiscountPrice, wbRegularPrice)}%
-                  </span>
+                <div className="text-sm text-gray-600">
+                  Скидка: <span className="font-semibold text-green-600">{calculateDiscount(wbDiscountPrice, wbRegularPrice)}%</span>
                 </div>
               )}
-              <Button
+              <button
                 onClick={handleSaveWB}
                 disabled={loading || !wbRegularPrice}
-                className="w-full"
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center justify-center gap-2"
                 data-testid="save-wb-btn"
               >
-                <Save className="w-4 h-4 mr-2" />
+                <FiSave className="w-4 h-4" />
                 Сохранить цены WB
-              </Button>
+              </button>
             </div>
           )}
 
           {/* Settings Section */}
           <div className="space-y-4 pt-4 border-t">
-            <h3 className="font-semibold flex items-center gap-2">
-              ⚙️ Настройки
-            </h3>
+            <h3 className="font-semibold">⚙️ Настройки</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="min-price">Мин. допустимая цена (₽)</Label>
-                <Input
-                  id="min-price"
+                <label className="block text-sm font-medium mb-1">Мин. допустимая цена (₽)</label>
+                <input
                   type="number"
                   value={minAllowedPrice}
                   onChange={(e) => setMinAllowedPrice(e.target.value)}
                   placeholder="1500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   data-testid="min-price-input"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Для алертов о слишком низких ценах
-                </p>
+                <p className="text-xs text-gray-500 mt-1">Для алертов о слишком низких ценах</p>
               </div>
               <div>
-                <Label htmlFor="cost-price">Себестоимость (₽)</Label>
-                <Input
-                  id="cost-price"
+                <label className="block text-sm font-medium mb-1">Себестоимость (₽)</label>
+                <input
                   type="number"
                   value={costPrice}
                   onChange={(e) => setCostPrice(e.target.value)}
                   placeholder="1000"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   data-testid="cost-price-input"
                 />
               </div>
@@ -345,35 +272,28 @@ const PriceEditModal = ({ product, onClose, onUpdate }) => {
           {/* History Section */}
           <div className="space-y-4 pt-4 border-t">
             <h3 className="font-semibold flex items-center gap-2">
-              <History className="w-4 h-4" />
+              <FiClock className="w-4 h-4" />
               История изменений (последние 5)
             </h3>
             {loadingHistory ? (
-              <div className="text-center text-muted-foreground py-4">Загрузка...</div>
+              <div className="text-center text-gray-500 py-4">Загрузка...</div>
             ) : history.length === 0 ? (
-              <div className="text-center text-muted-foreground py-4">История пуста</div>
+              <div className="text-center text-gray-500 py-4">История пуста</div>
             ) : (
               <div className="space-y-2">
                 {history.map((entry, idx) => (
-                  <div
-                    key={idx}
-                    className="text-sm p-3 bg-muted/30 rounded-lg flex items-center justify-between"
-                  >
+                  <div key={idx} className="text-sm p-3 bg-gray-50 rounded-lg flex items-center justify-between">
                     <div>
                       <span className="font-medium">{formatDate(entry.timestamp)}</span>
-                      <span className="text-muted-foreground ml-2">
+                      <span className="text-gray-600 ml-2">
                         {entry.marketplace === 'ozon' ? '📊 Ozon' : '📊 WB'}
                       </span>
                     </div>
                     <div className="text-right">
                       {entry.marketplace === 'ozon' ? (
-                        <span>
-                          {entry.new_price}₽ / {entry.new_old_price}₽
-                        </span>
+                        <span>{entry.new_price}₽ / {entry.new_old_price}₽</span>
                       ) : (
-                        <span>
-                          {entry.new_discount_price || entry.new_regular_price}₽
-                        </span>
+                        <span>{entry.new_discount_price || entry.new_regular_price}₽</span>
                       )}
                     </div>
                   </div>
@@ -384,21 +304,24 @@ const PriceEditModal = ({ product, onClose, onUpdate }) => {
 
           {/* Actions */}
           <div className="flex gap-2 pt-4">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
               Отмена
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handleSaveAll}
               disabled={loading}
-              className="flex-1"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center justify-center gap-2"
               data-testid="save-all-btn"
             >
-              <Save className="w-4 h-4 mr-2" />
+              <FiSave className="w-4 h-4" />
               💾 Сохранить и отправить
-            </Button>
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
