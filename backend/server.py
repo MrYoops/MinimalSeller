@@ -2004,8 +2004,6 @@ async def import_product_from_marketplace(
                 "product_id": str(product_id),
                 "action": "linked"
             }
-                "action": "linked"
-            }
         
         elif action == 'update_all':
             # Полностью обновить товар данными с МП
