@@ -1992,12 +1992,18 @@ async def import_product_from_marketplace(
             
             marketplace_data[marketplace] = mp_link_data
             
-            await db.product_catalog.update_one(
-                {"_id": product_id},
+            # ИСПРАВЛЕНО: Обновление товара - _id может быть как UUID string, так и ObjectId
+            result = await db.product_catalog.update_one(
+                {"_id": product_id},  # product_id уже правильного типа из БД
                 {"$set": {"marketplace_data": marketplace_data, "updated_at": datetime.utcnow()}}
             )
             
+            if result.modified_count == 0 and result.matched_count == 0:
+                logger.error(f"❌ Failed to update product {product_id} - not found!")
+                raise HTTPException(status_code=404, detail="Product not found for update")
+            
             logger.info(f"✅ Product {product_id} linked with {marketplace}: {mp_link_data}")
+            logger.info(f"   Update result: matched={result.matched_count}, modified={result.modified_count}")
             
             return {
                 "message": f"✅ Товар связан с {marketplace.upper()} без обновления данных",
