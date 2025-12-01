@@ -130,6 +130,14 @@ export default function ProductMatchingPage() {
     setUnmatched(unmatchedList)
     
     console.log(`📊 Matched: ${matchedList.length}, Unmatched: ${unmatchedList.length}`)
+    
+    // Показать уведомление о результатах
+    if (matchedList.length > 0 || unmatchedList.length > 0) {
+      toast.success(
+        `Автосопоставление завершено!\n\n✅ Сопоставлено: ${matchedList.length}\n⚠️ Не сопоставлено: ${unmatchedList.length}`,
+        { duration: 5000 }
+      )
+    }
   }
 
   const handleLink = async (mpProduct, localProduct) => {
