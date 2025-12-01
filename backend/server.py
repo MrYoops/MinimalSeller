@@ -2130,7 +2130,7 @@ async def import_product_from_marketplace(
     
     # Auto-create inventory record with zero quantity
     inventory_record = {
-        "product_id": ObjectId(product_id),
+        "product_id": product_id,  # ИСПРАВЛЕНО: product_id это UUID string, не ObjectId!
         "seller_id": str(current_user["_id"]),
         "sku": sku,
         "quantity": 0,
