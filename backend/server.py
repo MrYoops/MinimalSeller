@@ -3195,8 +3195,8 @@ async def get_catalog_products(
             additional_info=prod.get("additional_info"),
             website_link=prod.get("website_link"),
             
-            # Данные маркетплейсов
-            marketplace_specific_data=prod.get("marketplace_specific_data")
+            # Данные маркетплейсов - проверяем оба варианта названия
+            marketplace_specific_data=prod.get("marketplace_specific_data") or prod.get("marketplace_data")
         ))
     
     logger.info(f"✅ Found {len(result)} products (total: {total})")
