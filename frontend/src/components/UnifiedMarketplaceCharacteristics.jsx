@@ -66,10 +66,10 @@ export default function UnifiedMarketplaceCharacteristics({
     }
   }
   
-  // Получить список активных маркетплейсов
+  // Получить список активных маркетплейсов (с отмеченными галочками)
   const activeMarketplaces = useMemo(() => {
-    return Object.keys(selectedMarketplaces).filter(mp => selectedMarketplaces[mp] && characteristicsByMarketplace[mp]?.length > 0)
-  }, [selectedMarketplaces, characteristicsByMarketplace])
+    return Object.keys(selectedMarketplaces).filter(mp => selectedMarketplaces[mp])
+  }, [selectedMarketplaces])
   
   // ГЛОБАЛЬНЫЙ анализ ВСЕХ характеристик
   const unifiedCharacteristics = useMemo(() => {
