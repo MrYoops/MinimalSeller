@@ -269,6 +269,38 @@ export default function CatalogProductsPage() {
                       </div>
                     )}
                   </td>
+                  {/* Колонка маркетплейсов */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      {(() => {
+                        const mpData = product.marketplace_data || {}
+                        const marketplaces = []
+                        
+                        // Проверяем Ozon
+                        if (mpData.ozon?.product_id || mpData.ozon?.offer_id) {
+                          marketplaces.push(
+                            <div key="ozon" className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold" title="Ozon (создано)">O</div>
+                          )
+                        }
+                        
+                        // Проверяем Wildberries
+                        if (mpData.wb?.nm_id || mpData.wb?.vendor_code) {
+                          marketplaces.push(
+                            <div key="wb" className="w-6 h-6 bg-purple-600 text-white rounded flex items-center justify-center text-[9px] font-bold" title="Wildberries (создано)">WB</div>
+                          )
+                        }
+                        
+                        // Проверяем Yandex
+                        if (mpData.yandex?.offer_id || mpData.yandex?.shop_sku) {
+                          marketplaces.push(
+                            <div key="yandex" className="w-6 h-6 bg-red-500 text-white rounded flex items-center justify-center text-[10px] font-bold" title="Яндекс.Маркет (создано)">Я</div>
+                          )
+                        }
+                        
+                        return marketplaces.length > 0 ? marketplaces : <span className="text-xs text-mm-text-secondary">—</span>
+                      })()}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     {product.price_discounted ? (
                       <div className="flex flex-col">
