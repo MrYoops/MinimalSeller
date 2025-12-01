@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiBox, FiDollarSign, FiPieChart, FiLink, FiTrash2, FiEdit } from 'react-icons/fi'
+import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiBox, FiDollarSign, FiPieChart, FiLink, FiTrash2, FiEdit, FiUpload, FiGrid } from 'react-icons/fi'
 import { BsBoxSeam } from 'react-icons/bs'
+import { useNavigate } from 'react-router-dom'
+import NavDropdown from '../components/NavDropdown'
 import SettingsDropdown from '../components/SettingsDropdown'
 import IntegrationsPage from './IntegrationsPage'
 import OrdersPage from './OrdersPage'
@@ -17,6 +19,7 @@ import CatalogProductsPage from './CatalogProductsPage'
 
 function SellerDashboard() {
   const { user, logout, api } = useAuth()
+  const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('products')
@@ -72,14 +75,21 @@ function SellerDashboard() {
             >
               <BsBoxSeam className="inline mr-2" />СКЛАД
             </button>
-            <button
-              onClick={() => setActiveTab('products')}
-              className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
-                activeTab === 'products' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-            >
-              <FiPackage className="inline mr-2" />ТОВАРЫ
-            </button>
+            
+            {/* Dropdown для Товары */}
+            <NavDropdown
+              title="ТОВАРЫ"
+              icon={FiPackage}
+              isActive={activeTab === 'products'}
+              items={[
+                { label: 'Товары', path: '/catalog/products', icon: FiGrid },
+                { label: 'Категории', path: '/catalog/categories', icon: FiPackage },
+                { label: 'Цены', path: '/catalog/pricing', icon: FiDollarSign },
+                { label: 'Сопоставление', path: '/catalog/matching', icon: FiLink },
+                { label: 'Импорт товаров', path: '/catalog/import', icon: FiUpload }
+              ]}
+            />
+            
             <button
               onClick={() => setActiveTab('orders')}
               className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap ${
