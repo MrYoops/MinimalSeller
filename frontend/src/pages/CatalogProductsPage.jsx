@@ -229,6 +229,7 @@ export default function CatalogProductsPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">Фото</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">Артикул</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">Название</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">МП</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">Цена</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">Бренд</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">Категория</th>
