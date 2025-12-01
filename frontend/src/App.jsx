@@ -17,6 +17,7 @@ import CatalogCategoriesPageSimple from './pages/CatalogCategoriesPageSimple'
 import CatalogProductFormV4 from './pages/CatalogProductFormV4'
 import CatalogProductFormPage from './pages/CatalogProductFormPage'
 import CatalogImportPage from './pages/CatalogImportPage'
+import ProductMatchingPage from './pages/ProductMatchingPage'
 import InternalCategoriesPage from './pages/InternalCategoriesPage'
 // NEW: Warehouse module pages
 import WarehousesPageV2 from './pages/WarehousesPageV2'
