@@ -104,30 +104,6 @@ export default function CatalogProductsPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => window.location.href = '/catalog/matching'}
-            className="px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded flex items-center gap-2"
-          >
-            <FiLink /> СОПОСТАВЛЕНИЕ
-          </button>
-          <button
-            onClick={() => window.location.href = '/catalog/pricing'}
-            className="px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded flex items-center gap-2"
-          >
-            <FiDollarSign /> ЦЕНЫ
-          </button>
-          <button
-            onClick={() => window.location.href = '/catalog/import'}
-            className="px-4 py-2 bg-mm-secondary text-mm-text hover:bg-mm-secondary/80 rounded flex items-center gap-2"
-          >
-            <FiUpload /> ИМПОРТ ТОВАРОВ
-          </button>
-          <button
-            onClick={() => window.location.href = '/catalog/categories'}
-            className="px-4 py-2 bg-mm-secondary text-mm-text hover:bg-mm-secondary/80 rounded flex items-center gap-2"
-          >
-            <FiPackage /> КАТЕГОРИИ
-          </button>
-          <button
             onClick={() => window.location.href = '/catalog/products/new'}
             className="px-4 py-2 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded flex items-center gap-2"
           >
