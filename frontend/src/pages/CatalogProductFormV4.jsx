@@ -1174,6 +1174,46 @@ export default function CatalogProductFormV4() {
                     categoryMappings={categoryMappings}
                     onMappingUpdated={async (marketplace, categoryId, categoryName, typeId) => {
                       console.log(`[ProductForm] Mapping updated for ${marketplace}:`, categoryId)
+                      
+                      // Если categoryId = null - сброс маппинга для этого МП
+                      if (categoryId === null) {
+                        console.log(`[ProductForm] Resetting mapping for ${marketplace}`)
+                        
+                        // Сбросить флаг и очистить характеристики
+                        setCharacteristicsAttempted(prev => ({ ...prev, [marketplace]: false }))
+                        setMpCharacteristics(prev => ({ ...prev, [marketplace]: [] }))
+                        
+                        // Очистить categoryMappings для этого МП
+                        setCategoryMappings(prev => ({
+                          ...prev,
+                          [marketplace]: {}
+                        }))
+                        
+                        // Очистить характеристики в product.marketplace_data
+                        setProduct(prev => ({
+                          ...prev,
+                          marketplace_data: {
+                            ...prev.marketplace_data,
+                            [marketplace]: {
+                              ...(prev.marketplace_data?.[marketplace] || {}),
+                              characteristics: {}
+                            }
+                          }
+                        }))
+                        
+                        return
+                      }
+                      
+                      // Обновление маппинга с новой категорией
+                      setCategoryMappings(prev => ({
+                        ...prev,
+                        [marketplace]: {
+                          category_id: categoryId,
+                          category_name: categoryName,
+                          type_id: typeId
+                        }
+                      }))
+                      
                       // Перезагрузить характеристики для этого МП
                       setCharacteristicsAttempted(prev => ({ ...prev, [marketplace]: false }))
                       await loadMarketplaceCharacteristics(marketplace, product.category_mapping_id)
