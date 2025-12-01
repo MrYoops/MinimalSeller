@@ -509,6 +509,41 @@ class OzonConnector(BaseConnector):
         
         logger.info(f"[Ozon] Price conversion: {price} → {price_rubles}₽, Old: {old_price} → {old_price_rubles}₽")
         
+        # ГАБАРИТЫ И ВЕС: Ozon требует обязательно
+        # Dimensions в мм из БД → конвертируем в см для Ozon
+        dimensions = product_data.get('dimensions', {})
+        height_mm = dimensions.get('height', 0)
+        width_mm = dimensions.get('width', 0)
+        length_mm = dimensions.get('length', 0)
+        weight_g = product_data.get('weight', 0)
+        
+        # Конвертация мм → см (с округлением до целого)
+        height_cm = int(height_mm / 10) if height_mm > 0 else 0
+        width_cm = int(width_mm / 10) if width_mm > 0 else 0
+        depth_cm = int(length_mm / 10) if length_mm > 0 else 0
+        
+        # ВАЛИДАЦИЯ обязательных полей
+        validation_errors = []
+        if height_cm <= 0:
+            validation_errors.append("Высота (height) обязательна")
+        if width_cm <= 0:
+            validation_errors.append("Ширина (width) обязательна")
+        if depth_cm <= 0:
+            validation_errors.append("Длина (depth) обязательна")
+        if weight_g <= 0:
+            validation_errors.append("Вес (weight) обязателен")
+        
+        if validation_errors:
+            error_msg = "Ошибка валидации Ozon: " + ", ".join(validation_errors)
+            logger.error(f"[Ozon] {error_msg}")
+            raise MarketplaceError(
+                marketplace="Ozon",
+                status_code=400,
+                message=error_msg + ". Заполните габариты и вес товара!"
+            )
+        
+        logger.info(f"[Ozon] Dimensions: {height_mm}x{width_mm}x{length_mm} мм → {height_cm}x{width_cm}x{depth_cm} см, Weight: {weight_g} г")
+        
         payload = {
             "items": [{
                 "offer_id": product_data.get('article', ''),
@@ -516,10 +551,10 @@ class OzonConnector(BaseConnector):
                 "price": price_rubles,
                 "old_price": old_price_rubles,
                 "vat": str(vat_decimal),  # В формате 0.2 для 20%
-                "height": product_data.get('dimensions', {}).get('height', 0),
-                "width": product_data.get('dimensions', {}).get('width', 0),
-                "depth": product_data.get('dimensions', {}).get('length', 0),
-                "weight": product_data.get('weight', 0),
+                "height": height_cm,  # ОБЯЗАТЕЛЬНО в см
+                "width": width_cm,    # ОБЯЗАТЕЛЬНО в см
+                "depth": depth_cm,    # ОБЯЗАТЕЛЬНО в см
+                "weight": weight_g,   # ОБЯЗАТЕЛЬНО в граммах
                 "images": product_data.get('photos', [])[:10],  # Максимум 10 фото
                 "description": product_data.get('description', ''),
                 "description_category_id": category_id,  # ВАЛИДИРОВАННЫЙ int
