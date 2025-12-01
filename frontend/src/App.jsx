@@ -84,6 +84,9 @@ function AppRoutes() {
       <Route path="/catalog/import" element={
         <ProtectedRoute><CatalogImportPage /></ProtectedRoute>
       } />
+      <Route path="/catalog/matching" element={
+        <ProtectedRoute><ProductMatchingPage /></ProtectedRoute>
+      } />
       <Route path="/admin/categories" element={
         <ProtectedRoute requiredRole="admin"><AdminCategoriesPage /></ProtectedRoute>
       } />
