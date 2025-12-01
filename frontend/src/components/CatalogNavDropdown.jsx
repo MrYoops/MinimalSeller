@@ -55,11 +55,13 @@ const CatalogNavDropdown = () => {
               <button
                 key={idx}
                 onClick={() => handleItemClick(item.path)}
-                className={`w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 text-sm transition-colors font-medium ${\n                  isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:text-blue-600'\n                }`}
+                className={`w-full text-left px-4 py-3 hover:bg-gray-100 flex items-center gap-3 text-sm transition-colors font-medium ${
+                  isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                }`}
               >
-                <Icon className=\"w-4 h-4\" />
+                <Icon className="w-4 h-4" />
                 {item.label}
-                {isActive && <span className=\"ml-auto text-xs text-blue-500\">✓</span>}
+                {isActive && <span className="ml-auto text-xs text-blue-500">✓</span>}
               </button>
             );
           })}
