@@ -1247,59 +1247,6 @@ export default function CatalogProductFormV4() {
                   />
                 </div>
 
-                {/* ПОЛ И СЕЗОН */}
-                <div className="bg-mm-secondary p-6 rounded-lg space-y-4">
-                  <div>
-                    <label className="block text-sm text-mm-text-secondary mb-2 uppercase">Пол</label>
-                    <div className="flex gap-2">
-                      {['МУЖСКОЙ', 'МАЛЬЧИКИ', 'ЖЕНСКИЙ', 'ДЕВОЧКИ'].map(g => (
-                        <button
-                          key={g}
-                          type="button"
-                          onClick={() => handleProductChange('gender', product.gender === g ? '' : g)}
-                          className={`px-4 py-2 rounded border transition ${
-                            product.gender === g
-                              ? 'bg-mm-cyan border-mm-cyan text-mm-dark font-semibold'
-                              : 'bg-mm-dark border-mm-border text-mm-text hover:border-mm-cyan'
-                          }`}
-                        >
-                          {g}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-mm-text-secondary mb-2 uppercase">Сезон</label>
-                    <div className="flex gap-2 flex-wrap">
-                      {['КРУГЛОГОДИЧНЫЙ', 'ЗИМА', 'ЛЕТО', 'ВЕСНА', 'ОСЕНЬ'].map(s => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => handleProductChange('season', product.season === s ? '' : s)}
-                          className={`px-4 py-2 rounded border transition ${
-                            product.season === s
-                              ? 'bg-mm-cyan border-mm-cyan text-mm-dark font-semibold'
-                              : 'bg-mm-dark border-mm-border text-mm-text hover:border-mm-cyan'
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-mm-text-secondary mb-1 uppercase">Состав</label>
-                    <input
-                      type="text"
-                      value={product.composition}
-                      onChange={(e) => handleProductChange('composition', e.target.value)}
-                      className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
-                    />
-                  </div>
-                </div>
-
                 {/* ПОЛЯ ДЛЯ МАРКЕТПЛЕЙСОВ (появляются при выборе чекбокса) */}
                 {selectedMarketplaces.wb && (
                   <div className="bg-purple-500/10 border-2 border-purple-500 p-6 rounded-lg space-y-4">
