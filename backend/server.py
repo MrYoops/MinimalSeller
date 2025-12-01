@@ -1897,45 +1897,121 @@ async def import_product_from_marketplace(
     logger.info(f"📦 Importing product from {marketplace}: SKU={sku}, Name={marketplace_product.get('name', 'N/A')}")
     
     # Check if product with this SKU already exists
-    existing_product = await db.product_catalog.find_one({"article": sku, "seller_id": current_user["_id"]}, {"_id": 0})
+    existing_product = await db.product_catalog.find_one({"article": sku, "seller_id": current_user["_id"]})
     
     if existing_product:
-        logger.info(f"✅ Product already exists: {existing_product.get('name')}")
+        logger.info(f"⚠️ Duplicate found: {existing_product.get('name')}")
         
-        # Update marketplace_data for existing product
-        marketplace_data = existing_product.get("marketplace_data", {})
+        # Получить действие из запроса (если не указано - запросить у пользователя)
+        action = data.get('duplicate_action')
         
-        # Prepare characteristics dict
-        characteristics_dict = {}
-        for char in marketplace_product.get('characteristics', []):
-            char_name = char.get('name', '')
-            char_value = char.get('value', '')
-            if char_name and char_value:
-                characteristics_dict[char_name] = char_value
+        if not action:
+            # Вернуть диалог для выбора действия
+            return {
+                "status": "duplicate_found",
+                "existing_product": {
+                    "id": str(existing_product["_id"]),
+                    "article": existing_product.get("article"),
+                    "name": existing_product.get("name"),
+                    "brand": existing_product.get("brand"),
+                    "price": existing_product.get("price_with_discount", 0) / 100,
+                    "created_at": existing_product.get("created_at")
+                },
+                "import_product": {
+                    "sku": sku,
+                    "name": marketplace_product.get('name'),
+                    "marketplace": marketplace,
+                    "price": marketplace_product.get('price', 0)
+                },
+                "message": f"Товар с артикулом '{sku}' уже существует в базе. Выберите действие:"
+            }
         
-        marketplace_data[marketplace] = {
-            "id": marketplace_product.get('id'),
-            "barcode": marketplace_product.get('barcode', ''),
-            "characteristics": characteristics_dict,
-            "category": marketplace_product.get('category', ''),
-            "category_id": marketplace_product.get('category_id', ''),
-            "brand": marketplace_product.get('brand', ''),
-            "size": marketplace_product.get('size', ''),
-            "mapped_at": datetime.utcnow().isoformat()
-        }
+        # Обработка выбранного действия
+        product_id = existing_product["_id"]
         
-        product_id = existing_product.get("_id")
+        if action == 'link_only':
+            # Только связать с МП без обновления данных
+            marketplace_data = existing_product.get("marketplace_data", {})
+            characteristics_dict = {}
+            for char in marketplace_product.get('characteristics', []):
+                char_name = char.get('name', '')
+                char_value = char.get('value', '')
+                if char_name and char_value:
+                    characteristics_dict[char_name] = char_value
+            
+            marketplace_data[marketplace] = {
+                "id": marketplace_product.get('id'),
+                "barcode": marketplace_product.get('barcode', ''),
+                "characteristics": characteristics_dict,
+                "category": marketplace_product.get('category', ''),
+                "category_id": marketplace_product.get('category_id', ''),
+                "brand": marketplace_product.get('brand', ''),
+                "size": marketplace_product.get('size', ''),
+                "mapped_at": datetime.utcnow().isoformat()
+            }
+            
+            await db.product_catalog.update_one(
+                {"_id": product_id},
+                {"$set": {"marketplace_data": marketplace_data, "updated_at": datetime.utcnow()}}
+            )
+            
+            return {
+                "message": f"✅ Товар связан с {marketplace.upper()} без обновления данных",
+                "product_id": str(product_id),
+                "action": "linked"
+            }
         
-        await db.product_catalog.update_one(
-            {"_id": product_id},
-            {"$set": {"marketplace_data": marketplace_data, "updated_at": datetime.utcnow().isoformat()}}
-        )
+        elif action == 'update_all':
+            # Полностью обновить товар данными с МП
+            characteristics_dict = {}
+            for char in marketplace_product.get('characteristics', []):
+                char_name = char.get('name', '')
+                char_value = char.get('value', '')
+                if char_name and char_value:
+                    characteristics_dict[char_name] = char_value
+            
+            marketplace_data = existing_product.get("marketplace_data", {})
+            marketplace_data[marketplace] = {
+                "id": marketplace_product.get('id'),
+                "barcode": marketplace_product.get('barcode', ''),
+                "characteristics": characteristics_dict,
+                "category": marketplace_product.get('category', ''),
+                "category_id": marketplace_product.get('category_id', ''),
+                "brand": marketplace_product.get('brand', ''),
+                "size": marketplace_product.get('size', ''),
+                "mapped_at": datetime.utcnow().isoformat()
+            }
+            
+            update_data = {
+                "name": marketplace_product.get('name'),
+                "description": marketplace_product.get('description', ''),
+                "brand": marketplace_product.get('brand', ''),
+                "characteristics": characteristics_dict,
+                "marketplace_data": marketplace_data,
+                "price_with_discount": int(marketplace_product.get('price', 0) * 100) if marketplace_product.get('price') else 0,
+                "updated_at": datetime.utcnow()
+            }
+            
+            await db.product_catalog.update_one(
+                {"_id": product_id},
+                {"$set": update_data}
+            )
+            
+            return {
+                "message": f"✅ Товар полностью обновлён данными с {marketplace.upper()}",
+                "product_id": str(product_id),
+                "action": "updated"
+            }
         
-        return {
-            "message": "Product already exists, mapping updated",
-            "product_id": product_id,
-            "action": "mapped"
-        }
+        elif action == 'skip':
+            # Пропустить импорт этого товара
+            return {
+                "message": f"⏩ Импорт товара '{sku}' пропущен",
+                "action": "skipped"
+            }
+        
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown action: {action}")
     
     # Create new product from marketplace data
     product_id = str(uuid.uuid4())
