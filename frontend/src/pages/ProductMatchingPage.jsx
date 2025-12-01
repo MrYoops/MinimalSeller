@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { FiRefreshCw, FiLink, FiCheck, FiX, FiSearch, FiFilter } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
+import { toast } from 'sonner'
 
 export default function ProductMatchingPage() {
   const { api } = useAuth()
