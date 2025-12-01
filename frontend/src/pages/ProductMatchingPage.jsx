@@ -148,7 +148,12 @@ export default function ProductMatchingPage() {
     try {
       // Удаляем marketplace_data для этого МП
       const localProd = localProducts.find(p => p.id === localProductId)
-      const mpData = { ...localProd.marketplace_data }
+      if (!localProd) {
+        alert('Товар не найден')
+        return
+      }
+      
+      const mpData = { ...(localProd.marketplace_data || {}) }
       delete mpData[selectedMarketplace]
 
       await api.put(`/api/catalog/products/${localProductId}`, {
@@ -156,11 +161,18 @@ export default function ProductMatchingPage() {
       })
 
       alert('✅ Связь удалена')
-      await loadLocalProducts()
-      matchProducts(mpProducts, localProducts)
+      
+      // Перезагружаем и пересопоставляем
+      const refreshResponse = await api.get('/api/catalog/products', {
+        params: { limit: 1000 }
+      })
+      const refreshedLocalProds = refreshResponse.data
+      setLocalProducts(refreshedLocalProds)
+      matchProducts(mpProducts, refreshedLocalProds)
 
     } catch (error) {
-      alert('Ошибка: ' + error.message)
+      console.error('Unlink error:', error)
+      alert('Ошибка: ' + (error.response?.data?.detail || error.message))
     }
   }
 
