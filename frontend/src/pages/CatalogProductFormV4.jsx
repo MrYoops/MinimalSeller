@@ -881,12 +881,31 @@ export default function CatalogProductFormV4() {
                       if (mapping) {
                         setProduct(prev => ({ ...prev, category_mapping_id: mapping.id }))
                         setCurrentMapping(mapping) // Сохраняем маппинг
+                        
+                        // ИСПРАВЛЕНИЕ: Обновить categoryMappings для каждого МП
+                        setCategoryMappings({
+                          ozon: {
+                            category_id: mapping.marketplace_categories?.ozon,
+                            category_name: mapping.internal_name,
+                            type_id: mapping.marketplace_type_ids?.ozon
+                          },
+                          wb: {
+                            category_id: mapping.marketplace_categories?.wildberries,
+                            category_name: mapping.internal_name
+                          },
+                          yandex: {
+                            category_id: mapping.marketplace_categories?.yandex,
+                            category_name: mapping.internal_name
+                          }
+                        })
+                        
                         // Сбросить флаги загрузки при смене категории
                         setCharacteristicsAttempted({ wb: false, ozon: false, yandex: false })
                         setMpCharacteristics({ wb: [], ozon: [], yandex: [] })
                       } else {
                         setProduct(prev => ({ ...prev, category_mapping_id: null }))
                         setCurrentMapping(null)
+                        setCategoryMappings({ ozon: {}, wb: {}, yandex: {} })
                       }
                     }}
                     onAttributesLoaded={(attributes) => {
