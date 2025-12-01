@@ -290,8 +290,8 @@ export default function CatalogProductsPage() {
                           )
                         }
                         
-                        // Проверяем Wildberries
-                        if (mpData.wb?.nm_id || mpData.wb?.vendor_code) {
+                        // Проверяем Wildberries (проверяем все варианты полей)
+                        if (mpData.wb?.nm_id || mpData.wb?.id || mpData.wb?.vendor_code) {
                           marketplaces.push(
                             <div key="wb" className="w-6 h-6 bg-purple-600 text-white rounded flex items-center justify-center text-[9px] font-bold" title="Wildberries (создано)">WB</div>
                           )
