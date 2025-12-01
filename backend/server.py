@@ -3293,8 +3293,8 @@ async def get_catalog_product(
         additional_info=product.get("additional_info"),
         website_link=product.get("website_link"),
         
-        # Данные маркетплейсов
-        marketplace_specific_data=product.get("marketplace_specific_data")
+        # Данные маркетплейсов - проверяем оба варианта названия
+        marketplace_specific_data=product.get("marketplace_specific_data") or product.get("marketplace_data")
     )
 
 
