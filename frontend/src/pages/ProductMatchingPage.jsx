@@ -128,11 +128,16 @@ export default function ProductMatchingPage() {
       
       alert(`✅ Товары связаны!\n\n${mpProduct.name} (${selectedMarketplace.toUpperCase()}) ← → ${localProduct.name}`)
       
-      // Перезагружаем
-      await loadLocalProducts()
-      matchProducts(mpProducts, localProducts)
+      // Перезагружаем и пересопоставляем
+      const refreshResponse = await api.get('/api/catalog/products', {
+        params: { limit: 1000 }
+      })
+      const refreshedLocalProds = refreshResponse.data
+      setLocalProducts(refreshedLocalProds)
+      matchProducts(mpProducts, refreshedLocalProds)
       
     } catch (error) {
+      console.error('Link error:', error)
       alert('Ошибка связывания: ' + (error.response?.data?.detail || error.message))
     }
   }
