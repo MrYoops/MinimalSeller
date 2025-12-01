@@ -1899,6 +1899,34 @@ async def import_product_from_marketplace(
     # Check if product with this SKU already exists
     existing_product = await db.product_catalog.find_one({"article": sku, "seller_id": current_user["_id"]})
     
+    # НОВАЯ ПРОВЕРКА: Если не найдено по артикулу, проверить по существующим связям МП
+    if not existing_product:
+        mp_search_query = {"seller_id": current_user["_id"]}
+        
+        # Поиск по ID товара на конкретном МП
+        if marketplace == 'ozon':
+            mp_id = marketplace_product.get('id')
+            if mp_id:
+                mp_search_query["$or"] = [
+                    {"marketplace_data.ozon.id": mp_id},
+                    {"marketplace_data.ozon.offer_id": sku}
+                ]
+        elif marketplace == 'wb':
+            mp_id = marketplace_product.get('id')
+            if mp_id:
+                mp_search_query["$or"] = [
+                    {"marketplace_data.wb.nm_id": mp_id},
+                    {"marketplace_data.wb.vendor_code": sku}
+                ]
+        elif marketplace == 'yandex':
+            mp_search_query["marketplace_data.yandex.offer_id"] = sku
+        
+        # Попытка найти по связи с МП
+        if "$or" in mp_search_query or "marketplace_data" in str(mp_search_query):
+            existing_product = await db.product_catalog.find_one(mp_search_query)
+            if existing_product:
+                logger.info(f"✅ Found existing product by marketplace link: {existing_product.get('name')}")
+    
     if existing_product:
         logger.info(f"⚠️ Duplicate found: {existing_product.get('name')}")
         
