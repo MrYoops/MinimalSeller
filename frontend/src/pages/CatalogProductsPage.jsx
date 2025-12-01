@@ -110,6 +110,12 @@ export default function CatalogProductsPage() {
             <FiLink /> СОПОСТАВЛЕНИЕ
           </button>
           <button
+            onClick={() => window.location.href = '/catalog/pricing'}
+            className="px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded flex items-center gap-2"
+          >
+            <FiDollarSign /> ЦЕНЫ
+          </button>
+          <button
             onClick={() => window.location.href = '/catalog/import'}
             className="px-4 py-2 bg-mm-secondary text-mm-text hover:bg-mm-secondary/80 rounded flex items-center gap-2"
           >
