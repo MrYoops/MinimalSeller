@@ -76,6 +76,9 @@ function AppRoutes() {
       <Route path="/catalog/categories" element={
         <ProtectedRoute><CatalogCategoriesPageSimple /></ProtectedRoute>
       } />
+      <Route path="/catalog/products" element={
+        <ProtectedRoute><CatalogProductsPage /></ProtectedRoute>
+      } />
       <Route path="/catalog/products/new" element={
         <ProtectedRoute><CatalogProductFormV4 /></ProtectedRoute>
       } />
