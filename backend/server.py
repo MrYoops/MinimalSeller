@@ -5361,9 +5361,36 @@ async def save_product_with_marketplaces(
                         
                         logger.info(f"[{mp}] ✅ Product created: {create_result}")
                         
+                        # СОХРАНИТЬ СВЯЗЬ: обновить marketplace_data после успешного создания
+                        existing_mp_data = product_doc.get('marketplace_data', {})
+                        
+                        # Для Ozon сохраняем task_id и offer_id
+                        if mp == 'ozon':
+                            existing_mp_data[mp] = {
+                                **existing_mp_data.get(mp, {}),
+                                "task_id": create_result.get('task_id'),
+                                "offer_id": product_doc['article'],
+                                "linked_at": datetime.utcnow().isoformat()
+                            }
+                        # Для WB и Yandex - сохраняем артикул
+                        else:
+                            existing_mp_data[mp] = {
+                                **existing_mp_data.get(mp, {}),
+                                "vendor_code" if mp == 'wb' else "offer_id": product_doc['article'],
+                                "linked_at": datetime.utcnow().isoformat()
+                            }
+                        
+                        # Обновляем документ в БД со связью
+                        await db.product_catalog.update_one(
+                            {"_id": product_id},
+                            {"$set": {"marketplace_data": existing_mp_data}}
+                        )
+                        
+                        logger.info(f"[{mp}] 🔗 Marketplace link saved for product {product_id}")
+                        
                         results[mp] = {
                             "success": True,
-                            "message": f"✅ Карточка создана на {mp.upper()}",
+                            "message": f"✅ Карточка создана и связана на {mp.upper()}",
                             "details": create_result
                         }
                         
