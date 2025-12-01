@@ -376,11 +376,11 @@ export default function CatalogProductFormV4() {
       if (!categoryId) {
         console.warn(`Category not mapped to ${marketplace}`)
         // КРИТИЧНО: НЕ загружаем характеристики для несопоставленной категории!
+        // QuickMatcher автоматически появится в UnifiedMarketplaceCharacteristics
         setMpCharacteristics(prev => ({
           ...prev,
           [marketplace]: []
         }))
-        alert(`⚠️ ВНИМАНИЕ!\n\nВыбранная категория не сопоставлена с ${marketplace.toUpperCase()}!\n\nПерейдите в КАТЕГОРИИ и создайте сопоставление для этой категории, либо выберите другую категорию.`)
         return
       }
       
