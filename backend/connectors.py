@@ -201,7 +201,7 @@ class OzonConnector(BaseConnector):
             "limit": 100
         }
         
-        logger.info(f"[Ozon] Step 1: Getting product list")
+        logger.info("[Ozon] Step 1: Getting product list")
         
         all_products = []
         
@@ -882,7 +882,7 @@ class OzonConnector(BaseConnector):
                         message="; ".join(error_messages)
                     )
             
-            logger.info(f"[Ozon] ✅ Prices updated successfully")
+            logger.info("[Ozon] ✅ Prices updated successfully")
             return {
                 "success": True,
                 "message": f"✅ Цены обновлены на Ozon: {price}₽ / {old_price}₽"
@@ -1342,7 +1342,7 @@ class WildberriesConnector(BaseConnector):
         try:
             response = await self._make_request("POST", url, headers, json_data=payload)
             
-            logger.info(f"[WB] ✅ Prices updated successfully")
+            logger.info("[WB] ✅ Prices updated successfully")
             return {
                 "success": True,
                 "message": f"✅ Цены обновлены на Wildberries: {regular_price}₽" + 

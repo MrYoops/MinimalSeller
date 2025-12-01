@@ -4720,7 +4720,7 @@ async def get_marketplace_categories(
     if not seller_profile or not seller_profile.get("api_keys"):
         raise HTTPException(
             status_code=400,
-            detail=f"Нет активных интеграций. Добавьте API ключи в разделе ИНТЕГРАЦИИ."
+            detail="Нет активных интеграций. Добавьте API ключи в разделе ИНТЕГРАЦИИ."
         )
     
     # Найти ключи для этого маркетплейса
@@ -4780,7 +4780,7 @@ async def get_category_attributes(
     seller_profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
     
     if not seller_profile or not seller_profile.get("api_keys"):
-        raise HTTPException(status_code=400, detail=f"Нет активных интеграций")
+        raise HTTPException(status_code=400, detail="Нет активных интеграций")
     
     # Найти ключи для этого маркетплейса
     api_keys = [k for k in seller_profile.get("api_keys", []) if k.get("marketplace") == marketplace]
@@ -4833,7 +4833,7 @@ async def import_from_marketplace(
     seller_profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
     
     if not seller_profile or not seller_profile.get("api_keys"):
-        raise HTTPException(status_code=400, detail=f"Нет активных интеграций")
+        raise HTTPException(status_code=400, detail="Нет активных интеграций")
     
     # Найти ключи для этого маркетплейса
     api_keys = [k for k in seller_profile.get("api_keys", []) if k.get("marketplace") == marketplace]
@@ -5598,7 +5598,7 @@ async def save_product_with_marketplaces(
     success_count = sum(1 for r in results.values() if r.get('success'))
     total_count = len([k for k in marketplaces.keys() if k in ['wb', 'ozon', 'yandex'] and marketplaces[k]])
     
-    message = f"✅ Товар сохранен!"
+    message = "✅ Товар сохранен!"
     if total_count > 0:
         message += f"\n📤 Отправлено на {success_count} из {total_count} маркетплейсов"
     
