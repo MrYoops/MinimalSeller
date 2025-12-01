@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FiPlus, FiSearch, FiFilter, FiDownload, FiUpload, FiEdit, FiTrash2, FiPackage, FiLink } from 'react-icons/fi'
+import { FiPlus, FiSearch, FiFilter, FiDownload, FiUpload, FiEdit, FiTrash2, FiPackage, FiLink, FiDollarSign } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
 
 export default function CatalogProductsPage() {
