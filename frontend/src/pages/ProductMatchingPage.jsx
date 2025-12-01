@@ -120,11 +120,24 @@ export default function ProductMatchingPage() {
   const handleLink = async (mpProduct, localProduct) => {
     try {
       console.log('🔗 Linking:', mpProduct.sku, '→', localProduct.article)
+      console.log('MP Product:', mpProduct)
+      console.log('Local Product:', localProduct)
       
-      const response = await api.post('/api/products/import-from-marketplace', {
+      const payload = {
         product: mpProduct,
         duplicate_action: 'link_only'
-      })
+      }
+      
+      console.log('Sending payload:', payload)
+      
+      const response = await api.post('/api/products/import-from-marketplace', payload)
+      
+      console.log('Response:', response.data)
+      
+      if (response.data.status === 'duplicate_found') {
+        alert('⚠️ Товар уже существует. Повторите попытку с выбором действия.')
+        return
+      }
       
       alert(`✅ Товары связаны!\n\n${mpProduct.name} (${selectedMarketplace.toUpperCase()}) ← → ${localProduct.name}`)
       
@@ -138,6 +151,7 @@ export default function ProductMatchingPage() {
       
     } catch (error) {
       console.error('Link error:', error)
+      console.error('Error response:', error.response?.data)
       alert('Ошибка связывания: ' + (error.response?.data?.detail || error.message))
     }
   }
