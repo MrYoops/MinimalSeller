@@ -225,10 +225,37 @@ function ProductMappingPage() {
         product: mpProduct
       })
       
-      if (response.data.action === 'created') {
+      // Проверка на дубликат
+      if (response.data.status === 'duplicate_found') {
+        const existingProd = response.data.existing_product
+        const importProd = response.data.import_product
+        
+        const choice = window.confirm(
+          `⚠️ ДУБЛИКАТ НАЙДЕН!\n\n` +
+          `Артикул: ${existingProd.article}\n\n` +
+          `В базе:\n  - Название: ${existingProd.name}\n  - Бренд: ${existingProd.brand}\n  - Цена: ${existingProd.price}₽\n\n` +
+          `Импортируется с ${importProd.marketplace.toUpperCase()}:\n  - Название: ${importProd.name}\n  - Цена: ${importProd.price}₽\n\n` +
+          `Нажмите:\n` +
+          `  OK - связать с МП без изменений\n` +
+          `  ОТМЕНА - пропустить импорт`
+        )
+        
+        if (choice) {
+          // Связать с МП без обновления
+          const linkResponse = await api.post('/api/products/import-from-marketplace', {
+            product: mpProduct,
+            duplicate_action: 'link_only'
+          })
+          alert(`✅ ${linkResponse.data.message}`)
+        } else {
+          // Пропустить
+          alert('⏩ Импорт пропущен')
+          return
+        }
+      } else if (response.data.action === 'created') {
         alert(`✅ Товар импортирован!\n\n${mpProduct.name}\nSKU: ${mpProduct.sku}\n\nТовар добавлен во вкладку PRODUCTS.`)
       } else {
-        alert(`ℹ️ Товар уже существует!\n\n${mpProduct.name}\nSKU: ${mpProduct.sku}`)
+        alert(`ℹ️ ${response.data.message}`)
       }
       
       // Reload data
