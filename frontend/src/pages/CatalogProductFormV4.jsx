@@ -390,8 +390,15 @@ export default function CatalogProductFormV4() {
         url += `?type_id=${typeId}`
       }
       
+      console.log(`[loadMarketplaceCharacteristics] 🔥 LOADING FROM:`, url)
+      console.log(`[loadMarketplaceCharacteristics] 🔥 CATEGORY ID:`, categoryId)
+      console.log(`[loadMarketplaceCharacteristics] 🔥 TYPE ID:`, typeId)
+      
       const response = await api.get(url)
       const characteristics = response.data.attributes || []
+      
+      console.log(`[loadMarketplaceCharacteristics] 🔥 RECEIVED ${characteristics.length} CHARACTERISTICS`)
+      console.log(`[loadMarketplaceCharacteristics] 🔥 FIRST 3 CHARS:`, characteristics.slice(0, 3).map(c => c.name || c.attribute_name))
       
       setMpCharacteristics(prev => ({
         ...prev,
