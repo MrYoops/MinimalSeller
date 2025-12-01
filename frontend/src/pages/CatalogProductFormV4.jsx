@@ -421,9 +421,9 @@ export default function CatalogProductFormV4() {
       
       // Проверяем каждый маркетплейс
       for (const mp of ['ozon', 'wb', 'yandex']) {
-        // Если галочка включена И (характеристики не загружены ИЛИ еще не пытались загрузить)
-        if (selectedMarketplaces[mp] && !characteristicsAttempted[mp] && !loadingCharacteristics[mp]) {
-          console.log(`[ProductForm] Loading characteristics for ${mp}`)
+        // ИСПРАВЛЕНО: Перезагружать характеристики КАЖДЫЙ РАЗ при смене категории
+        if (selectedMarketplaces[mp] && !loadingCharacteristics[mp]) {
+          console.log(`[ProductForm] Loading characteristics for ${mp} (category: ${product.category_mapping_id})`)
           await loadMarketplaceCharacteristics(mp, product.category_mapping_id)
         }
       }
