@@ -1967,9 +1967,8 @@ async def import_product_from_marketplace(
                 if char_name and char_value:
                     characteristics_dict[char_name] = char_value
             
-            marketplace_data[marketplace] = {
-                "id": marketplace_product.get('id'),
-                "barcode": marketplace_product.get('barcode', ''),
+            # УЛУЧШЕННОЕ СОХРАНЕНИЕ: Сохраняем все нужные ID для разных МП
+            mp_link_data = {
                 "characteristics": characteristics_dict,
                 "category": marketplace_product.get('category', ''),
                 "category_id": marketplace_product.get('category_id', ''),
@@ -1978,14 +1977,33 @@ async def import_product_from_marketplace(
                 "mapped_at": datetime.utcnow().isoformat()
             }
             
+            # Добавляем специфичные для МП поля
+            if marketplace == 'ozon':
+                mp_link_data["id"] = marketplace_product.get('id')  # product_id
+                mp_link_data["offer_id"] = sku  # артикул продавца
+                mp_link_data["barcode"] = marketplace_product.get('barcode', '')
+            elif marketplace == 'wb':
+                mp_link_data["nm_id"] = marketplace_product.get('id')  # nmID товара
+                mp_link_data["vendor_code"] = sku  # артикул продавца
+                mp_link_data["barcode"] = marketplace_product.get('barcode', '')
+            elif marketplace == 'yandex':
+                mp_link_data["offer_id"] = sku
+                mp_link_data["shop_sku"] = marketplace_product.get('id', sku)
+            
+            marketplace_data[marketplace] = mp_link_data
+            
             await db.product_catalog.update_one(
                 {"_id": product_id},
                 {"$set": {"marketplace_data": marketplace_data, "updated_at": datetime.utcnow()}}
             )
             
+            logger.info(f"✅ Product {product_id} linked with {marketplace}: {mp_link_data}")
+            
             return {
                 "message": f"✅ Товар связан с {marketplace.upper()} без обновления данных",
                 "product_id": str(product_id),
+                "action": "linked"
+            }
                 "action": "linked"
             }
         
