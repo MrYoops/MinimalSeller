@@ -747,6 +747,151 @@ class OzonConnector(BaseConnector):
             logger.error(f"[Ozon] Failed to get stocks: {e.message}")
             raise
 
+    async def get_product_prices(self, offer_id: str) -> Dict[str, Any]:
+        """
+        Получить текущие цены товара с Ozon
+        
+        Args:
+            offer_id: Артикул товара (offer_id)
+        
+        Returns:
+            {
+                "offer_id": str,
+                "price": float,
+                "old_price": float,
+                "marketing_price": float,
+                "currency_code": str
+            }
+        """
+        logger.info(f"[Ozon] Getting prices for offer_id: {offer_id}")
+        
+        url = f"{self.base_url}/v4/product/info/prices"
+        headers = self._get_headers()
+        
+        payload = {
+            "filter": {
+                "offer_id": [offer_id],
+                "visibility": "ALL"
+            },
+            "last_id": "",
+            "limit": 1
+        }
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            items = response.get("result", {}).get("items", [])
+            
+            if not items:
+                logger.warning(f"[Ozon] No price info found for offer_id: {offer_id}")
+                return {
+                    "offer_id": offer_id,
+                    "price": 0,
+                    "old_price": 0,
+                    "marketing_price": 0,
+                    "currency_code": "RUB"
+                }
+            
+            item = items[0]
+            price_info = item.get("price", {})
+            
+            result = {
+                "offer_id": item.get("offer_id", offer_id),
+                "product_id": item.get("product_id"),
+                "price": float(price_info.get("price", "0")),
+                "old_price": float(price_info.get("old_price", "0")),
+                "marketing_price": float(price_info.get("marketing_price", "0")),
+                "currency_code": price_info.get("currency_code", "RUB"),
+                "vat": price_info.get("vat", "0")
+            }
+            
+            logger.info(f"[Ozon] ✅ Got prices: {result['price']}₽ / {result['old_price']}₽")
+            return result
+            
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Failed to get prices: {e.message}")
+            raise
+
+    async def update_product_prices(self, offer_id: str, price: float, old_price: float, 
+                                     marketing_price: str = "UNKNOWN") -> Dict[str, Any]:
+        """
+        Обновить цены товара на Ozon
+        
+        Args:
+            offer_id: Артикул товара
+            price: Цена со скидкой (в рублях)
+            old_price: Цена до скидки (в рублях)
+            marketing_price: Маркетинговая цена (по умолчанию "UNKNOWN")
+        
+        Returns:
+            {"success": bool, "message": str}
+        """
+        logger.info(f"[Ozon] Updating prices for {offer_id}: {price}₽ / {old_price}₽")
+        
+        url = f"{self.base_url}/v1/product/import/prices"
+        headers = self._get_headers()
+        
+        # Валидация
+        if price <= 0:
+            raise MarketplaceError(
+                marketplace="Ozon",
+                status_code=400,
+                message="Цена должна быть больше 0"
+            )
+        
+        if old_price <= 0:
+            raise MarketplaceError(
+                marketplace="Ozon",
+                status_code=400,
+                message="Цена до скидки должна быть больше 0"
+            )
+        
+        if price > old_price:
+            raise MarketplaceError(
+                marketplace="Ozon",
+                status_code=400,
+                message="Цена со скидкой не может быть больше цены без скидки"
+            )
+        
+        payload = {
+            "prices": [{
+                "offer_id": offer_id,
+                "price": str(int(price)),
+                "old_price": str(int(old_price)),
+                "currency_code": "RUB"
+            }]
+        }
+        
+        # Добавляем marketing_price только если не UNKNOWN
+        if marketing_price and marketing_price != "UNKNOWN":
+            payload["prices"][0]["marketing_price"] = marketing_price
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            
+            # Проверяем результат
+            results = response.get("result", [])
+            if results and len(results) > 0:
+                result = results[0]
+                errors = result.get("errors", [])
+                
+                if errors:
+                    error_messages = [f"{e.get('code')}: {e.get('message')}" for e in errors]
+                    raise MarketplaceError(
+                        marketplace="Ozon",
+                        status_code=400,
+                        message="; ".join(error_messages)
+                    )
+            
+            logger.info(f"[Ozon] ✅ Prices updated successfully")
+            return {
+                "success": True,
+                "message": f"✅ Цены обновлены на Ozon: {price}₽ / {old_price}₽"
+            }
+            
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Failed to update prices: {e.message}")
+            raise
+
 
 
 
