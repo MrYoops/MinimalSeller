@@ -1236,6 +1236,123 @@ class WildberriesConnector(BaseConnector):
             logger.error(f"[WB] Failed to get stocks: {e.message}")
             raise
 
+    async def get_product_prices(self, nm_id: int) -> Dict[str, Any]:
+        """
+        Получить текущие цены товара с Wildberries
+        
+        Args:
+            nm_id: ID товара на WB (nmID)
+        
+        Returns:
+            {
+                "nm_id": int,
+                "price": float,
+                "discount_price": float,
+                "discount_percent": int
+            }
+        """
+        logger.info(f"[WB] Getting prices for nm_id: {nm_id}")
+        
+        # WB API v3 для получения цен и скидок
+        url = f"{self.content_api_url}/public/api/v1/info"
+        headers = self._get_headers()
+        
+        params = {
+            "nm": nm_id
+        }
+        
+        try:
+            response = await self._make_request("GET", url, headers, params=params)
+            
+            if not response or not isinstance(response, list) or len(response) == 0:
+                logger.warning(f"[WB] No price info found for nm_id: {nm_id}")
+                return {
+                    "nm_id": nm_id,
+                    "price": 0,
+                    "discount_price": 0,
+                    "discount_percent": 0
+                }
+            
+            item = response[0]
+            price = item.get("price", 0)
+            discount = item.get("discount", 0)
+            
+            # Рассчитываем цену со скидкой
+            discount_price = price * (1 - discount / 100) if discount > 0 else price
+            
+            result = {
+                "nm_id": nm_id,
+                "price": float(price),
+                "discount_price": float(discount_price),
+                "discount_percent": int(discount)
+            }
+            
+            logger.info(f"[WB] ✅ Got prices: {result['price']}₽ (скидка {result['discount_percent']}%)")
+            return result
+            
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to get prices: {e.message}")
+            raise
+
+    async def update_product_prices(self, nm_id: int, regular_price: float, 
+                                     discount_price: Optional[float] = None) -> Dict[str, Any]:
+        """
+        Обновить цены товара на Wildberries
+        
+        Args:
+            nm_id: ID товара на WB
+            regular_price: Обычная цена (без скидки) в рублях
+            discount_price: Цена со скидкой (опционально) в рублях
+        
+        Returns:
+            {"success": bool, "message": str}
+        """
+        logger.info(f"[WB] Updating prices for nm_id {nm_id}: regular={regular_price}₽, discount={discount_price}₽")
+        
+        # Новый API WB для установки цен (2024)
+        url = f"{self.content_api_url}/public/api/v1/prices"
+        headers = self._get_headers()
+        
+        # Валидация
+        if regular_price <= 0:
+            raise MarketplaceError(
+                marketplace="Wildberries",
+                status_code=400,
+                message="Обычная цена должна быть больше 0"
+            )
+        
+        if discount_price and discount_price > regular_price:
+            raise MarketplaceError(
+                marketplace="Wildberries",
+                status_code=400,
+                message="Цена со скидкой не может быть больше обычной цены"
+            )
+        
+        # Формируем payload
+        payload = [{
+            "nmId": nm_id,
+            "price": int(regular_price)
+        }]
+        
+        # Если есть цена со скидкой, добавляем discount
+        if discount_price:
+            discount_percent = int(((regular_price - discount_price) / regular_price) * 100)
+            payload[0]["discount"] = discount_percent
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            
+            logger.info(f"[WB] ✅ Prices updated successfully")
+            return {
+                "success": True,
+                "message": f"✅ Цены обновлены на Wildberries: {regular_price}₽" + 
+                          (f" / {discount_price}₽" if discount_price else "")
+            }
+            
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to update prices: {e.message}")
+            raise
+
 class YandexMarketConnector(BaseConnector):
     """Yandex.Market connector - REAL API with full headers"""
     
