@@ -489,19 +489,34 @@ class OzonConnector(BaseConnector):
         # Преобразовать в int если возможно
         if isinstance(category_id, str):
             try:
-                category_id = int(category_id) if category_id.isdigit() else 15621048
+                category_id = int(category_id) if category_id.isdigit() else None
             except:
-                category_id = 15621048
-        elif not category_id or not isinstance(category_id, int):
-            category_id = 15621048
+                category_id = None
+        elif not isinstance(category_id, int):
+            category_id = None
         
         if isinstance(type_id, str):
             try:
-                type_id = int(type_id) if type_id.isdigit() else 91248
+                type_id = int(type_id) if type_id.isdigit() else None
             except:
-                type_id = 91248
-        elif not type_id or not isinstance(type_id, int):
-            type_id = 91248
+                type_id = None
+        elif not isinstance(type_id, int):
+            type_id = None
+        
+        # ВАЛИДАЦИЯ: Если category_id или type_id не удалось получить - ошибка!
+        if not category_id:
+            raise MarketplaceError(
+                marketplace="Ozon",
+                status_code=400,
+                message="Неверный формат category_id! Проверьте сопоставление категории с Ozon."
+            )
+        
+        if not type_id:
+            raise MarketplaceError(
+                marketplace="Ozon",
+                status_code=400,
+                message="Неверный формат type_id! Проверьте сопоставление категории с Ozon."
+            )
         
         logger.info(f"[Ozon] Validated category_id={category_id}, type_id={type_id}")
         
