@@ -375,12 +375,12 @@ export default function CatalogProductFormV4() {
       
       if (!categoryId) {
         console.warn(`Category not mapped to ${marketplace}`)
-        // Не загружаем характеристики, но не показываем ошибку
-        // Пользователь может использовать товар без этого маркетплейса
+        // КРИТИЧНО: НЕ загружаем характеристики для несопоставленной категории!
         setMpCharacteristics(prev => ({
           ...prev,
           [marketplace]: []
         }))
+        alert(`⚠️ ВНИМАНИЕ!\n\nВыбранная категория не сопоставлена с ${marketplace.toUpperCase()}!\n\nПерейдите в КАТЕГОРИИ и создайте сопоставление для этой категории, либо выберите другую категорию.`)
         return
       }
       
