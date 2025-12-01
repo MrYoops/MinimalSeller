@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { FiPlus, FiSearch, FiFilter, FiDownload, FiUpload, FiEdit, FiTrash2, FiPackage, FiLink, FiDollarSign } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
+import CatalogNavDropdown from '../components/CatalogNavDropdown'
 
 export default function CatalogProductsPage() {
   const { api } = useAuth()
@@ -98,9 +99,12 @@ export default function CatalogProductsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-mm-cyan">ТОВАРЫ</h1>
-          <p className="text-sm text-mm-text-secondary mt-1">Каталог товаров</p>
+        <div className="flex items-center gap-4">
+          <CatalogNavDropdown />
+          <div>
+            <h1 className="text-3xl font-bold text-mm-cyan">ТОВАРЫ</h1>
+            <p className="text-sm text-mm-text-secondary mt-1">Каталог товаров</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
