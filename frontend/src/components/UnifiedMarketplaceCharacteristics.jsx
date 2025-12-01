@@ -289,10 +289,16 @@ export default function UnifiedMarketplaceCharacteristics({
     )
   }
   
-  // МП которым нужен QuickMatcher (нет характеристик)
+  // МП которым нужен QuickMatcher (нет характеристик ИЛИ нужна перенастройка)
   const marketplacesNeedingMapping = activeMarketplaces.filter(mp => {
     const chars = characteristicsByMarketplace[mp] || []
     return chars.length === 0
+  })
+  
+  // МП с загруженными характеристиками (можно пересопоставить)
+  const marketplacesWithMapping = activeMarketplaces.filter(mp => {
+    const chars = characteristicsByMarketplace[mp] || []
+    return chars.length > 0
   })
   
   const requiredChars = unifiedCharacteristics.filter(c => c.requiredIn.length > 0)
@@ -318,6 +324,47 @@ export default function UnifiedMarketplaceCharacteristics({
           }}
         />
       ))}
+      
+      {/* ПРЕДУПРЕЖДЕНИЯ ДЛЯ МП С СОПОСТАВЛЕННЫМИ КАТЕГОРИЯМИ */}
+      {marketplacesWithMapping.map(mp => {
+        const config = mpConfig[mp]
+        const mapping = categoryMappings[mp] || {}
+        
+        return (
+          <div key={`info-${mp}`} className={`${config.color.bg} border ${config.color.border} border-opacity-30 rounded-lg p-4`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 ${config.color.bg} text-white rounded flex items-center justify-center text-xs font-bold`}>
+                  {config.shortName}
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${config.color.text}`}>
+                    {config.name}: {currentCategoryName}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    ID: {mapping.category_id} {mapping.type_id ? `| Type: ${mapping.type_id}` : ''}
+                  </p>
+                </div>
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Пересопоставить категорию ${config.name}?\n\nХарактеристики будут очищены.`)) {
+                    if (onMappingUpdated) {
+                      onMappingUpdated(mp, null, null, null)
+                    }
+                  }
+                }}
+                className={`px-3 py-1.5 ${config.color.bg} bg-opacity-80 hover:bg-opacity-100 text-white text-xs font-semibold rounded flex items-center gap-1.5 transition`}
+              >
+                <FiAlertCircle size={14} />
+                🔄 Изменить категорию
+              </button>
+            </div>
+          </div>
+        )
+      })}
       
       {/* ЕДИНАЯ ТАБЛИЦА ВСЕХ ХАРАКТЕРИСТИК */}
       {unifiedCharacteristics.length > 0 && (
