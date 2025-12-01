@@ -1369,7 +1369,7 @@ export default function CatalogProductFormV4() {
 
           {activeTab !== 'card' && activeTab !== 'prices' && (
             <div className="bg-mm-secondary p-6 rounded-lg text-center py-12">
-              <p className="text-mm-text-secondary">Раздел "{activeTab}" в разработке</p>
+              <p className="text-mm-text-secondary">Раздел &quot;{activeTab}&quot; в разработке</p>
             </div>
           )}
         </form>
