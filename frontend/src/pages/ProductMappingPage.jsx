@@ -177,6 +177,7 @@ function ProductMappingPage() {
     try {
       let imported = 0
       let existing = 0
+      let skipped = 0
       
       for (const mpProductId of selectedForImport) {
         const mpProduct = mpProducts.find(p => p.id === mpProductId)
@@ -190,7 +191,29 @@ function ProductMappingPage() {
             tag: importSettings.tag  // Отправляем тег
           })
           
-          if (response.data.action === 'created') {
+          // Проверка на дубликат
+          if (response.data.status === 'duplicate_found') {
+            const existingProd = response.data.existing_product
+            const importProd = response.data.import_product
+            
+            const choice = window.confirm(
+              `⚠️ ДУБЛИКАТ: ${existingProd.article}\n\n` +
+              `В базе: ${existingProd.name}\n` +
+              `Импорт: ${importProd.name} (${importProd.marketplace.toUpperCase()})\n\n` +
+              `OK - связать | ОТМЕНА - пропустить`
+            )
+            
+            if (choice) {
+              // Связать с МП
+              const linkResponse = await api.post('/api/products/import-from-marketplace', {
+                product: mpProduct,
+                duplicate_action: 'link_only'
+              })
+              existing++
+            } else {
+              skipped++
+            }
+          } else if (response.data.action === 'created') {
             imported++
           } else {
             existing++
@@ -198,10 +221,17 @@ function ProductMappingPage() {
           
         } catch (error) {
           console.error('Failed:', mpProduct.sku, error)
+          skipped++
         }
       }
       
-      alert(`✅ Импорт завершён!\n\nНовых товаров: ${imported}\nУже существует: ${existing}\n\nТовары добавлены во вкладку PRODUCTS с автоматическим сопоставлением.`)
+      alert(
+        `✅ Импорт завершён!\n\n` +
+        `Новых товаров: ${imported}\n` +
+        `Обновлено связей: ${existing}\n` +
+        `Пропущено: ${skipped}\n\n` +
+        `Товары добавлены во вкладку PRODUCTS с автоматическим сопоставлением.`
+      )
       setSelectedForImport([])
       setImportSettings({ category_id: '', tag: '' })  // Очищаем настройки
       
