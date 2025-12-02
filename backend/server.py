@@ -5615,7 +5615,7 @@ async def save_product_with_marketplaces(
 
 @app.get("/api/catalog/products/pricing")
 async def get_all_products_pricing(
-    current_user: dict = Depends(require_role(UserRole.SELLER))
+    current_user: dict = Depends(get_current_user)
 ):
     """Получить все товары с информацией о ценах на маркетплейсах"""
     try:
