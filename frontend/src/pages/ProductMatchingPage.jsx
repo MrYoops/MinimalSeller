@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { FiRefreshCw, FiLink, FiCheck, FiX, FiSearch, FiFilter } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
 import { toast } from 'sonner'
+import CatalogNavDropdown from '../components/CatalogNavDropdown'
 
 export default function ProductMatchingPage() {
   const { api } = useAuth()
