@@ -23,7 +23,7 @@ const PriceEditModal = ({ product, onClose, onUpdate }) => {
   const fetchHistory = async () => {
     try {
       setLoadingHistory(true);
-      const response = await api.get(`/api/catalog/products/${product.product_id}/pricing/history?limit=5`);
+      const response = await api.get(`/api/catalog/pricing/${product.product_id}/history?limit=5`);
       setHistory(response.data.history || []);
     } catch (error) {
       console.error('Error fetching history:', error);
@@ -55,7 +55,7 @@ const PriceEditModal = ({ product, onClose, onUpdate }) => {
 
     try {
       setLoading(true);
-      await api.put(`/api/catalog/products/${product.product_id}/pricing/ozon`, {
+      await api.put(`/api/catalog/pricing/${product.product_id}/ozon`, {
         marketplace: 'ozon',
         price: parseFloat(ozonPrice),
         old_price: parseFloat(ozonOldPrice)
@@ -88,7 +88,7 @@ const PriceEditModal = ({ product, onClose, onUpdate }) => {
 
     try {
       setLoading(true);
-      await api.put(`/api/catalog/products/${product.product_id}/pricing/wb`, {
+      await api.put(`/api/catalog/pricing/${product.product_id}/wb`, {
         marketplace: 'wb',
         regular_price: parseFloat(wbRegularPrice),
         discount_price: wbDiscountPrice ? parseFloat(wbDiscountPrice) : null

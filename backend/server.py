@@ -5613,7 +5613,7 @@ async def save_product_with_marketplaces(
 # PRICING MANAGEMENT ENDPOINTS
 # ============================================================================
 
-@app.get("/api/catalog/products/pricing")
+@app.get("/api/catalog/pricing")
 async def get_all_products_pricing(
     current_user: dict = Depends(get_current_user)
 ):
@@ -5660,7 +5660,7 @@ async def get_all_products_pricing(
         )
 
 
-@app.get("/api/catalog/products/{product_id}/pricing")
+@app.get("/api/catalog/pricing/{product_id}")
 async def get_product_pricing(
     product_id: str,
     current_user: dict = Depends(get_current_user)

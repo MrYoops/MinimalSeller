@@ -32,7 +32,7 @@ const PricingPage = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/catalog/products/pricing');
+      const response = await api.get('/api/catalog/pricing');
       setProducts(response.data.products || []);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -44,7 +44,7 @@ const PricingPage = () => {
 
   const fetchAlerts = async () => {
     try {
-      const response = await api.get('/api/catalog/products/pricing/alerts');
+      const response = await api.get('/api/catalog/pricing/alerts');
       setAlerts(response.data.alerts || []);
     } catch (error) {
       console.error('Error fetching alerts:', error);
@@ -87,7 +87,7 @@ const PricingPage = () => {
       
       for (const product of products) {
         try {
-          await api.post(`/api/catalog/products/${product.product_id}/pricing/sync`);
+          await api.post(`/api/catalog/pricing/${product.product_id}/sync`);
           successCount++;
         } catch (err) {
           console.error(`Failed to sync ${product.article}:`, err);
