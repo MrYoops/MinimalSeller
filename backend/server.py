@@ -5663,7 +5663,7 @@ async def get_all_products_pricing(
 @app.get("/api/catalog/products/{product_id}/pricing")
 async def get_product_pricing(
     product_id: str,
-    current_user: dict = Depends(require_role(UserRole.SELLER))
+    current_user: dict = Depends(get_current_user)
 ):
     """Получить информацию о ценах конкретного товара"""
     try:
@@ -5709,7 +5709,7 @@ async def update_product_pricing(
     product_id: str,
     marketplace: str,
     pricing_update: PricingUpdate,
-    current_user: dict = Depends(require_role(UserRole.SELLER))
+    current_user: dict = Depends(get_current_user)
 ):
     """Обновить цены товара на конкретном маркетплейсе"""
     try:
@@ -5880,7 +5880,7 @@ async def update_product_pricing(
 @app.post("/api/catalog/products/{product_id}/pricing/sync")
 async def sync_product_pricing(
     product_id: str,
-    current_user: dict = Depends(require_role(UserRole.SELLER))
+    current_user: dict = Depends(get_current_user)
 ):
     """Синхронизировать цены с маркетплейсами (получить актуальные цены)"""
     try:
@@ -6021,7 +6021,7 @@ async def sync_product_pricing(
 @app.post("/api/catalog/products/pricing/bulk")
 async def bulk_update_pricing(
     bulk_update: BulkPricingUpdate,
-    current_user: dict = Depends(require_role(UserRole.SELLER))
+    current_user: dict = Depends(get_current_user)
 ):
     """Массовое обновление цен товаров"""
     try:
@@ -6217,7 +6217,7 @@ async def bulk_update_pricing(
 
 @app.get("/api/catalog/products/pricing/alerts")
 async def get_pricing_alerts(
-    current_user: dict = Depends(require_role(UserRole.SELLER))
+    current_user: dict = Depends(get_current_user)
 ):
     """Получить все активные алерты о ценах"""
     try:
@@ -6243,7 +6243,7 @@ async def get_pricing_alerts(
 @app.post("/api/catalog/products/pricing/alerts/{alert_id}/resolve")
 async def resolve_pricing_alert(
     alert_id: str,
-    current_user: dict = Depends(require_role(UserRole.SELLER))
+    current_user: dict = Depends(get_current_user)
 ):
     """Отметить алерт как решённый"""
     try:
@@ -6285,7 +6285,7 @@ async def resolve_pricing_alert(
 async def get_product_pricing_history(
     product_id: str,
     limit: int = Query(default=10, ge=1, le=100),
-    current_user: dict = Depends(require_role(UserRole.SELLER))
+    current_user: dict = Depends(get_current_user)
 ):
     """Получить историю изменения цен товара"""
     try:
