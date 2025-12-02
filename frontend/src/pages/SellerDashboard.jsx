@@ -123,7 +123,9 @@ function SellerDashboard() {
         
         {activeTab === 'warehouses' && <WarehousesSection />}
         
-        {/* ТОВАРЫ теперь работает через router, не через tabs */}
+        {activeTab === 'products' && (
+          <CatalogProductsPage />
+        )}
         
         {activeTab === 'old-products' && (
           <div className="space-y-6">
