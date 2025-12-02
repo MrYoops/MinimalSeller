@@ -148,55 +148,47 @@ const PricingPage = () => {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={handleSyncAll}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
-            data-testid="sync-all-btn"
-          >
-            <FiRefreshCw className="w-4 h-4" />
-            Синхронизировать все
-          </button>
-          <button
             onClick={() => setShowBulkModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            className="px-4 py-2 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded flex items-center gap-2 font-semibold"
             data-testid="bulk-update-btn"
           >
             <FiSettings className="w-4 h-4" />
-            Массовые операции
+            МАССОВЫЕ ОПЕРАЦИИ
           </button>
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">Всего товаров</p>
-          <p className="text-2xl font-bold mt-1">{products.length}</p>
+        <div className="bg-mm-secondary p-4 rounded-lg border border-mm-border">
+          <p className="text-sm text-mm-text-secondary">Всего товаров</p>
+          <p className="text-2xl font-bold mt-1 text-mm-text">{products.length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">На Ozon</p>
-          <p className="text-2xl font-bold mt-1">{products.filter(p => p.ozon_linked).length}</p>
+        <div className="bg-mm-secondary p-4 rounded-lg border border-mm-border">
+          <p className="text-sm text-mm-text-secondary">На Ozon</p>
+          <p className="text-2xl font-bold mt-1 text-blue-400">{products.filter(p => p.ozon_linked).length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-600">На Wildberries</p>
-          <p className="text-2xl font-bold mt-1">{products.filter(p => p.wb_linked).length}</p>
+        <div className="bg-mm-secondary p-4 rounded-lg border border-mm-border">
+          <p className="text-sm text-mm-text-secondary">На Wildberries</p>
+          <p className="text-2xl font-bold mt-1 text-purple-400">{products.filter(p => p.wb_linked).length}</p>
         </div>
-        <div className="bg-orange-50 p-4 rounded-lg shadow border border-orange-200">
-          <p className="text-sm text-orange-800">Алерты</p>
-          <p className="text-2xl font-bold text-orange-600 mt-1">{alerts.length}</p>
+        <div className="bg-orange-900/20 p-4 rounded-lg border border-orange-500/30">
+          <p className="text-sm text-orange-300">Алерты</p>
+          <p className="text-2xl font-bold text-orange-400 mt-1">{alerts.length}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow">
+      <div className="bg-mm-secondary p-4 rounded-lg border border-mm-border">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mm-text-secondary" />
             <input
               type="text"
               placeholder="Поиск по артикулу или названию..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
               data-testid="search-input"
             />
           </div>
@@ -204,7 +196,7 @@ const PricingPage = () => {
           <select
             value={marketplaceFilter}
             onChange={(e) => setMarketplaceFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
             data-testid="marketplace-filter"
           >
             <option value="all">Все маркетплейсы</option>
@@ -215,7 +207,7 @@ const PricingPage = () => {
           <select
             value={alertFilter}
             onChange={(e) => setAlertFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
             data-testid="alert-filter"
           >
             <option value="all">Все товары</option>
@@ -225,25 +217,25 @@ const PricingPage = () => {
       </div>
 
       {/* Products Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-mm-secondary rounded-lg border border-mm-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-mm-dark border-b border-mm-border">
               <tr>
-                <th className="text-left p-4 font-medium text-gray-700">Артикул</th>
-                <th className="text-left p-4 font-medium text-gray-700">Фото</th>
-                <th className="text-left p-4 font-medium text-gray-700">Название</th>
-                <th className="text-left p-4 font-medium text-gray-700">Ozon</th>
-                <th className="text-left p-4 font-medium text-gray-700">Wildberries</th>
-                <th className="text-left p-4 font-medium text-gray-700">Мин. цена</th>
-                <th className="text-center p-4 font-medium text-gray-700">⚠️</th>
-                <th className="text-right p-4 font-medium text-gray-700">Действия</th>
+                <th className="text-left p-4 font-medium text-mm-text-secondary uppercase text-xs">Артикул</th>
+                <th className="text-left p-4 font-medium text-mm-text-secondary uppercase text-xs">Фото</th>
+                <th className="text-left p-4 font-medium text-mm-text-secondary uppercase text-xs">Название</th>
+                <th className="text-left p-4 font-medium text-mm-text-secondary uppercase text-xs">Ozon</th>
+                <th className="text-left p-4 font-medium text-mm-text-secondary uppercase text-xs">Wildberries</th>
+                <th className="text-left p-4 font-medium text-mm-text-secondary uppercase text-xs">Мин. цена</th>
+                <th className="text-center p-4 font-medium text-mm-text-secondary uppercase text-xs">⚠️</th>
+                <th className="text-right p-4 font-medium text-mm-text-secondary uppercase text-xs">Действия</th>
               </tr>
             </thead>
             <tbody>
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="text-center p-8 text-gray-500">
+                  <td colSpan="8" className="text-center p-8 text-mm-text-secondary">
                     Товары не найдены
                   </td>
                 </tr>
@@ -255,10 +247,10 @@ const PricingPage = () => {
                   return (
                     <tr
                       key={product.product_id}
-                      className="border-b hover:bg-gray-50"
+                      className="border-b border-mm-border hover:bg-mm-dark/30"
                       data-testid={`product-row-${product.article}`}
                     >
-                      <td className="p-4 font-mono text-sm">{product.article}</td>
+                      <td className="p-4 font-mono text-sm text-mm-text">{product.article}</td>
                       <td className="p-4">
                         {product.photo ? (
                           <img
@@ -267,55 +259,55 @@ const PricingPage = () => {
                             className="w-12 h-12 object-cover rounded"
                           />
                         ) : (
-                          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-500 text-xs">
+                          <div className="w-12 h-12 bg-mm-dark rounded flex items-center justify-center text-mm-text-secondary text-xs">
                             Нет фото
                           </div>
                         )}
                       </td>
                       <td className="p-4">
-                        <div className="max-w-xs truncate">{product.name}</div>
+                        <div className="max-w-xs truncate text-mm-text">{product.name}</div>
                       </td>
                       <td className="p-4">
                         {product.ozon_linked ? (
                           <div className="space-y-1">
-                            <span className="inline-block px-2 py-1 text-xs rounded bg-blue-100 text-blue-700">✅ Ozon</span>
+                            <span className="inline-block px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">✅ Ozon</span>
                             {product.ozon?.price ? (
-                              <div className="text-sm">
+                              <div className="text-sm text-mm-text">
                                 <span className="font-semibold">{formatPrice(product.ozon.price)}</span>
-                                <span className="text-gray-500"> / {formatPrice(product.ozon.old_price)}</span>
+                                <span className="text-mm-text-secondary"> / {formatPrice(product.ozon.old_price)}</span>
                               </div>
                             ) : (
-                              <div className="text-xs text-gray-500">Цены не установлены</div>
+                              <div className="text-xs text-mm-text-secondary">Цены не установлены</div>
                             )}
                           </div>
                         ) : (
-                          <span className="inline-block px-2 py-1 text-xs rounded bg-gray-100 text-gray-600">Не привязан</span>
+                          <span className="inline-block px-2 py-1 text-xs rounded bg-mm-dark text-mm-text-secondary border border-mm-border">Не привязан</span>
                         )}
                       </td>
                       <td className="p-4">
                         {product.wb_linked ? (
                           <div className="space-y-1">
-                            <span className="inline-block px-2 py-1 text-xs rounded bg-purple-100 text-purple-700">✅ WB</span>
+                            <span className="inline-block px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">✅ WB</span>
                             {product.wb?.regular_price ? (
-                              <div className="text-sm">
+                              <div className="text-sm text-mm-text">
                                 <span className="font-semibold">{formatPrice(product.wb.discount_price || product.wb.regular_price)}</span>
                                 {product.wb.discount_price && (
-                                  <span className="text-gray-500"> / {formatPrice(product.wb.regular_price)}</span>
+                                  <span className="text-mm-text-secondary"> / {formatPrice(product.wb.regular_price)}</span>
                                 )}
                               </div>
                             ) : (
-                              <div className="text-xs text-gray-500">Цены не установлены</div>
+                              <div className="text-xs text-mm-text-secondary">Цены не установлены</div>
                             )}
                           </div>
                         ) : (
-                          <span className="inline-block px-2 py-1 text-xs rounded bg-gray-100 text-gray-600">Не привязан</span>
+                          <span className="inline-block px-2 py-1 text-xs rounded bg-mm-dark text-mm-text-secondary border border-mm-border">Не привязан</span>
                         )}
                       </td>
                       <td className="p-4">
                         {product.min_allowed_price ? (
-                          <span className="text-sm font-medium">{formatPrice(product.min_allowed_price)}</span>
+                          <span className="text-sm font-medium text-mm-text">{formatPrice(product.min_allowed_price)}</span>
                         ) : (
-                          <span className="text-gray-500">—</span>
+                          <span className="text-mm-text-secondary">—</span>
                         )}
                       </td>
                       <td className="p-4 text-center">
@@ -326,7 +318,7 @@ const PricingPage = () => {
                       <td className="p-4 text-right">
                         <button
                           onClick={() => handleEditPrice(product)}
-                          className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                          className="px-3 py-1 text-sm bg-mm-dark text-mm-cyan border border-mm-border rounded hover:bg-mm-dark/80"
                           data-testid={`edit-price-btn-${product.article}`}
                         >
                           📝 Изменить
