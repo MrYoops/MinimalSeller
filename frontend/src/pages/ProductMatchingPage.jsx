@@ -242,11 +242,14 @@ export default function ProductMatchingPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-mm-cyan">СОПОСТАВЛЕНИЕ ТОВАРОВ</h1>
-        <p className="text-sm text-mm-text-secondary mt-1">
-          Связывание товаров из базы с товарами на маркетплейсах
-        </p>
+      <div className="flex items-center gap-4">
+        <CatalogNavDropdown />
+        <div>
+          <h1 className="text-3xl font-bold text-mm-cyan">СОПОСТАВЛЕНИЕ ТОВАРОВ</h1>
+          <p className="text-sm text-mm-text-secondary mt-1">
+            Связывание товаров из базы с товарами на маркетплейсах
+          </p>
+        </div>
       </div>
 
       {/* Controls */}
