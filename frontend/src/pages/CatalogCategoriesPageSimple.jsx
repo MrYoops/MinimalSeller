@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { FiArrowLeft, FiTrash2, FiEdit, FiRefreshCw, FiPackage } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
+import CatalogNavDropdown from '../components/CatalogNavDropdown'
 
 export default function CatalogCategoriesPageSimple() {
   const { api } = useAuth()
@@ -89,11 +90,14 @@ export default function CatalogCategoriesPageSimple() {
         </button>
         
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-mm-cyan mb-2">КАТЕГОРИИ</h1>
-            <p className="text-gray-400 text-sm">
-              Сопоставления категорий между маркетплейсами
-            </p>
+          <div className="flex items-center gap-4">
+            <CatalogNavDropdown />
+            <div>
+              <h1 className="text-3xl font-bold text-mm-cyan mb-2">КАТЕГОРИИ</h1>
+              <p className="text-gray-400 text-sm">
+                Сопоставления категорий между маркетплейсами
+              </p>
+            </div>
           </div>
           
           <button

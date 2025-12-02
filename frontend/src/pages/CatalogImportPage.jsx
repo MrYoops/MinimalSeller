@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { FiArrowLeft, FiDownload, FiUpload, FiCheck, FiX } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import CatalogNavDropdown from '../components/CatalogNavDropdown'
 
 export default function CatalogImportPage() {
   const { api } = useAuth()
@@ -77,17 +78,14 @@ export default function CatalogImportPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="text-mm-cyan hover:underline mb-2 flex items-center gap-2"
-        >
-          <FiArrowLeft /> Назад к товарам
-        </button>
-        <h1 className="text-3xl font-bold text-mm-cyan">ИМПОРТ ТОВАРОВ</h1>
-        <p className="text-sm text-mm-text-secondary mt-1">
-          Импортируйте товары с маркетплейсов или загрузите из Excel
-        </p>
+      <div className="flex items-center gap-4">
+        <CatalogNavDropdown />
+        <div>
+          <h1 className="text-3xl font-bold text-mm-cyan">ИМПОРТ ТОВАРОВ</h1>
+          <p className="text-sm text-mm-text-secondary mt-1">
+            Импортируйте товары с маркетплейсов или загрузите из Excel
+          </p>
+        </div>
       </div>
 
       {/* Steps */}
