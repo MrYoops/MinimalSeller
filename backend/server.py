@@ -5922,6 +5922,11 @@ async def push_prices_to_marketplaces(
             ]
         }).to_list(length=None)
         
+        print(f"Found {len(products)} products")
+        for p in products:
+            print(f"  - {p.get('article')}: id={p.get('id')}")
+        print()
+        
         logger.info(f"Found {len(products)} products for price update")
         
         results = {
