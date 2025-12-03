@@ -325,8 +325,11 @@ const PricingPage = () => {
   const changesCount = Object.keys(localEdits).length;
   const selectedCount = selectedProducts.size;
   
-  // Check if there are selected products with price changes
-  const hasSelectedWithChanges = filteredProducts.some(p => {
+  // Check if ANY product has changes (not necessarily selected)
+  const hasAnyChanges = changesCount > 0;
+  
+  // Check if there are selected products WITH price changes for push to MP
+  const selectedProductsWithChanges = filteredProducts.filter(p => {
     if (!selectedProducts.has(p.product_id)) return false;
     const edits = localEdits[p.product_id];
     if (!edits) return false;
@@ -336,6 +339,37 @@ const PricingPage = () => {
            edits['wb.regular_price'] || edits['wb.discount_price'] || edits['wb.discount'] ||
            edits['cost_price'] || edits['min_allowed_price'];
   });
+  
+  const canPushToMP = selectedProductsWithChanges.length > 0;
+  
+  // Save all changes function
+  const saveAllChanges = async () => {
+    const productsToSave = filteredProducts.filter(p => hasChanges(p.product_id));
+    
+    if (productsToSave.length === 0) {
+      toast.error('Нет изменений для сохранения');
+      return;
+    }
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (const product of productsToSave) {
+      try {
+        await saveProduct(product);
+        successCount++;
+      } catch (error) {
+        errorCount++;
+      }
+    }
+    
+    if (successCount > 0) {
+      toast.success(`✅ Сохранено изменений: ${successCount}`);
+    }
+    if (errorCount > 0) {
+      toast.error(`❌ Ошибок при сохранении: ${errorCount}`);
+    }
+  };
 
   if (loading) {
     return (
@@ -362,18 +396,35 @@ const PricingPage = () => {
             {syncing ? <FiRefreshCw className="w-4 h-4 animate-spin" /> : <FiDownload className="w-4 h-4" />}
             Загрузить с МП
           </button>
+          
+          {/* Save All Changes Button */}
+          <button
+            onClick={saveAllChanges}
+            disabled={!hasAnyChanges || savingProduct !== null}
+            className={`px-4 py-2 font-medium rounded transition-colors flex items-center gap-2 ${
+              hasAnyChanges && savingProduct === null
+                ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                : 'bg-mm-secondary text-mm-text-secondary cursor-not-allowed opacity-50'
+            }`}
+          >
+            {savingProduct !== null ? <FiRefreshCw className="w-4 h-4 animate-spin" /> : <FiSave className="w-4 h-4" />}
+            Сохранить изменения
+            {changesCount > 0 && <span className={`px-1.5 py-0.5 rounded text-xs ${hasAnyChanges ? 'bg-white/20' : 'bg-mm-border'}`}>{changesCount}</span>}
+          </button>
+          
+          {/* Push to Marketplaces Button */}
           <button
             onClick={pushToMarketplaces}
-            disabled={pushing || !hasSelectedWithChanges}
+            disabled={pushing || !canPushToMP}
             className={`px-4 py-2 font-medium rounded transition-colors flex items-center gap-2 ${
-              hasSelectedWithChanges && !pushing
+              canPushToMP && !pushing
                 ? 'bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 cursor-pointer'
                 : 'bg-mm-secondary text-mm-text-secondary cursor-not-allowed opacity-50'
             }`}
           >
             {pushing ? <FiRefreshCw className="w-4 h-4 animate-spin" /> : <FiUpload className="w-4 h-4" />}
             Отправить на МП
-            {selectedCount > 0 && <span className={`px-1.5 py-0.5 rounded text-xs ${hasSelectedWithChanges ? 'bg-mm-dark/20' : 'bg-mm-border'}`}>{selectedCount}</span>}
+            {selectedCount > 0 && <span className={`px-1.5 py-0.5 rounded text-xs ${canPushToMP ? 'bg-mm-dark/20' : 'bg-mm-border'}`}>{selectedCount}</span>}
           </button>
         </div>
       </div>
