@@ -2189,9 +2189,6 @@ async def import_product_from_marketplace(
             }
         },
         
-        # Photos
-        "photos": marketplace_product.get('photos', [])[:10],
-        
         # Prices (in kopeks)
         "price_with_discount": int(marketplace_product.get('price', 0) * 100) if marketplace_product.get('price') else 0,
         "price_without_discount": int(marketplace_product.get('price', 0) * 100) if marketplace_product.get('price') else 0,
@@ -2199,6 +2196,22 @@ async def import_product_from_marketplace(
     
     # Insert product
     await db.product_catalog.insert_one(new_product)
+    
+    # Extract photos from marketplace product (support both 'photos' and 'images' keys)
+    photos = marketplace_product.get('photos', []) or marketplace_product.get('images', [])
+    if photos:
+        logger.info(f"📸 Saving {len(photos)} photos for product {product_id}")
+        for idx, photo_url in enumerate(photos[:10]):  # Max 10 photos
+            if photo_url:
+                photo_record = {
+                    "product_id": product_id,
+                    "url": photo_url,
+                    "position": idx,
+                    "is_main": idx == 0,
+                    "created_at": datetime.utcnow().isoformat()
+                }
+                await db.product_photos.insert_one(photo_record)
+        logger.info(f"✅ Saved {min(len(photos), 10)} photos to product_photos collection")
     
     # Auto-create inventory record with zero quantity
     inventory_record = {
