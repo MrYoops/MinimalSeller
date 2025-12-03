@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { FiSearch, FiDollarSign, FiTrendingUp, FiAlertTriangle, FiSettings, FiRefreshCw, FiPlus } from 'react-icons/fi';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
-import CatalogNavDropdown from '../components/CatalogNavDropdown';
 import PriceEditModal from '../components/PriceEditModal';
 import BulkPriceUpdateModal from '../components/BulkPriceUpdateModal';
 import PriceAlertBadge from '../components/PriceAlertBadge';
