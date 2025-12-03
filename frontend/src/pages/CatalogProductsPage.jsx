@@ -114,6 +114,43 @@ export default function CatalogProductsPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="border-b border-mm-border mb-6">
+        <div className="flex gap-1">
+          <button
+            onClick={() => setActiveTab('products')}
+            className={`px-6 py-3 font-medium transition-colors relative ${
+              activeTab === 'products'
+                ? 'text-mm-cyan'
+                : 'text-mm-text-secondary hover:text-mm-text'
+            }`}
+          >
+            Список товаров
+            {activeTab === 'products' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-mm-cyan"></div>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('sync')}
+            className={`px-6 py-3 font-medium transition-colors relative ${
+              activeTab === 'sync'
+                ? 'text-mm-cyan'
+                : 'text-mm-text-secondary hover:text-mm-text'
+            }`}
+          >
+            Синхронизация
+            {activeTab === 'sync' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-mm-cyan"></div>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'sync' ? (
+        <SyncLogsTab />
+      ) : (
+        <>
       {/* Search and Filters */}
       <div className="bg-mm-secondary p-4 rounded-lg space-y-4">
         {/* Search */}
