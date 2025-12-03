@@ -5635,7 +5635,14 @@ async def get_all_products_pricing(
 ):
     """Получить все товары с информацией о ценах на маркетплейсах"""
     try:
-        products = await db.product_catalog.find({"user_id": current_user["_id"]}).to_list(length=None)
+        # Поддержка обоих вариантов: user_id и seller_id
+        seller_id = str(current_user["_id"])
+        products = await db.product_catalog.find({
+            "$or": [
+                {"user_id": current_user["_id"]},
+                {"seller_id": seller_id}
+            ]
+        }).to_list(length=None)
         
         result = []
         for product in products:
