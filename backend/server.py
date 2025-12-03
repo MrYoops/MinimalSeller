@@ -5824,20 +5824,25 @@ async def sync_prices_from_marketplaces(
         # Обновить цены в базе
         for product in products:
             article = product.get("article", "")
-            update_fields = {}
+            
+            # Build complete pricing object
+            current_pricing = product.get("pricing", {}) or {}
+            new_pricing = dict(current_pricing)
             
             if article in ozon_prices:
-                update_fields["pricing.ozon"] = ozon_prices[article]
-                update_fields["pricing.ozon.synced_at"] = datetime.utcnow().isoformat()
+                ozon_data = ozon_prices[article].copy()
+                ozon_data["synced_at"] = datetime.utcnow().isoformat()
+                new_pricing["ozon"] = ozon_data
             
             if article in wb_prices:
-                update_fields["pricing.wb"] = wb_prices[article]
-                update_fields["pricing.wb.synced_at"] = datetime.utcnow().isoformat()
+                wb_data = wb_prices[article].copy()
+                wb_data["synced_at"] = datetime.utcnow().isoformat()
+                new_pricing["wb"] = wb_data
             
-            if update_fields:
+            if article in ozon_prices or article in wb_prices:
                 await db.product_catalog.update_one(
                     {"_id": product["_id"]},
-                    {"$set": update_fields}
+                    {"$set": {"pricing": new_pricing}}
                 )
                 updated_count += 1
         
