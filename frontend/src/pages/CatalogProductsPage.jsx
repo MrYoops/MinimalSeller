@@ -152,7 +152,7 @@ export default function CatalogProductsPage() {
       ) : (
         <>
       {/* Search and Filters */}
-      <div className="bg-mm-secondary p-4 rounded-lg space-y-4">
+      <div className="bg-mm-secondary p-6 rounded-lg space-y-4">
         {/* Search */}
         <div className="flex gap-2">
           <div className="flex-1 relative">
