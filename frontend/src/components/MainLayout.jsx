@@ -115,7 +115,7 @@ const MainLayout = ({ children }) => {
       {/* Navigation */}
       <nav className="border-b border-mm-border bg-mm-dark relative" style={{ zIndex: 100 }}>
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex space-x-6 h-12 overflow-x-auto">
+          <div className="flex space-x-6 h-12">
             <button
               onClick={() => navigate('/integrations')}
               className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap flex items-center gap-1 h-12 ${
