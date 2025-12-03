@@ -101,13 +101,16 @@ async def get_fbs_inventory(
     # Обогатить данными о товарах
     result = []
     for inv in inventory_list:
-        # product_id может быть ObjectId или UUID строкой
         product_id = inv["product_id"]
+        sku = inv.get("sku", "")
         
-        # Пробуем найти в product_catalog (новая схема с UUID)
+        # Попробовать найти товар по product_id или по артикулу (sku)
         product = await db.product_catalog.find_one({"_id": product_id})
         
-        # Если не нашли, пробуем в старой коллекции products
+        if not product and sku:
+            # Поиск по артикулу
+            product = await db.product_catalog.find_one({"article": sku, "seller_id": seller_id})
+        
         if not product:
             try:
                 product = await db.products.find_one({"_id": ObjectId(product_id) if isinstance(product_id, str) else product_id})
@@ -120,9 +123,10 @@ async def get_fbs_inventory(
         
         if product:
             product_name = product.get("name") or product.get("minimalmod", {}).get("name", "")
+            actual_product_id = str(product.get("_id", product_id))
             
             # Попробовать загрузить фото из product_photos
-            photo = await db.product_photos.find_one({"product_id": str(product_id)})
+            photo = await db.product_photos.find_one({"product_id": actual_product_id})
             if photo:
                 product_image = photo.get("url", "")
             else:
@@ -133,7 +137,7 @@ async def get_fbs_inventory(
             id=str(inv["_id"]),
             product_id=str(inv["product_id"]),
             seller_id=str(inv["seller_id"]),
-            sku=inv["sku"],
+            sku=sku,
             quantity=inv["quantity"],
             reserved=inv["reserved"],
             available=inv["available"],
