@@ -6049,6 +6049,54 @@ async def push_prices_to_marketplaces(
             detail=f"Failed to push prices: {str(e)}"
         )
 
+# ============ SYNC LOGS API ============
+
+@app.get("/api/sync/logs")
+async def get_sync_logs(
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить логи синхронизации с маркетплейсами"""
+    try:
+        seller_id = str(current_user["_id"])
+        
+        # Build query
+        query = {
+            "$or": [
+                {"user_id": current_user["_id"]},
+                {"seller_id": seller_id}
+            ]
+        }
+        
+        if status and status in ['success', 'error', 'pending']:
+            query["status"] = status
+        
+        # Get logs from sync_logs collection
+        logs = await db.sync_logs.find(query).sort("timestamp", -1).limit(100).to_list(length=100)
+        
+        # Format logs
+        formatted_logs = []
+        for log in logs:
+            formatted_logs.append({
+                "timestamp": log.get("timestamp"),
+                "type": log.get("type"),  # 'product' or 'price'
+                "marketplace": log.get("marketplace"),
+                "product_article": log.get("product_article"),
+                "product_name": log.get("product_name"),
+                "status": log.get("status"),
+                "message": log.get("message"),
+                "error": log.get("error")
+            })
+        
+        return {"logs": formatted_logs}
+        
+    except Exception as e:
+        logger.error(f"Failed to get sync logs: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get sync logs: {str(e)}"
+        )
+
 
 
 @app.get("/api/catalog/pricing/{product_id}")
