@@ -113,7 +113,7 @@ const MainLayout = ({ children }) => {
       </header>
 
       {/* Navigation */}
-      <nav className="border-b border-mm-border bg-mm-dark">
+      <nav className="border-b border-mm-border bg-mm-dark relative" style={{ zIndex: 100 }}>
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex space-x-6 h-12 overflow-x-auto">
             <button
