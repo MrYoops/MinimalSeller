@@ -5708,6 +5708,144 @@ async def get_all_products_pricing(
         )
 
 
+@app.get("/api/catalog/pricing/sync-from-mp")
+async def sync_prices_from_marketplaces(
+    current_user: dict = Depends(get_current_user)
+):
+    """Загрузить актуальные цены с маркетплейсов и обновить в базе"""
+    from connectors import get_connector, MarketplaceError
+    import httpx
+    
+    try:
+        seller_id = str(current_user["_id"])
+        
+        # Получить API ключи
+        profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+        if not profile:
+            return {"success": False, "message": "Профиль продавца не найден"}
+        
+        api_keys = profile.get("api_keys", [])
+        ozon_key = next((k for k in api_keys if k["marketplace"] == "ozon"), None)
+        wb_key = next((k for k in api_keys if k["marketplace"] == "wb"), None)
+        
+        # Получить все товары
+        products = await db.product_catalog.find({
+            "$or": [
+                {"user_id": current_user["_id"]},
+                {"seller_id": seller_id}
+            ]
+        }).to_list(length=None)
+        
+        updated_count = 0
+        ozon_prices = {}
+        wb_prices = {}
+        
+        # Загрузить цены с Ozon
+        if ozon_key:
+            try:
+                headers = {
+                    "Client-Id": ozon_key.get("client_id", ""),
+                    "Api-Key": ozon_key.get("api_key", ""),
+                    "Content-Type": "application/json"
+                }
+                
+                # Собрать offer_ids привязанных товаров
+                ozon_offer_ids = []
+                for p in products:
+                    mp_data = p.get("marketplace_data", {})
+                    if mp_data.get("ozon", {}).get("id"):
+                        ozon_offer_ids.append(p.get("article"))
+                
+                if ozon_offer_ids:
+                    async with httpx.AsyncClient() as http:
+                        resp = await http.post(
+                            "https://api-seller.ozon.ru/v3/product/info/list",
+                            headers=headers,
+                            json={"offer_id": ozon_offer_ids[:100]},
+                            timeout=30
+                        )
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            for item in data.get("items", []):
+                                offer_id = item.get("offer_id")
+                                ozon_prices[offer_id] = {
+                                    "price": float(item.get("price", "0").replace(",", ".")) if isinstance(item.get("price"), str) else float(item.get("price") or 0),
+                                    "old_price": float(item.get("old_price", "0").replace(",", ".")) if isinstance(item.get("old_price"), str) else float(item.get("old_price") or 0),
+                                    "min_price": float(item.get("min_price", "0").replace(",", ".")) if isinstance(item.get("min_price"), str) else float(item.get("min_price") or 0)
+                                }
+                            logger.info(f"Loaded {len(ozon_prices)} prices from Ozon")
+            except Exception as e:
+                logger.error(f"Failed to load Ozon prices: {e}")
+        
+        # Загрузить цены с WB
+        if wb_key:
+            try:
+                headers = {
+                    "Authorization": wb_key.get("api_key", ""),
+                    "Content-Type": "application/json"
+                }
+                
+                async with httpx.AsyncClient() as http:
+                    resp = await http.get(
+                        "https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter",
+                        headers=headers,
+                        params={"limit": 1000},
+                        timeout=30
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        for item in data.get("data", {}).get("listGoods", []):
+                            vendor_code = item.get("vendorCode")
+                            sizes = item.get("sizes", [])
+                            if sizes:
+                                s = sizes[0]
+                                wb_prices[vendor_code] = {
+                                    "regular_price": float(s.get("price", 0) or 0),
+                                    "discount_price": float(s.get("discountedPrice", 0) or 0),
+                                    "discount": float(item.get("discount", 0) or 0)
+                                }
+                        logger.info(f"Loaded {len(wb_prices)} prices from WB")
+            except Exception as e:
+                logger.error(f"Failed to load WB prices: {e}")
+        
+        # Обновить цены в базе
+        for product in products:
+            article = product.get("article", "")
+            update_fields = {}
+            
+            if article in ozon_prices:
+                update_fields["pricing.ozon"] = ozon_prices[article]
+                update_fields["pricing.ozon.synced_at"] = datetime.utcnow().isoformat()
+            
+            if article in wb_prices:
+                update_fields["pricing.wb"] = wb_prices[article]
+                update_fields["pricing.wb.synced_at"] = datetime.utcnow().isoformat()
+            
+            if update_fields:
+                await db.product_catalog.update_one(
+                    {"_id": product["_id"]},
+                    {"$set": update_fields}
+                )
+                updated_count += 1
+        
+        return {
+            "success": True,
+            "message": f"Синхронизировано цен: {updated_count} товаров",
+            "ozon_count": len(ozon_prices),
+            "wb_count": len(wb_prices),
+            "updated_count": updated_count
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to sync prices from marketplaces: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to sync prices: {str(e)}"
+        )
+
+
+
+
 @app.get("/api/catalog/pricing/{product_id}")
 async def get_product_pricing(
     product_id: str,
