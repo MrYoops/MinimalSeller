@@ -2226,8 +2226,9 @@ async def import_product_from_marketplace(
     await db.inventory.insert_one(inventory_record)
     logger.info(f"✅ Auto-created inventory record for {sku}")
     
+    photos_count = len(photos) if photos else 0
     logger.info(f"✅ Product imported with auto-category: {new_product['name']} (SKU: {sku})")
-    logger.info(f"   Photos: {len(new_product.get('photos', []))}, Characteristics: {len(characteristics_dict)}")
+    logger.info(f"   Photos: {photos_count}, Characteristics: {len(characteristics_dict)}")
     logger.info(f"   Category: {category_name}, Mapping ID: {mapping_id}")
     
     return {
@@ -2238,7 +2239,7 @@ async def import_product_from_marketplace(
             "id": product_id,
             "sku": sku,
             "name": new_product['name'],
-            "photos_count": len(new_product.get('photos', [])),
+            "photos_count": photos_count,
             "characteristics_count": len(characteristics_dict),
             "category": category_name,
             "category_mapping_id": mapping_id
