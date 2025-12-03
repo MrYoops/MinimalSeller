@@ -5781,10 +5781,22 @@ async def sync_prices_from_marketplaces(
                                     except (ValueError, TypeError):
                                         return 0.0
                                 
+                                # Parse commissions
+                                commissions = item.get("commissions", [])
+                                fbo_commission = 0
+                                fbs_commission = 0
+                                for comm in commissions:
+                                    if comm.get("sale_schema") == "FBO":
+                                        fbo_commission = comm.get("percent", 0)
+                                    elif comm.get("sale_schema") == "FBS":
+                                        fbs_commission = comm.get("percent", 0)
+                                
                                 ozon_prices[offer_id] = {
                                     "price": safe_float(item.get("price")),
                                     "old_price": safe_float(item.get("old_price")),
-                                    "min_price": safe_float(item.get("min_price"))
+                                    "min_price": safe_float(item.get("min_price")),
+                                    "fbo_commission": fbo_commission,
+                                    "fbs_commission": fbs_commission
                                 }
                             logger.info(f"Loaded {len(ozon_prices)} prices from Ozon")
             except Exception as e:
