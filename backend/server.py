@@ -5913,6 +5913,14 @@ async def push_prices_to_marketplaces(
         ozon_key = next((k for k in api_keys if k["marketplace"] == "ozon"), None)
         wb_key = next((k for k in api_keys if k["marketplace"] == "wb"), None)
         
+        print(f"API Keys check - Ozon: {bool(ozon_key)}, WB: {bool(wb_key)}")
+        if ozon_key:
+            print(f"  Ozon client_id: {ozon_key.get('client_id', '')[:10]}...")
+        if wb_key:
+            print(f"  WB api_key: {wb_key.get('api_key', '')[:10]}...")
+        print()
+
+        
         # Получить товары
         products = await db.product_catalog.find({
             "id": {"$in": product_ids},
