@@ -5890,6 +5890,14 @@ async def push_prices_to_marketplaces(
         product_ids = data.get("product_ids", [])
         prices_data = data.get("prices", {})
         
+        print(f"\n{'='*60}")
+        print(f"PUSH PRICES TO MP - DEBUG")
+        print(f"{'='*60}")
+        print(f"Seller ID: {seller_id}")
+        print(f"Product IDs: {product_ids}")
+        print(f"Prices data: {prices_data}")
+        print(f"{'='*60}\n")
+        
         logger.info(f"Push prices - seller: {seller_id}, products: {product_ids}")
         logger.info(f"Prices payload: {prices_data}")
         
