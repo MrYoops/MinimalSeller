@@ -760,24 +760,6 @@ const PricingPage = () => {
                         onChange={(v) => updateLocalEdit(product.product_id, 'min_allowed_price', v)}
                       />
                     </td>
-                    
-                    {/* Save button */}
-                    <td className="p-1 text-center">
-                      {hasChanges(product.product_id) && (
-                        <button
-                          onClick={() => saveProduct(product)}
-                          disabled={savingProduct === product.product_id}
-                          className="px-2 py-1 bg-mm-cyan text-mm-dark text-xs font-medium rounded hover:bg-mm-cyan/90 transition-colors disabled:opacity-50"
-                          title="Сохранить в базу"
-                        >
-                          {savingProduct === product.product_id ? (
-                            <FiRefreshCw className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <FiSave className="w-3 h-3" />
-                          )}
-                        </button>
-                      )}
-                    </td>
                   </tr>
                 ))
               )}
