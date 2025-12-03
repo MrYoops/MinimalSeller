@@ -114,13 +114,20 @@ async def get_fbs_inventory(
             except:
                 product = None
         
-        # Получить имя товара из разных источников
+        # Получить имя товара и фото
+        product_name = ""
+        product_image = ""
+        
         if product:
             product_name = product.get("name") or product.get("minimalmod", {}).get("name", "")
-            product_image = product.get("photos", [None])[0] or product.get("minimalmod", {}).get("images", [""])[0]
-        else:
-            product_name = ""
-            product_image = ""
+            
+            # Попробовать загрузить фото из product_photos
+            photo = await db.product_photos.find_one({"product_id": str(product_id)})
+            if photo:
+                product_image = photo.get("url", "")
+            else:
+                # Fallback на старые поля
+                product_image = product.get("photos", [None])[0] or product.get("minimalmod", {}).get("images", [""])[0] or ""
         
         result.append(InventoryResponse(
             id=str(inv["_id"]),
