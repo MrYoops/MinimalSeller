@@ -6112,6 +6112,10 @@ async def update_product_all_pricing(
         if "min_allowed_price" in data:
             update_fields["min_allowed_price"] = float(data["min_allowed_price"]) if data["min_allowed_price"] else 0
         
+        # Обновить cost_price (закупочная цена)
+        if "cost_price" in data:
+            update_fields["cost_price"] = float(data["cost_price"]) if data["cost_price"] else 0
+        
         # Обновить pricing.ozon
         if "ozon" in data and data["ozon"]:
             update_fields["pricing.ozon"] = {
