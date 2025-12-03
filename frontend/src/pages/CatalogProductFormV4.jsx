@@ -1159,6 +1159,90 @@ export default function CatalogProductFormV4() {
                   </div>
                 </div>
 
+                {/* ЦЕНЫ ДЛЯ МАРКЕТПЛЕЙСОВ - компактная темная версия */}
+                {(selectedMarketplaces.ozon || selectedMarketplaces.wb) && (
+                  <div className="bg-mm-secondary p-6 rounded-lg space-y-4">
+                    <h2 className="text-sm font-bold text-mm-text-secondary uppercase">
+                      Цены для маркетплейсов
+                    </h2>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Ozon Цены */}
+                      {selectedMarketplaces.ozon && (
+                        <div className="p-4 bg-mm-dark rounded border border-blue-500/30">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">O</span>
+                            <span className="text-sm font-semibold text-blue-400">Ozon</span>
+                          </div>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-xs text-mm-text-secondary mb-1">Цена со скидкой ₽</label>
+                              <input
+                                type="number"
+                                value={product.ozon_price || ''}
+                                onChange={(e) => setProduct({...product, ozon_price: parseFloat(e.target.value) || 0})}
+                                placeholder="1990"
+                                className="w-full px-3 py-2 text-sm bg-mm-dark border border-mm-border rounded text-mm-text focus:border-blue-500 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-mm-text-secondary mb-1">Цена до скидки ₽</label>
+                              <input
+                                type="number"
+                                value={product.ozon_old_price || ''}
+                                onChange={(e) => setProduct({...product, ozon_old_price: parseFloat(e.target.value) || 0})}
+                                placeholder="2490"
+                                className="w-full px-3 py-2 text-sm bg-mm-dark border border-mm-border rounded text-mm-text focus:border-blue-500 outline-none"
+                              />
+                            </div>
+                            {product.ozon_price && product.ozon_old_price && (
+                              <p className="text-xs text-green-400 font-medium">
+                                Скидка: {Math.round(((product.ozon_old_price - product.ozon_price) / product.ozon_old_price) * 100)}%
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* WB Цены */}
+                      {selectedMarketplaces.wb && (
+                        <div className="p-4 bg-mm-dark rounded border border-purple-500/30">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="w-6 h-6 bg-purple-600 text-white rounded flex items-center justify-center text-xs font-bold">WB</span>
+                            <span className="text-sm font-semibold text-purple-400">Wildberries</span>
+                          </div>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-xs text-mm-text-secondary mb-1">Обычная цена ₽</label>
+                              <input
+                                type="number"
+                                value={product.wb_regular_price || ''}
+                                onChange={(e) => setProduct({...product, wb_regular_price: parseFloat(e.target.value) || 0})}
+                                placeholder="2490"
+                                className="w-full px-3 py-2 text-sm bg-mm-dark border border-mm-border rounded text-mm-text focus:border-purple-500 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-mm-text-secondary mb-1">Цена со скидкой ₽</label>
+                              <input
+                                type="number"
+                                value={product.wb_discount_price || ''}
+                                onChange={(e) => setProduct({...product, wb_discount_price: parseFloat(e.target.value) || 0})}
+                                placeholder="1990"
+                                className="w-full px-3 py-2 text-sm bg-mm-dark border border-mm-border rounded text-mm-text focus:border-purple-500 outline-none"
+                              />
+                            </div>
+                            {product.wb_regular_price && product.wb_discount_price && (
+                              <p className="text-xs text-green-400 font-medium">
+                                Скидка: {Math.round(((product.wb_regular_price - product.wb_discount_price) / product.wb_regular_price) * 100)}%
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* ХАРАКТЕРИСТИКИ ТОВАРА */}
                 <div className="bg-mm-secondary p-6 rounded-lg space-y-6">
                   <h2 className="text-sm font-bold text-mm-text-secondary uppercase mb-4">
@@ -1255,101 +1339,7 @@ export default function CatalogProductFormV4() {
                   />
                 </div>
 
-                {/* ПОЛЯ ДЛЯ МАРКЕТПЛЕЙСОВ (появляются при выборе чекбокса) */}
-                {selectedMarketplaces.wb && (
-                  <div className="bg-purple-500/10 border-2 border-purple-500 p-6 rounded-lg space-y-4">
-                    <h2 className="text-lg font-bold text-purple-400 flex items-center gap-2">
-                      <span className="w-8 h-8 bg-purple-500 text-white rounded flex items-center justify-center text-sm font-bold">WB</span>
-                      WILDBERRIES - Специфичные поля
-                    </h2>
-                    
-                    <div>
-                      <label className="block text-sm text-purple-300 mb-1">Название для WB</label>
-                      <input
-                        type="text"
-                        value={marketplaceData.wb.name}
-                        onChange={(e) => handleMarketplaceDataChange('wb', 'name', e.target.value)}
-                        placeholder={product.name}
-                        className="w-full px-3 py-2 bg-mm-dark border border-purple-500/50 rounded text-mm-text focus:border-purple-400 outline-none"
-                      />
-                      <p className="text-xs text-purple-300/70 mt-1">Оставьте пустым для использования общего названия</p>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm text-purple-300 mb-1">Описание для WB</label>
-                      <textarea
-                        value={marketplaceData.wb.description}
-                        onChange={(e) => handleMarketplaceDataChange('wb', 'description', e.target.value)}
-                        placeholder={product.description}
-                        rows="3"
-                        className="w-full px-3 py-2 bg-mm-dark border border-purple-500/50 rounded text-mm-text focus:border-purple-400 outline-none resize-none"
-                      />
-                      <p className="text-xs text-purple-300/70 mt-1">Оставьте пустым для использования общего описания</p>
-                    </div>
-                  </div>
-                )}
-
-                {selectedMarketplaces.ozon && (
-                  <div className="bg-blue-500/10 border-2 border-blue-500 p-6 rounded-lg space-y-4">
-                    <h2 className="text-lg font-bold text-blue-400 flex items-center gap-2">
-                      <span className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">O</span>
-                      OZON - Специфичные поля
-                    </h2>
-                    
-                    <div>
-                      <label className="block text-sm text-blue-300 mb-1">Название для Ozon</label>
-                      <input
-                        type="text"
-                        value={marketplaceData.ozon.name}
-                        onChange={(e) => handleMarketplaceDataChange('ozon', 'name', e.target.value)}
-                        placeholder={product.name}
-                        className="w-full px-3 py-2 bg-mm-dark border border-blue-500/50 rounded text-mm-text focus:border-blue-400 outline-none"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm text-blue-300 mb-1">Аннотация для Ozon</label>
-                      <textarea
-                        value={marketplaceData.ozon.description}
-                        onChange={(e) => handleMarketplaceDataChange('ozon', 'description', e.target.value)}
-                        placeholder={product.description}
-                        rows="3"
-                        className="w-full px-3 py-2 bg-mm-dark border border-blue-500/50 rounded text-mm-text focus:border-blue-400 outline-none resize-none"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {selectedMarketplaces.yandex && (
-                  <div className="bg-red-500/10 border-2 border-red-500 p-6 rounded-lg space-y-4">
-                    <h2 className="text-lg font-bold text-red-400 flex items-center gap-2">
-                      <span className="w-8 h-8 bg-red-500 text-white rounded flex items-center justify-center text-sm font-bold">Я</span>
-                      ЯНДЕКС.МАРКЕТ - Специфичные поля
-                    </h2>
-                    
-                    <div>
-                      <label className="block text-sm text-red-300 mb-1">Название для Яндекс</label>
-                      <input
-                        type="text"
-                        value={marketplaceData.yandex.name}
-                        onChange={(e) => handleMarketplaceDataChange('yandex', 'name', e.target.value)}
-                        placeholder={product.name}
-                        className="w-full px-3 py-2 bg-mm-dark border border-red-500/50 rounded text-mm-text focus:border-red-400 outline-none"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm text-red-300 mb-1">Описание для Яндекс</label>
-                      <textarea
-                        value={marketplaceData.yandex.description}
-                        onChange={(e) => handleMarketplaceDataChange('yandex', 'description', e.target.value)}
-                        placeholder={product.description}
-                        rows="3"
-                        className="w-full px-3 py-2 bg-mm-dark border border-red-500/50 rounded text-mm-text focus:border-red-400 outline-none resize-none"
-                      />
-                    </div>
-                  </div>
-                )}
+                {/* Специфичные поля МП убраны - цены теперь выше, перед характеристиками */}
               </div>
             </div>
           )}
