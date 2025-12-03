@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { FiPlus, FiSearch, FiFilter, FiDownload, FiUpload, FiEdit, FiTrash2, FiPackage, FiLink, FiDollarSign } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
+import SyncLogsTab from './SyncLogsTab'
 
 export default function CatalogProductsPage() {
   const { api } = useAuth()
+  const [activeTab, setActiveTab] = useState('products') // products | sync
   const [products, setProducts] = useState([])
   const [productsWithPhotos, setProductsWithPhotos] = useState([])
   const [categories, setCategories] = useState([])
