@@ -5691,10 +5691,10 @@ async def get_all_products_pricing(
             if pricing.get("wb"):
                 pricing_data["wb"] = pricing["wb"]
             
-            # Проверить привязки к МП
+            # Проверить привязки к МП (наличие id означает привязку)
             marketplace_data = product.get("marketplace_data", {})
-            pricing_data["ozon_linked"] = bool(marketplace_data.get("ozon"))
-            pricing_data["wb_linked"] = bool(marketplace_data.get("wb"))
+            pricing_data["ozon_linked"] = bool(marketplace_data.get("ozon", {}).get("id"))
+            pricing_data["wb_linked"] = bool(marketplace_data.get("wb", {}).get("id"))
             
             result.append(pricing_data)
         
