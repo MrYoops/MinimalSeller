@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FiSearch, FiRefreshCw, FiSave, FiCheck, FiDownload } from 'react-icons/fi';
+import { FiSearch, FiRefreshCw, FiSave, FiCheck, FiDownload, FiPercent } from 'react-icons/fi';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 
 // Editable price cell component - with visible input field style
-const EditablePrice = ({ value, onChange, suffix = '₽', placeholder = '—' }) => {
+const EditablePrice = ({ value, onChange, suffix = '₽' }) => {
   const [editing, setEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value || '');
 
@@ -38,7 +38,7 @@ const EditablePrice = ({ value, onChange, suffix = '₽', placeholder = '—' })
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         autoFocus
-        className="w-20 px-2 py-1 bg-mm-dark border-2 border-mm-cyan rounded text-mm-text text-sm focus:outline-none text-center"
+        className="w-[75px] px-2 py-1 bg-mm-dark border-2 border-mm-cyan rounded text-mm-cyan text-sm focus:outline-none text-center"
       />
     );
   }
@@ -47,12 +47,12 @@ const EditablePrice = ({ value, onChange, suffix = '₽', placeholder = '—' })
   return (
     <div
       onClick={() => setEditing(true)}
-      className="cursor-pointer px-2 py-1 rounded transition-colors min-w-[70px] text-center bg-mm-dark/50 border border-mm-border hover:border-mm-cyan/50 hover:bg-mm-dark"
+      className="cursor-pointer px-2 py-1.5 rounded transition-all min-w-[75px] text-center bg-mm-dark border border-dashed border-mm-border hover:border-mm-cyan hover:bg-mm-dark/80"
     >
       {value ? (
-        <span className="text-mm-cyan">{value}{suffix}</span>
+        <span className="text-mm-cyan font-medium">{value}{suffix}</span>
       ) : (
-        <span className="text-mm-text-secondary/50">ввести</span>
+        <span className="text-mm-text-secondary/40 text-xs">ввести</span>
       )}
     </div>
   );
@@ -60,10 +60,20 @@ const EditablePrice = ({ value, onChange, suffix = '₽', placeholder = '—' })
 
 // Current price display (read-only from marketplace)
 const CurrentPrice = ({ value, suffix = '₽' }) => (
-  <div className="text-mm-text-secondary text-center px-2 py-1 min-w-[60px]">
+  <div className="text-mm-text text-center px-2 py-1.5 min-w-[75px] font-medium">
     {value ? `${value}${suffix}` : '—'}
   </div>
 );
+
+// Commission display
+const CommissionBadge = ({ fbo, fbs }) => {
+  if (!fbo && !fbs) return <span className="text-mm-text-secondary text-xs">—</span>;
+  return (
+    <div className="text-xs text-center">
+      <span className="text-orange-400">{fbo || fbs}%</span>
+    </div>
+  );
+};
 
 const PricingPage = () => {
   const { api } = useAuth();
@@ -150,7 +160,6 @@ const PricingPage = () => {
   };
 
   const getNewValue = (product, field) => {
-    // Check local edits first
     if (localEdits[product.product_id]?.[field] !== undefined) {
       return localEdits[product.product_id][field];
     }
@@ -158,7 +167,6 @@ const PricingPage = () => {
   };
 
   const getCurrentValue = (product, field) => {
-    // Parse field path like 'ozon.price'
     const parts = field.split('.');
     let val = product;
     for (const part of parts) {
@@ -183,7 +191,6 @@ const PricingPage = () => {
         updates.min_allowed_price = parseFloat(edits.min_allowed_price) || 0;
       }
 
-      // Build Ozon updates
       if (product.ozon_linked && (edits['ozon.price'] || edits['ozon.old_price'] || edits['ozon.min_price'])) {
         updates.ozon = {
           price: parseFloat(edits['ozon.price']) || product.ozon?.price || 0,
@@ -192,7 +199,6 @@ const PricingPage = () => {
         };
       }
 
-      // Build WB updates
       if (product.wb_linked && (edits['wb.regular_price'] || edits['wb.discount_price'] || edits['wb.discount'])) {
         updates.wb = {
           regular_price: parseFloat(edits['wb.regular_price']) || product.wb?.regular_price || 0,
@@ -204,7 +210,6 @@ const PricingPage = () => {
       await api.put(`/api/catalog/pricing/${product.product_id}`, updates);
       toast.success(`✅ Сохранено: ${product.article}`);
       
-      // Clear local edits for this product and refresh
       setLocalEdits(prev => {
         const newEdits = { ...prev };
         delete newEdits[product.product_id];
@@ -219,7 +224,6 @@ const PricingPage = () => {
     }
   };
 
-  // Stats
   const ozonCount = products.filter(p => p.ozon_linked).length;
   const wbCount = products.filter(p => p.wb_linked).length;
 
@@ -239,22 +243,20 @@ const PricingPage = () => {
           <h1 className="text-3xl font-bold text-mm-cyan">ЦЕНЫ</h1>
           <p className="text-sm text-mm-text-secondary mt-1">Управление ценами на маркетплейсах</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={syncFromMarketplaces}
-            disabled={syncing}
-            className="px-4 py-2 bg-mm-cyan text-mm-dark font-medium rounded hover:bg-mm-cyan/90 transition-colors flex items-center gap-2 disabled:opacity-50"
-          >
-            {syncing ? <FiRefreshCw className="w-4 h-4 animate-spin" /> : <FiDownload className="w-4 h-4" />}
-            Загрузить с МП
-          </button>
-        </div>
+        <button
+          onClick={syncFromMarketplaces}
+          disabled={syncing}
+          className="px-4 py-2 bg-mm-cyan text-mm-dark font-medium rounded hover:bg-mm-cyan/90 transition-colors flex items-center gap-2 disabled:opacity-50"
+        >
+          {syncing ? <FiRefreshCw className="w-4 h-4 animate-spin" /> : <FiDownload className="w-4 h-4" />}
+          Загрузить с МП
+        </button>
       </div>
 
       {/* Marketplace Checkboxes */}
       <div className="bg-mm-secondary p-4 rounded-lg border border-mm-border">
         <div className="flex flex-wrap items-center gap-6">
-          <span className="text-sm text-mm-text-secondary">Показать колонки:</span>
+          <span className="text-sm text-mm-text-secondary">Показать:</span>
           
           {/* Ozon checkbox */}
           <label className="flex items-center gap-3 cursor-pointer group">
@@ -327,12 +329,12 @@ const PricingPage = () => {
             <thead className="bg-mm-dark">
               {/* Main header row */}
               <tr className="border-b border-mm-border">
-                <th className="text-left p-3 font-medium text-mm-text-secondary uppercase text-xs" rowSpan="2">Фото</th>
-                <th className="text-left p-3 font-medium text-mm-text-secondary uppercase text-xs" rowSpan="2">Товар</th>
+                <th className="text-left p-2 font-medium text-mm-text-secondary uppercase text-xs w-[50px]" rowSpan="2">Фото</th>
+                <th className="text-left p-2 font-medium text-mm-text-secondary uppercase text-xs min-w-[150px]" rowSpan="2">Товар</th>
                 
                 {/* Ozon columns */}
                 {selectedMPs.ozon && (
-                  <th className="text-center p-2 font-medium text-blue-400 uppercase text-xs border-l border-mm-border" colSpan="6">
+                  <th className="text-center p-2 font-medium text-blue-400 uppercase text-xs border-l border-mm-border" colSpan="7">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-5 h-5 bg-blue-500 rounded flex items-center justify-center text-white text-xs font-bold">O</div>
                       Ozon
@@ -350,54 +352,33 @@ const PricingPage = () => {
                   </th>
                 )}
                 
-                <th className="text-center p-3 font-medium text-mm-text-secondary uppercase text-xs border-l border-mm-border" rowSpan="2">Мин.<br/>цена</th>
-                <th className="text-center p-3 font-medium text-mm-text-secondary uppercase text-xs" rowSpan="2" style={{width: '60px'}}></th>
+                <th className="text-center p-2 font-medium text-mm-text-secondary uppercase text-xs border-l border-mm-border w-[80px]" rowSpan="2">Мин.<br/>цена</th>
+                <th className="text-center p-2 font-medium text-mm-text-secondary uppercase text-xs w-[50px]" rowSpan="2"></th>
               </tr>
               
-              {/* Sub-headers for price types */}
-              <tr className="border-b border-mm-border bg-mm-dark/70">
+              {/* Sub-headers */}
+              <tr className="border-b border-mm-border bg-mm-dark/70 text-[11px]">
                 {selectedMPs.ozon && (
                   <>
-                    <th className="p-2 text-center text-xs text-blue-300/80 font-normal border-l border-mm-border" colSpan="2">Со скидкой</th>
-                    <th className="p-2 text-center text-xs text-blue-300/80 font-normal" colSpan="2">До скидки</th>
-                    <th className="p-2 text-center text-xs text-blue-300/80 font-normal" colSpan="2">Мин. цена</th>
+                    <th className="p-1 text-center text-blue-300/70 font-normal border-l border-mm-border">Со скид.</th>
+                    <th className="p-1 text-center text-mm-cyan/70 font-normal bg-mm-cyan/5">Новая</th>
+                    <th className="p-1 text-center text-blue-300/70 font-normal">До скид.</th>
+                    <th className="p-1 text-center text-mm-cyan/70 font-normal bg-mm-cyan/5">Новая</th>
+                    <th className="p-1 text-center text-blue-300/70 font-normal">Мин.</th>
+                    <th className="p-1 text-center text-mm-cyan/70 font-normal bg-mm-cyan/5">Новая</th>
+                    <th className="p-1 text-center text-orange-400/70 font-normal"><FiPercent className="inline w-3 h-3" /></th>
                   </>
                 )}
                 {selectedMPs.wb && (
                   <>
-                    <th className="p-2 text-center text-xs text-purple-300/80 font-normal border-l border-mm-border" colSpan="2">До скидки</th>
-                    <th className="p-2 text-center text-xs text-purple-300/80 font-normal" colSpan="2">Со скидкой</th>
-                    <th className="p-2 text-center text-xs text-purple-300/80 font-normal" colSpan="2">Скидка %</th>
+                    <th className="p-1 text-center text-purple-300/70 font-normal border-l border-mm-border">До скид.</th>
+                    <th className="p-1 text-center text-mm-cyan/70 font-normal bg-mm-cyan/5">Новая</th>
+                    <th className="p-1 text-center text-purple-300/70 font-normal">Со скид.</th>
+                    <th className="p-1 text-center text-mm-cyan/70 font-normal bg-mm-cyan/5">Новая</th>
+                    <th className="p-1 text-center text-purple-300/70 font-normal">Скидка</th>
+                    <th className="p-1 text-center text-mm-cyan/70 font-normal bg-mm-cyan/5">Новая</th>
                   </>
                 )}
-              </tr>
-              
-              {/* Current/New sub-headers */}
-              <tr className="border-b border-mm-border bg-mm-dark/50">
-                <th className="p-1"></th>
-                <th className="p-1"></th>
-                {selectedMPs.ozon && (
-                  <>
-                    <th className="p-1 text-center text-[10px] text-mm-text-secondary font-normal border-l border-mm-border">Текущ.</th>
-                    <th className="p-1 text-center text-[10px] text-mm-cyan font-normal">Новая</th>
-                    <th className="p-1 text-center text-[10px] text-mm-text-secondary font-normal">Текущ.</th>
-                    <th className="p-1 text-center text-[10px] text-mm-cyan font-normal">Новая</th>
-                    <th className="p-1 text-center text-[10px] text-mm-text-secondary font-normal">Текущ.</th>
-                    <th className="p-1 text-center text-[10px] text-mm-cyan font-normal">Новая</th>
-                  </>
-                )}
-                {selectedMPs.wb && (
-                  <>
-                    <th className="p-1 text-center text-[10px] text-mm-text-secondary font-normal border-l border-mm-border">Текущ.</th>
-                    <th className="p-1 text-center text-[10px] text-mm-cyan font-normal">Новая</th>
-                    <th className="p-1 text-center text-[10px] text-mm-text-secondary font-normal">Текущ.</th>
-                    <th className="p-1 text-center text-[10px] text-mm-cyan font-normal">Новая</th>
-                    <th className="p-1 text-center text-[10px] text-mm-text-secondary font-normal">Текущ.</th>
-                    <th className="p-1 text-center text-[10px] text-mm-cyan font-normal">Новая</th>
-                  </>
-                )}
-                <th className="p-1 border-l border-mm-border"></th>
-                <th className="p-1"></th>
               </tr>
             </thead>
             <tbody>
@@ -429,69 +410,81 @@ const PricingPage = () => {
                     {/* Article & Name */}
                     <td className="p-2">
                       <div className="font-mono text-sm text-mm-cyan">{product.article}</div>
-                      <div className="text-xs text-mm-text-secondary truncate max-w-[150px]">{product.name}</div>
+                      <div className="text-xs text-mm-text-secondary truncate max-w-[140px]">{product.name}</div>
                     </td>
                     
                     {/* Ozon prices */}
                     {selectedMPs.ozon && (
                       <>
-                        {/* Цена со скидкой */}
-                        <td className="p-1 text-center border-l border-mm-border">
+                        {/* Цена со скидкой - Текущая */}
+                        <td className="p-1 border-l border-mm-border">
                           {product.ozon_linked ? (
                             <CurrentPrice value={getCurrentValue(product, 'ozon.price')} />
                           ) : (
-                            <span className="text-mm-text-secondary text-xs">—</span>
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
                           )}
                         </td>
-                        <td className="p-1 text-center">
+                        {/* Цена со скидкой - Новая */}
+                        <td className="p-1 bg-mm-cyan/5">
                           {product.ozon_linked ? (
                             <EditablePrice
                               value={getNewValue(product, 'ozon.price')}
                               onChange={(v) => updateLocalEdit(product.product_id, 'ozon.price', v)}
-                              placeholder=""
                             />
                           ) : (
-                            <span className="text-mm-text-secondary text-xs">—</span>
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
                           )}
                         </td>
                         
-                        {/* Цена до скидки */}
-                        <td className="p-1 text-center">
+                        {/* Цена до скидки - Текущая */}
+                        <td className="p-1">
                           {product.ozon_linked ? (
                             <CurrentPrice value={getCurrentValue(product, 'ozon.old_price')} />
                           ) : (
-                            <span className="text-mm-text-secondary text-xs">—</span>
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
                           )}
                         </td>
-                        <td className="p-1 text-center">
+                        {/* Цена до скидки - Новая */}
+                        <td className="p-1 bg-mm-cyan/5">
                           {product.ozon_linked ? (
                             <EditablePrice
                               value={getNewValue(product, 'ozon.old_price')}
                               onChange={(v) => updateLocalEdit(product.product_id, 'ozon.old_price', v)}
-                              placeholder=""
                             />
                           ) : (
-                            <span className="text-mm-text-secondary text-xs">—</span>
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
                           )}
                         </td>
                         
-                        {/* Мин. цена */}
-                        <td className="p-1 text-center">
+                        {/* Мин. цена - Текущая */}
+                        <td className="p-1">
                           {product.ozon_linked ? (
                             <CurrentPrice value={getCurrentValue(product, 'ozon.min_price')} />
                           ) : (
-                            <span className="text-mm-text-secondary text-xs">—</span>
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
                           )}
                         </td>
-                        <td className="p-1 text-center">
+                        {/* Мин. цена - Новая */}
+                        <td className="p-1 bg-mm-cyan/5">
                           {product.ozon_linked ? (
                             <EditablePrice
                               value={getNewValue(product, 'ozon.min_price')}
                               onChange={(v) => updateLocalEdit(product.product_id, 'ozon.min_price', v)}
-                              placeholder=""
                             />
                           ) : (
-                            <span className="text-mm-text-secondary text-xs">—</span>
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
+                          )}
+                        </td>
+                        
+                        {/* Комиссия */}
+                        <td className="p-1">
+                          {product.ozon_linked ? (
+                            <CommissionBadge 
+                              fbo={getCurrentValue(product, 'ozon.fbo_commission')} 
+                              fbs={getCurrentValue(product, 'ozon.fbs_commission')} 
+                            />
+                          ) : (
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
                           )}
                         </td>
                       </>
@@ -500,71 +493,71 @@ const PricingPage = () => {
                     {/* WB prices */}
                     {selectedMPs.wb && (
                       <>
-                        {/* Цена до скидки */}
-                        <td className="p-1 text-center border-l border-mm-border">
+                        {/* Цена до скидки - Текущая */}
+                        <td className="p-1 border-l border-mm-border">
                           {product.wb_linked ? (
                             <CurrentPrice value={getCurrentValue(product, 'wb.regular_price')} />
                           ) : (
-                            <span className="text-mm-text-secondary text-xs">—</span>
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
                           )}
                         </td>
-                        <td className="p-1 text-center">
+                        {/* Цена до скидки - Новая */}
+                        <td className="p-1 bg-mm-cyan/5">
                           {product.wb_linked ? (
                             <EditablePrice
                               value={getNewValue(product, 'wb.regular_price')}
                               onChange={(v) => updateLocalEdit(product.product_id, 'wb.regular_price', v)}
-                              placeholder=""
                             />
                           ) : (
-                            <span className="text-mm-text-secondary text-xs">—</span>
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
                           )}
                         </td>
                         
-                        {/* Цена со скидкой */}
-                        <td className="p-1 text-center">
+                        {/* Цена со скидкой - Текущая */}
+                        <td className="p-1">
                           {product.wb_linked ? (
                             <CurrentPrice value={getCurrentValue(product, 'wb.discount_price')} />
                           ) : (
-                            <span className="text-mm-text-secondary text-xs">—</span>
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
                           )}
                         </td>
-                        <td className="p-1 text-center">
+                        {/* Цена со скидкой - Новая */}
+                        <td className="p-1 bg-mm-cyan/5">
                           {product.wb_linked ? (
                             <EditablePrice
                               value={getNewValue(product, 'wb.discount_price')}
                               onChange={(v) => updateLocalEdit(product.product_id, 'wb.discount_price', v)}
-                              placeholder=""
                             />
                           ) : (
-                            <span className="text-mm-text-secondary text-xs">—</span>
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
                           )}
                         </td>
                         
-                        {/* Скидка % */}
-                        <td className="p-1 text-center">
+                        {/* Скидка % - Текущая */}
+                        <td className="p-1">
                           {product.wb_linked ? (
                             <CurrentPrice value={getCurrentValue(product, 'wb.discount')} suffix="%" />
                           ) : (
-                            <span className="text-mm-text-secondary text-xs">—</span>
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
                           )}
                         </td>
-                        <td className="p-1 text-center">
+                        {/* Скидка % - Новая */}
+                        <td className="p-1 bg-mm-cyan/5">
                           {product.wb_linked ? (
                             <EditablePrice
                               value={getNewValue(product, 'wb.discount')}
                               onChange={(v) => updateLocalEdit(product.product_id, 'wb.discount', v)}
                               suffix="%"
-                              placeholder=""
                             />
                           ) : (
-                            <span className="text-mm-text-secondary text-xs">—</span>
+                            <span className="text-mm-text-secondary/30 text-xs block text-center">—</span>
                           )}
                         </td>
                       </>
                     )}
                     
                     {/* Min price */}
-                    <td className="p-1 text-center border-l border-mm-border">
+                    <td className="p-1 border-l border-mm-border">
                       <EditablePrice
                         value={getNewValue(product, 'min_allowed_price') || getCurrentValue(product, 'min_allowed_price')}
                         onChange={(v) => updateLocalEdit(product.product_id, 'min_allowed_price', v)}
@@ -577,7 +570,7 @@ const PricingPage = () => {
                         <button
                           onClick={() => saveProduct(product)}
                           disabled={savingProduct === product.product_id}
-                          className="px-2 py-1 bg-mm-cyan text-mm-dark text-xs font-medium rounded hover:bg-mm-cyan/90 transition-colors disabled:opacity-50"
+                          className="px-2 py-1.5 bg-mm-cyan text-mm-dark text-xs font-medium rounded hover:bg-mm-cyan/90 transition-colors disabled:opacity-50"
                         >
                           {savingProduct === product.product_id ? (
                             <FiRefreshCw className="w-3 h-3 animate-spin" />
@@ -596,10 +589,19 @@ const PricingPage = () => {
       </div>
       
       {/* Legend */}
-      <div className="text-xs text-mm-text-secondary space-y-1">
-        <div>💡 <strong>Текущ.</strong> — актуальная цена на маркетплейсе (только чтение)</div>
-        <div>💡 <strong>Новая</strong> — введите новое значение для обновления (кликните для редактирования)</div>
-        <div>💡 Нажмите <strong>"Загрузить с МП"</strong> чтобы обновить текущие цены с маркетплейсов</div>
+      <div className="flex gap-6 text-xs text-mm-text-secondary">
+        <div className="flex items-center gap-2">
+          <div className="w-16 h-6 bg-mm-secondary rounded border border-mm-border"></div>
+          <span>Текущая цена (с МП)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-16 h-6 bg-mm-dark rounded border border-dashed border-mm-border"></div>
+          <span>Поле для ввода новой цены</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <FiPercent className="w-4 h-4 text-orange-400" />
+          <span>Комиссия маркетплейса</span>
+        </div>
       </div>
     </div>
   );
