@@ -324,6 +324,18 @@ const PricingPage = () => {
   const wbCount = products.filter(p => p.wb_linked).length;
   const changesCount = Object.keys(localEdits).length;
   const selectedCount = selectedProducts.size;
+  
+  // Check if there are selected products with price changes
+  const hasSelectedWithChanges = filteredProducts.some(p => {
+    if (!selectedProducts.has(p.product_id)) return false;
+    const edits = localEdits[p.product_id];
+    if (!edits) return false;
+    
+    // Check if any price field was edited
+    return edits['ozon.price'] || edits['ozon.old_price'] || edits['ozon.min_price'] ||
+           edits['wb.regular_price'] || edits['wb.discount_price'] || edits['wb.discount'] ||
+           edits['cost_price'] || edits['min_allowed_price'];
+  });
 
   if (loading) {
     return (
@@ -352,12 +364,16 @@ const PricingPage = () => {
           </button>
           <button
             onClick={pushToMarketplaces}
-            disabled={pushing || selectedCount === 0}
-            className="px-4 py-2 bg-mm-cyan text-mm-dark font-medium rounded hover:bg-mm-cyan/90 transition-colors flex items-center gap-2 disabled:opacity-50"
+            disabled={pushing || !hasSelectedWithChanges}
+            className={`px-4 py-2 font-medium rounded transition-colors flex items-center gap-2 ${
+              hasSelectedWithChanges && !pushing
+                ? 'bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 cursor-pointer'
+                : 'bg-mm-secondary text-mm-text-secondary cursor-not-allowed opacity-50'
+            }`}
           >
             {pushing ? <FiRefreshCw className="w-4 h-4 animate-spin" /> : <FiUpload className="w-4 h-4" />}
             Отправить на МП
-            {selectedCount > 0 && <span className="bg-mm-dark/20 px-1.5 py-0.5 rounded text-xs">{selectedCount}</span>}
+            {selectedCount > 0 && <span className={`px-1.5 py-0.5 rounded text-xs ${hasSelectedWithChanges ? 'bg-mm-dark/20' : 'bg-mm-border'}`}>{selectedCount}</span>}
           </button>
         </div>
       </div>
