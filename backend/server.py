@@ -5923,15 +5923,20 @@ async def push_prices_to_marketplaces(
         
         # Отправить цены на Ozon
         if ozon_key:
+            logger.info(f"Processing Ozon prices for {len(products)} products")
             ozon_prices = []
             for product in products:
                 mp_data = product.get("marketplace_data", {}).get("ozon", {})
                 pricing = product.get("pricing", {}).get("ozon", {})
                 product_id = mp_data.get("id")
                 
+                logger.info(f"Product {product.get('article')}: Ozon ID={product_id}, has_pricing={bool(pricing)}")
+                
                 if product_id:
                     # Get new prices from payload (use product.id as key)
                     new_price = data.get("prices", {}).get(product.get("id"), {}).get("ozon", {})
+                    logger.info(f"  New prices from payload: {new_price}")
+                    
                     if new_price and (new_price.get("price") or new_price.get("old_price")):
                         # Prices come in rubles from frontend
                         ozon_prices.append({
@@ -5942,6 +5947,7 @@ async def push_prices_to_marketplaces(
                             "min_price": str(int(new_price.get("min_price", pricing.get("min_price", 0)))),
                             "currency_code": "RUB"
                         })
+                        logger.info(f"  ✓ Added to Ozon batch")
             
             if ozon_prices:
                 logger.info(f"Sending {len(ozon_prices)} prices to Ozon: {ozon_prices}")
