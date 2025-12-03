@@ -5646,11 +5646,22 @@ async def get_all_products_pricing(
         
         result = []
         for product in products:
+            product_id = str(product["_id"])
+            
+            # Получить фото из product_photos
+            photo_doc = await db.product_photos.find_one({"product_id": product_id})
+            photo_url = photo_doc.get("url", "") if photo_doc else ""
+            
+            # Fallback на старое поле photos если нет в product_photos
+            if not photo_url:
+                photos = product.get("photos", [])
+                photo_url = photos[0] if photos else ""
+            
             pricing_data = {
-                "product_id": str(product["_id"]),
+                "product_id": product_id,
                 "article": product.get("article", ""),
                 "name": product.get("name", ""),
-                "photo": product.get("photos", [""])[0] if product.get("photos") else "",
+                "photo": photo_url,
                 "ozon": None,
                 "wb": None,
                 "min_allowed_price": product.get("min_allowed_price", 0),
