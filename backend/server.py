@@ -5660,10 +5660,13 @@ async def get_all_products_pricing(
         
         result = []
         for product in products:
-            product_id = str(product["_id"])
+            # ВАЖНО: используем UUID, не ObjectId!
+            product_id = product.get("id")
+            if not product_id:
+                continue  # Skip products without UUID
             
             # Получить фото из product_photos
-            photo_doc = await db.product_photos.find_one({"product_id": product_id})
+            photo_doc = await db.product_photos.find_one({"product_id": str(product["_id"])})
             photo_url = photo_doc.get("url", "") if photo_doc else ""
             
             # Fallback на старое поле photos если нет в product_photos
@@ -5672,7 +5675,7 @@ async def get_all_products_pricing(
                 photo_url = photos[0] if photos else ""
             
             pricing_data = {
-                "product_id": product_id,
+                "product_id": product_id,  # UUID, not ObjectId
                 "article": product.get("article", ""),
                 "name": product.get("name", ""),
                 "photo": photo_url,
