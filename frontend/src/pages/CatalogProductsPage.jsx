@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { FiPlus, FiSearch, FiFilter, FiDownload, FiUpload, FiEdit, FiTrash2, FiPackage, FiLink, FiDollarSign } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
-import CatalogNavDropdown from '../components/CatalogNavDropdown'
 
 export default function CatalogProductsPage() {
   const { api } = useAuth()
