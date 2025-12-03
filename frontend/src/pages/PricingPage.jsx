@@ -136,14 +136,11 @@ const PricingPage = () => {
 
   return (
     <div className="space-y-6" data-testid="pricing-page">
-      {/* Header with Dropdown */}
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <CatalogNavDropdown />
-          <div>
-            <h1 className="text-3xl font-bold text-mm-cyan">ЦЕНЫ</h1>
-            <p className="text-sm text-mm-text-secondary mt-1">Управление ценами на маркетплейсах</p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-mm-cyan">ЦЕНЫ</h1>
+          <p className="text-sm text-mm-text-secondary mt-1">Управление ценами на маркетплейсах</p>
         </div>
         <div className="flex gap-2">
           <button
