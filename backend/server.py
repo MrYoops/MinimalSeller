@@ -5752,6 +5752,78 @@ async def get_product_pricing(
         )
 
 
+
+@app.put("/api/catalog/pricing/{product_id}")
+async def update_product_all_pricing(
+    product_id: str,
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Обновить все цены товара (Ozon, WB, min_allowed_price)"""
+    try:
+        seller_id = str(current_user["_id"])
+        
+        # Найти товар
+        product = await db.product_catalog.find_one({
+            "_id": product_id,
+            "$or": [
+                {"user_id": current_user["_id"]},
+                {"seller_id": seller_id}
+            ]
+        })
+        
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found"
+            )
+        
+        update_fields = {}
+        
+        # Обновить min_allowed_price
+        if "min_allowed_price" in data:
+            update_fields["min_allowed_price"] = float(data["min_allowed_price"]) if data["min_allowed_price"] else 0
+        
+        # Обновить pricing.ozon
+        if "ozon" in data and data["ozon"]:
+            update_fields["pricing.ozon"] = {
+                "price": float(data["ozon"].get("price", 0) or 0),
+                "old_price": float(data["ozon"].get("old_price", 0) or 0),
+                "min_price": float(data["ozon"].get("min_price", 0) or 0)
+            }
+        
+        # Обновить pricing.wb
+        if "wb" in data and data["wb"]:
+            update_fields["pricing.wb"] = {
+                "regular_price": float(data["wb"].get("regular_price", 0) or 0),
+                "discount_price": float(data["wb"].get("discount_price", 0) or 0),
+                "discount": float(data["wb"].get("discount", 0) or 0)
+            }
+        
+        if update_fields:
+            await db.product_catalog.update_one(
+                {"_id": product_id},
+                {"$set": update_fields}
+            )
+            logger.info(f"Updated pricing for product {product_id}: {update_fields}")
+        
+        return {
+            "success": True,
+            "message": "Цены обновлены",
+            "updated_fields": list(update_fields.keys())
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update product pricing: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update pricing: {str(e)}"
+        )
+
+
+
 @app.put("/api/catalog/products/{product_id}/pricing/{marketplace}")
 async def update_product_pricing(
     product_id: str,
