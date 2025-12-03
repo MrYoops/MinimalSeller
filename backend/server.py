@@ -5768,10 +5768,23 @@ async def sync_prices_from_marketplaces(
                             data = resp.json()
                             for item in data.get("items", []):
                                 offer_id = item.get("offer_id")
+                                # Safe float conversion
+                                def safe_float(val):
+                                    if val is None or val == '':
+                                        return 0.0
+                                    if isinstance(val, str):
+                                        val = val.replace(",", ".").strip()
+                                        if val == '':
+                                            return 0.0
+                                    try:
+                                        return float(val)
+                                    except (ValueError, TypeError):
+                                        return 0.0
+                                
                                 ozon_prices[offer_id] = {
-                                    "price": float(item.get("price", "0").replace(",", ".")) if isinstance(item.get("price"), str) else float(item.get("price") or 0),
-                                    "old_price": float(item.get("old_price", "0").replace(",", ".")) if isinstance(item.get("old_price"), str) else float(item.get("old_price") or 0),
-                                    "min_price": float(item.get("min_price", "0").replace(",", ".")) if isinstance(item.get("min_price"), str) else float(item.get("min_price") or 0)
+                                    "price": safe_float(item.get("price")),
+                                    "old_price": safe_float(item.get("old_price")),
+                                    "min_price": safe_float(item.get("min_price"))
                                 }
                             logger.info(f"Loaded {len(ozon_prices)} prices from Ozon")
             except Exception as e:
