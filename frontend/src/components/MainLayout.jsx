@@ -41,7 +41,10 @@ const MainNavDropdown = ({ title, icon: Icon, items, isActive }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 bg-mm-darker rounded-lg shadow-2xl border border-mm-border py-2 z-[9999] min-w-[220px]">
+        <div 
+          className="absolute top-full left-0 mt-1 bg-mm-darker rounded-lg shadow-2xl border border-mm-border py-2 min-w-[220px]"
+          style={{ zIndex: 9999 }}
+        >
           {items.map((item, idx) => (
             <button
               key={idx}
