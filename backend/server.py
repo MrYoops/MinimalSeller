@@ -5903,7 +5903,7 @@ async def push_prices_to_marketplaces(
         
         # Получить товары
         products = await db.product_catalog.find({
-            "_id": {"$in": product_ids},
+            "id": {"$in": product_ids},
             "$or": [
                 {"user_id": current_user["_id"]},
                 {"seller_id": seller_id}
@@ -5923,15 +5923,17 @@ async def push_prices_to_marketplaces(
                 pricing = product.get("pricing", {}).get("ozon", {})
                 product_id = mp_data.get("id")
                 
-                if product_id and pricing:
-                    new_price = data.get("prices", {}).get(product["_id"], {}).get("ozon", {})
-                    if new_price:
+                if product_id:
+                    # Get new prices from payload (use product.id as key)
+                    new_price = data.get("prices", {}).get(product.get("id"), {}).get("ozon", {})
+                    if new_price and (new_price.get("price") or new_price.get("old_price")):
+                        # Prices come in rubles from frontend
                         ozon_prices.append({
                             "product_id": int(product_id),
                             "offer_id": product.get("article", ""),
-                            "price": str(new_price.get("price", pricing.get("price", 0))),
-                            "old_price": str(new_price.get("old_price", pricing.get("old_price", 0))),
-                            "min_price": str(new_price.get("min_price", pricing.get("min_price", 0))),
+                            "price": str(int(new_price.get("price", pricing.get("price", 0)))),
+                            "old_price": str(int(new_price.get("old_price", pricing.get("old_price", 0)))),
+                            "min_price": str(int(new_price.get("min_price", pricing.get("min_price", 0)))),
                             "currency_code": "RUB"
                         })
             
@@ -5978,13 +5980,18 @@ async def push_prices_to_marketplaces(
                 pricing = product.get("pricing", {}).get("wb", {})
                 nm_id = mp_data.get("id")
                 
-                if nm_id and pricing:
-                    new_price = data.get("prices", {}).get(product["_id"], {}).get("wb", {})
-                    if new_price:
+                if nm_id:
+                    # Get new prices from payload (use product.id as key)
+                    new_price = data.get("prices", {}).get(product.get("id"), {}).get("wb", {})
+                    if new_price and (new_price.get("regular_price") or new_price.get("discount_price")):
+                        # Prices come in rubles from frontend
+                        regular = int(new_price.get("regular_price", pricing.get("regular_price", 0)))
+                        discount = int(new_price.get("discount", pricing.get("discount", 0)))
+                        
                         wb_prices.append({
                             "nmID": int(nm_id),
-                            "price": int(new_price.get("regular_price", pricing.get("regular_price", 0))),
-                            "discount": int(new_price.get("discount", pricing.get("discount", 0)))
+                            "price": regular,
+                            "discount": discount
                         })
             
             if wb_prices:
