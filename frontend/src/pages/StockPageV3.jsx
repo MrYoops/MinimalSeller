@@ -256,6 +256,7 @@ function StockPageV3() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-mm-border">
+                <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Фото</th>
                 <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">SKU</th>
                 <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Название</th>
                 <th className="text-center py-4 px-4 text-mm-text-secondary uppercase text-sm font-mono">Всего</th>
@@ -267,6 +268,22 @@ function StockPageV3() {
             <tbody>
               {stocks.map((item) => (
                 <tr key={item.id} className="border-b border-mm-border hover:bg-mm-gray transition-colors">
+                  <td className="py-4 px-4">
+                    {item.product_image ? (
+                      <img 
+                        src={item.product_image} 
+                        alt={item.product_name || item.sku}
+                        className="w-12 h-12 object-cover rounded bg-mm-dark"
+                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                      />
+                    ) : null}
+                    <div 
+                      className="w-12 h-12 bg-mm-dark rounded flex items-center justify-center text-mm-text-secondary text-xs"
+                      style={{ display: item.product_image ? 'none' : 'flex' }}
+                    >
+                      Нет фото
+                    </div>
+                  </td>
                   <td className="py-4 px-4 font-mono text-sm text-mm-cyan">{item.sku}</td>
                   <td className="py-4 px-4 text-sm">{item.product_name || '—'}</td>
                   <td className="py-4 px-4 text-center">
