@@ -5876,6 +5876,166 @@ async def sync_prices_from_marketplaces(
 
 
 
+
+@app.post("/api/catalog/pricing/push-to-mp")
+async def push_prices_to_marketplaces(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Отправить новые цены на маркетплейсы"""
+    import httpx
+    
+    try:
+        seller_id = str(current_user["_id"])
+        product_ids = data.get("product_ids", [])
+        
+        if not product_ids:
+            return {"success": False, "message": "Не выбраны товары для обновления"}
+        
+        # Получить API ключи
+        profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+        if not profile:
+            return {"success": False, "message": "Профиль продавца не найден"}
+        
+        api_keys = profile.get("api_keys", [])
+        ozon_key = next((k for k in api_keys if k["marketplace"] == "ozon"), None)
+        wb_key = next((k for k in api_keys if k["marketplace"] == "wb"), None)
+        
+        # Получить товары
+        products = await db.product_catalog.find({
+            "_id": {"$in": product_ids},
+            "$or": [
+                {"user_id": current_user["_id"]},
+                {"seller_id": seller_id}
+            ]
+        }).to_list(length=None)
+        
+        results = {
+            "ozon": {"success": 0, "failed": 0, "errors": []},
+            "wb": {"success": 0, "failed": 0, "errors": []}
+        }
+        
+        # Отправить цены на Ozon
+        if ozon_key:
+            ozon_prices = []
+            for product in products:
+                mp_data = product.get("marketplace_data", {}).get("ozon", {})
+                pricing = product.get("pricing", {}).get("ozon", {})
+                product_id = mp_data.get("id")
+                
+                if product_id and pricing:
+                    new_price = data.get("prices", {}).get(product["_id"], {}).get("ozon", {})
+                    if new_price:
+                        ozon_prices.append({
+                            "product_id": int(product_id),
+                            "offer_id": product.get("article", ""),
+                            "price": str(new_price.get("price", pricing.get("price", 0))),
+                            "old_price": str(new_price.get("old_price", pricing.get("old_price", 0))),
+                            "min_price": str(new_price.get("min_price", pricing.get("min_price", 0))),
+                            "currency_code": "RUB"
+                        })
+            
+            if ozon_prices:
+                headers = {
+                    "Client-Id": ozon_key.get("client_id", ""),
+                    "Api-Key": ozon_key.get("api_key", ""),
+                    "Content-Type": "application/json"
+                }
+                
+                try:
+                    async with httpx.AsyncClient() as http:
+                        resp = await http.post(
+                            "https://api-seller.ozon.ru/v1/product/import/prices",
+                            headers=headers,
+                            json={"prices": ozon_prices},
+                            timeout=30
+                        )
+                        
+                        if resp.status_code == 200:
+                            result = resp.json()
+                            for r in result.get("result", []):
+                                if r.get("updated"):
+                                    results["ozon"]["success"] += 1
+                                else:
+                                    results["ozon"]["failed"] += 1
+                                    errors = r.get("errors", [])
+                                    if errors:
+                                        results["ozon"]["errors"].extend([e.get("message", str(e)) for e in errors])
+                            logger.info(f"Ozon prices update: {results['ozon']}")
+                        else:
+                            error_text = resp.text[:200]
+                            results["ozon"]["errors"].append(f"HTTP {resp.status_code}: {error_text}")
+                            logger.error(f"Ozon price update failed: {resp.status_code} - {error_text}")
+                except Exception as e:
+                    results["ozon"]["errors"].append(str(e))
+                    logger.error(f"Ozon price update error: {e}")
+        
+        # Отправить цены на WB
+        if wb_key:
+            wb_prices = []
+            for product in products:
+                mp_data = product.get("marketplace_data", {}).get("wb", {})
+                pricing = product.get("pricing", {}).get("wb", {})
+                nm_id = mp_data.get("id")
+                
+                if nm_id and pricing:
+                    new_price = data.get("prices", {}).get(product["_id"], {}).get("wb", {})
+                    if new_price:
+                        wb_prices.append({
+                            "nmID": int(nm_id),
+                            "price": int(new_price.get("regular_price", pricing.get("regular_price", 0))),
+                            "discount": int(new_price.get("discount", pricing.get("discount", 0)))
+                        })
+            
+            if wb_prices:
+                headers = {
+                    "Authorization": wb_key.get("api_key", ""),
+                    "Content-Type": "application/json"
+                }
+                
+                try:
+                    async with httpx.AsyncClient() as http:
+                        resp = await http.post(
+                            "https://discounts-prices-api.wildberries.ru/api/v2/upload/task",
+                            headers=headers,
+                            json={"data": wb_prices},
+                            timeout=30
+                        )
+                        
+                        if resp.status_code == 200:
+                            result = resp.json()
+                            if result.get("data", {}).get("id"):
+                                results["wb"]["success"] = len(wb_prices)
+                                logger.info(f"WB prices update task created: {result}")
+                            else:
+                                results["wb"]["failed"] = len(wb_prices)
+                                results["wb"]["errors"].append("Failed to create task")
+                        else:
+                            error_text = resp.text[:200]
+                            results["wb"]["errors"].append(f"HTTP {resp.status_code}: {error_text}")
+                            logger.error(f"WB price update failed: {resp.status_code} - {error_text}")
+                except Exception as e:
+                    results["wb"]["errors"].append(str(e))
+                    logger.error(f"WB price update error: {e}")
+        
+        total_success = results["ozon"]["success"] + results["wb"]["success"]
+        total_failed = results["ozon"]["failed"] + results["wb"]["failed"]
+        
+        return {
+            "success": True,
+            "message": f"Отправлено: {total_success} успешно, {total_failed} с ошибками",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to push prices to marketplaces: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to push prices: {str(e)}"
+        )
+
+
+
 @app.get("/api/catalog/pricing/{product_id}")
 async def get_product_pricing(
     product_id: str,
