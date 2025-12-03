@@ -5936,31 +5936,39 @@ async def push_prices_to_marketplaces(
         
         # Отправить цены на Ozon
         if ozon_key:
-            logger.info(f"Processing Ozon prices for {len(products)} products")
+            print(f"\n🔵 Processing Ozon prices...")
             ozon_prices = []
             for product in products:
                 mp_data = product.get("marketplace_data", {}).get("ozon", {})
                 pricing = product.get("pricing", {}).get("ozon", {})
                 product_id = mp_data.get("id")
                 
-                logger.info(f"Product {product.get('article')}: Ozon ID={product_id}, has_pricing={bool(pricing)}")
+                print(f"  Product: {product.get('article')}")
+                print(f"    Ozon ID: {product_id}")
+                print(f"    Has pricing: {bool(pricing)}")
                 
                 if product_id:
                     # Get new prices from payload (use product.id as key)
-                    new_price = data.get("prices", {}).get(product.get("id"), {}).get("ozon", {})
-                    logger.info(f"  New prices from payload: {new_price}")
+                    new_price = prices_data.get(product.get("id"), {}).get("ozon", {})
+                    print(f"    New prices: {new_price}")
                     
                     if new_price and (new_price.get("price") or new_price.get("old_price")):
                         # Prices come in rubles from frontend
-                        ozon_prices.append({
+                        price_item = {
                             "product_id": int(product_id),
                             "offer_id": product.get("article", ""),
                             "price": str(int(new_price.get("price", pricing.get("price", 0)))),
                             "old_price": str(int(new_price.get("old_price", pricing.get("old_price", 0)))),
                             "min_price": str(int(new_price.get("min_price", pricing.get("min_price", 0)))),
                             "currency_code": "RUB"
-                        })
+                        }
+                        ozon_prices.append(price_item)
+                        print(f"    ✓ Added to batch: {price_item}")
                         logger.info(f"  ✓ Added to Ozon batch")
+                    else:
+                        print(f"    ✗ Skipped (no new prices)")
+        else:
+            print(f"\n⚠️  No Ozon API key found")
             
             if ozon_prices:
                 logger.info(f"Sending {len(ozon_prices)} prices to Ozon: {ozon_prices}")
