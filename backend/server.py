@@ -5888,6 +5888,10 @@ async def push_prices_to_marketplaces(
     try:
         seller_id = str(current_user["_id"])
         product_ids = data.get("product_ids", [])
+        prices_data = data.get("prices", {})
+        
+        logger.info(f"Push prices - seller: {seller_id}, products: {product_ids}")
+        logger.info(f"Prices payload: {prices_data}")
         
         if not product_ids:
             return {"success": False, "message": "Не выбраны товары для обновления"}
@@ -5909,6 +5913,8 @@ async def push_prices_to_marketplaces(
                 {"seller_id": seller_id}
             ]
         }).to_list(length=None)
+        
+        logger.info(f"Found {len(products)} products for price update")
         
         results = {
             "ozon": {"success": 0, "failed": 0, "errors": []},
@@ -5938,6 +5944,7 @@ async def push_prices_to_marketplaces(
                         })
             
             if ozon_prices:
+                logger.info(f"Sending {len(ozon_prices)} prices to Ozon: {ozon_prices}")
                 headers = {
                     "Client-Id": ozon_key.get("client_id", ""),
                     "Api-Key": ozon_key.get("api_key", ""),
@@ -5995,6 +6002,7 @@ async def push_prices_to_marketplaces(
                         })
             
             if wb_prices:
+                logger.info(f"Sending {len(wb_prices)} prices to WB: {wb_prices}")
                 headers = {
                     "Authorization": wb_key.get("api_key", ""),
                     "Content-Type": "application/json"
