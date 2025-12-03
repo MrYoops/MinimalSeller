@@ -180,19 +180,38 @@ const PricingPage = () => {
         prices: prices
       });
       
+      console.log('Push to MP response:', response.data);
+      
       if (response.data.success) {
         const { results } = response.data;
-        let message = '✅ ';
-        if (results.ozon.success > 0) message += `Ozon: ${results.ozon.success} `;
-        if (results.wb.success > 0) message += `WB: ${results.wb.success} `;
-        toast.success(message || response.data.message);
+        
+        // Build success message
+        const successParts = [];
+        if (results.ozon.success > 0) {
+          successParts.push(`Ozon: ${results.ozon.success} шт`);
+        }
+        if (results.wb.success > 0) {
+          successParts.push(`WB: ${results.wb.success} шт`);
+        }
+        
+        if (successParts.length > 0) {
+          toast.success(`✅ Отправлено на МП: ${successParts.join(', ')}`, {
+            duration: 5000
+          });
+        } else {
+          toast.warning('⚠️ Товары обработаны, но цены не обновлены. Проверьте связку с МП.');
+        }
         
         // Show errors if any
         if (results.ozon.errors?.length > 0) {
-          toast.error(`Ozon ошибки: ${results.ozon.errors.join(', ')}`);
+          toast.error(`Ozon ошибки: ${results.ozon.errors.join(', ')}`, {
+            duration: 7000
+          });
         }
         if (results.wb.errors?.length > 0) {
-          toast.error(`WB ошибки: ${results.wb.errors.join(', ')}`);
+          toast.error(`WB ошибки: ${results.wb.errors.join(', ')}`, {
+            duration: 7000
+          });
         }
         
         // Refresh data
@@ -202,7 +221,7 @@ const PricingPage = () => {
       }
     } catch (error) {
       console.error('Push error:', error);
-      toast.error('Ошибка отправки цен на маркетплейсы');
+      toast.error(`Ошибка отправки: ${error.response?.data?.detail || error.message}`);
     } finally {
       setPushing(false);
     }
