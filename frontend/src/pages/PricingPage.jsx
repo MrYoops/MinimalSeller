@@ -3,7 +3,7 @@ import { FiSearch, FiRefreshCw, FiSave, FiCheck, FiDownload } from 'react-icons/
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 
-// Editable price cell component
+// Editable price cell component - with visible input field style
 const EditablePrice = ({ value, onChange, suffix = '₽', placeholder = '—' }) => {
   const [editing, setEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value || '');
@@ -38,17 +38,22 @@ const EditablePrice = ({ value, onChange, suffix = '₽', placeholder = '—' })
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         autoFocus
-        className="w-20 px-2 py-1 bg-mm-dark border border-mm-cyan rounded text-mm-text text-sm focus:outline-none"
+        className="w-20 px-2 py-1 bg-mm-dark border-2 border-mm-cyan rounded text-mm-text text-sm focus:outline-none text-center"
       />
     );
   }
 
+  // Always show as input-like field with border
   return (
     <div
       onClick={() => setEditing(true)}
-      className="cursor-pointer hover:bg-mm-cyan/10 px-2 py-1 rounded transition-colors min-w-[60px] text-center border border-transparent hover:border-mm-cyan/30"
+      className="cursor-pointer px-2 py-1 rounded transition-colors min-w-[70px] text-center bg-mm-dark/50 border border-mm-border hover:border-mm-cyan/50 hover:bg-mm-dark"
     >
-      {value ? `${value}${suffix}` : placeholder}
+      {value ? (
+        <span className="text-mm-cyan">{value}{suffix}</span>
+      ) : (
+        <span className="text-mm-text-secondary/50">ввести</span>
+      )}
     </div>
   );
 };
