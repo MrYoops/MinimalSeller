@@ -5975,10 +5975,10 @@ async def push_prices_to_marketplaces(
                         logger.info(f"  ✓ Added to Ozon batch")
                     else:
                         print(f"    ✗ Skipped (no new prices)")
-        else:
-            print(f"\n⚠️  No Ozon API key found")
             
+            print(f"\nOzon batch готов: {len(ozon_prices)} товаров")
             if ozon_prices:
+                print(f"Sending {len(ozon_prices)} prices to Ozon API...")
                 logger.info(f"Sending {len(ozon_prices)} prices to Ozon: {ozon_prices}")
                 headers = {
                     "Client-Id": ozon_key.get("client_id", ""),
