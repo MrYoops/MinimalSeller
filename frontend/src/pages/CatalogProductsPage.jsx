@@ -410,6 +410,8 @@ export default function CatalogProductsPage() {
           </div>
         </div>
       )}
+        </>
+      )}
     </div>
   )
 }
