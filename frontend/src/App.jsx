@@ -20,11 +20,20 @@ import CatalogImportPage from './pages/CatalogImportPage'
 import ProductMatchingPage from './pages/ProductMatchingPage'
 import PricingPage from './pages/PricingPage'
 import InternalCategoriesPage from './pages/InternalCategoriesPage'
-// NEW: Warehouse module pages
+// Warehouse module pages
 import WarehousesPageV2 from './pages/WarehousesPageV2'
 import SuppliersPage from './pages/SuppliersPage'
 import IncomeOrdersPage from './pages/IncomeOrdersPage'
 import IncomeOrderFormPage from './pages/IncomeOrderFormPage'
+// Stock pages
+import StockPageV3 from './pages/StockPageV3'
+import StockSyncHistoryPage from './pages/StockSyncHistoryPage'
+// Orders & Finance
+import OrdersPage from './pages/OrdersPage'
+import FinanceDashboard from './pages/FinanceDashboard'
+import PayoutsPage from './pages/PayoutsPage'
+// Layout
+import MainLayout from './components/MainLayout'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 
