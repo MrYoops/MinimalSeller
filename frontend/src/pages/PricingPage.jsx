@@ -136,13 +136,22 @@ const PricingPage = () => {
   };
 
   const pushToMarketplaces = async () => {
-    // Collect products with changes
-    const productsWithChanges = filteredProducts.filter(p => 
-      selectedProducts.has(p.product_id) && hasChanges(p.product_id)
-    );
+    // Collect selected products with editable price changes
+    const productsWithChanges = filteredProducts.filter(p => {
+      if (!selectedProducts.has(p.product_id)) return false
+      const edits = localEdits[p.product_id]
+      if (!edits) return false
+      
+      // Check if any price field was edited
+      const hasPriceChange = 
+        edits['ozon.price'] || edits['ozon.old_price'] || edits['ozon.min_price'] ||
+        edits['wb.regular_price'] || edits['wb.discount_price'] || edits['wb.discount']
+      
+      return hasPriceChange
+    });
     
     if (productsWithChanges.length === 0) {
-      toast.error('Выберите товары с изменениями для отправки');
+      toast.error('Выберите товары с изменениями цен для отправки');
       return;
     }
     
@@ -343,7 +352,7 @@ const PricingPage = () => {
           </button>
           <button
             onClick={pushToMarketplaces}
-            disabled={pushing || selectedCount === 0 || changesCount === 0}
+            disabled={pushing || selectedCount === 0}
             className="px-4 py-2 bg-mm-cyan text-mm-dark font-medium rounded hover:bg-mm-cyan/90 transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             {pushing ? <FiRefreshCw className="w-4 h-4 animate-spin" /> : <FiUpload className="w-4 h-4" />}

@@ -124,19 +124,27 @@ export default function CatalogProductFormV4() {
 
   // Инициализация marketplace data при выборе маркетплейса
   useEffect(() => {
+    let needsUpdate = false
+    const updates = {}
+    
     Object.keys(selectedMarketplaces).forEach(mp => {
       if (selectedMarketplaces[mp] && !marketplaceData[mp]?.name) {
-        setMarketplaceData(prev => ({
-          ...prev,
-          [mp]: {
-            name: product.name,
-            description: product.description,
-            characteristics: product.characteristics
-          }
-        }))
+        needsUpdate = true
+        updates[mp] = {
+          name: product.name,
+          description: product.description,
+          characteristics: product.characteristics
+        }
       }
     })
-  }, [selectedMarketplaces])
+    
+    if (needsUpdate) {
+      setMarketplaceData(prev => ({
+        ...prev,
+        ...updates
+      }))
+    }
+  }, [selectedMarketplaces.ozon, selectedMarketplaces.wb, selectedMarketplaces.yandex, selectedMarketplaces.honest_sign])
 
   const loadCategories = async () => {
     try {
