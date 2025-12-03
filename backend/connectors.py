@@ -215,53 +215,65 @@ class OzonConnector(BaseConnector):
                 return all_products
             
             # Step 2: Get full info for each product (in batches)
-            info_url = f"{self.base_url}/v2/product/info/list"
+            # Use v3 API which returns images correctly
+            info_url = f"{self.base_url}/v3/product/info/list"
             
-            # Prepare product IDs
-            product_ids = [item.get('product_id') for item in items if item.get('product_id')]
+            # Prepare offer IDs
             offer_ids = [item.get('offer_id') for item in items if item.get('offer_id')]
             
-            logger.info(f"[Ozon] Step 2: Getting full info for {len(offer_ids)} products")
+            logger.info(f"[Ozon] Step 2: Getting full info for {len(offer_ids)} products via v3 API")
             
-            # Get full info
+            # Get full info - v3 API uses simpler payload
             info_payload = {
-                "offer_id": offer_ids[:100],  # Max 100 per request
-                "product_id": [],
-                "sku": []
+                "offer_id": offer_ids[:100]  # Max 100 per request
             }
             
             try:
                 info_response = await self._make_request("POST", info_url, headers, json_data=info_payload)
-                detailed_items = info_response.get('result', {}).get('items', [])
+                # v3 API returns items directly, not in result.items
+                detailed_items = info_response.get('items', []) or info_response.get('result', {}).get('items', [])
                 logger.info(f"[Ozon] Received full info for {len(detailed_items)} products")
                 
                 # Transform to standard format
                 for detailed in detailed_items:
-                    # Extract images
+                    # Extract images - v3 API returns images as array of URLs directly
                     images = []
-                    for img in detailed.get('images', []):
-                        img_url = img.get('file_name') or img.get('url')
-                        if img_url:
-                            images.append(img_url)
+                    images_data = detailed.get('images', [])
                     
-                    # Extract primary image
-                    primary_image = detailed.get('primary_image', '')
-                    if primary_image and primary_image not in images:
-                        images.insert(0, primary_image)
+                    # Handle both formats: array of strings or array of objects
+                    for img in images_data:
+                        if isinstance(img, str):
+                            images.append(img)
+                        elif isinstance(img, dict):
+                            img_url = img.get('file_name') or img.get('url')
+                            if img_url:
+                                images.append(img_url)
+                    
+                    # Extract primary image (v3 returns it as array)
+                    primary_image = detailed.get('primary_image', [])
+                    if isinstance(primary_image, list) and primary_image:
+                        for pi in primary_image:
+                            if pi and pi not in images:
+                                images.insert(0, pi)
+                    elif isinstance(primary_image, str) and primary_image:
+                        if primary_image not in images:
+                            images.insert(0, primary_image)
+                    
+                    logger.info(f"[Ozon] Product {detailed.get('offer_id')}: found {len(images)} images")
                     
                     all_products.append({
                         "id": str(detailed.get('id', '')),
                         "sku": detailed.get('offer_id', ''),
                         "name": detailed.get('name', 'Unnamed product'),
                         "description": detailed.get('description', ''),
-                        "price": 0,
+                        "price": float(detailed.get('price', 0) or 0),
                         "stock": 0,
                         "images": images,
                         "attributes": detailed.get('attributes', []),
                         "category": detailed.get('category_name', ''),
                         "marketplace": "ozon",
-                        "status": 'archived' if detailed.get('archived') else 'active',
-                        "barcode": detailed.get('barcode', '')
+                        "status": 'archived' if detailed.get('is_archived') else 'active',
+                        "barcode": detailed.get('barcodes', [''])[0] if detailed.get('barcodes') else ''
                     })
                 
                 logger.info(f"[Ozon] Successfully transformed {len(all_products)} products with full details")
