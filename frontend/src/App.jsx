@@ -53,79 +53,114 @@ function ProtectedRoute({ children, requiredRole }) {
   return children
 }
 
+// Wrapper component for pages that need MainLayout
+function WithLayout({ children }) {
+  return (
+    <MainLayout>
+      {children}
+    </MainLayout>
+  )
+}
+
 function AppRoutes() {
   const { user } = useAuth()
   
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
+      
+      {/* Home - redirects based on role */}
       <Route path="/" element={
         <ProtectedRoute>
-          {user?.role === 'admin' ? <AdminDashboardV2 /> : <SellerDashboard />}
+          {user?.role === 'admin' ? <AdminDashboardV2 /> : <Navigate to="/catalog/products" />}
         </ProtectedRoute>
       } />
-      <Route path="/products/:id/edit" element={
-        <ProtectedRoute><ProductEditPage /></ProtectedRoute>
+      
+      {/* Integrations */}
+      <Route path="/integrations" element={
+        <ProtectedRoute><WithLayout><IntegrationsPage /></WithLayout></ProtectedRoute>
+      } />
+      
+      {/* Warehouse Section */}
+      <Route path="/warehouses" element={
+        <ProtectedRoute><WithLayout><WarehousesPageV2 /></WithLayout></ProtectedRoute>
       } />
       <Route path="/warehouses/:id" element={
-        <ProtectedRoute><WarehouseDetailNew /></ProtectedRoute>
+        <ProtectedRoute><WithLayout><WarehouseDetailNew /></WithLayout></ProtectedRoute>
       } />
-      <Route path="/integrations" element={
-        <ProtectedRoute><IntegrationsPage /></ProtectedRoute>
+      <Route path="/suppliers" element={
+        <ProtectedRoute><WithLayout><SuppliersPage /></WithLayout></ProtectedRoute>
       } />
-      {/* <Route path="/warehouses-old/:id" element={
-        <ProtectedRoute><WarehouseDetailPage /></ProtectedRoute>
-      } /> */}
-      <Route path="/products-new" element={
-        <ProtectedRoute><ProductsPageNew /></ProtectedRoute>
+      <Route path="/income-orders" element={
+        <ProtectedRoute><WithLayout><IncomeOrdersPage /></WithLayout></ProtectedRoute>
       } />
-      <Route path="/stock-balances" element={
-        <ProtectedRoute><StockBalancesPage /></ProtectedRoute>
+      <Route path="/income-orders/new" element={
+        <ProtectedRoute><WithLayout><IncomeOrderFormPage /></WithLayout></ProtectedRoute>
       } />
-      <Route path="/catalog/categories" element={
-        <ProtectedRoute><CatalogCategoriesPageSimple /></ProtectedRoute>
+      <Route path="/income-orders/:id/edit" element={
+        <ProtectedRoute><WithLayout><IncomeOrderFormPage /></WithLayout></ProtectedRoute>
       } />
+      <Route path="/stock" element={
+        <ProtectedRoute><WithLayout><StockPageV3 /></WithLayout></ProtectedRoute>
+      } />
+      <Route path="/stock/sync" element={
+        <ProtectedRoute><WithLayout><StockSyncHistoryPage /></WithLayout></ProtectedRoute>
+      } />
+      
+      {/* Catalog/Products Section */}
       <Route path="/catalog/products" element={
-        <ProtectedRoute><CatalogProductsPage /></ProtectedRoute>
+        <ProtectedRoute><WithLayout><CatalogProductsPage /></WithLayout></ProtectedRoute>
       } />
       <Route path="/catalog/products/new" element={
-        <ProtectedRoute><CatalogProductFormV4 /></ProtectedRoute>
+        <ProtectedRoute><WithLayout><CatalogProductFormV4 /></WithLayout></ProtectedRoute>
       } />
       <Route path="/catalog/products/:id/edit" element={
-        <ProtectedRoute><CatalogProductFormV4 /></ProtectedRoute>
+        <ProtectedRoute><WithLayout><CatalogProductFormV4 /></WithLayout></ProtectedRoute>
       } />
-      <Route path="/catalog/import" element={
-        <ProtectedRoute><CatalogImportPage /></ProtectedRoute>
-      } />
-      <Route path="/catalog/matching" element={
-        <ProtectedRoute><ProductMatchingPage /></ProtectedRoute>
+      <Route path="/catalog/categories" element={
+        <ProtectedRoute><WithLayout><CatalogCategoriesPageSimple /></WithLayout></ProtectedRoute>
       } />
       <Route path="/catalog/pricing" element={
-        <ProtectedRoute><PricingPage /></ProtectedRoute>
+        <ProtectedRoute><WithLayout><PricingPage /></WithLayout></ProtectedRoute>
       } />
+      <Route path="/catalog/matching" element={
+        <ProtectedRoute><WithLayout><ProductMatchingPage /></WithLayout></ProtectedRoute>
+      } />
+      <Route path="/catalog/import" element={
+        <ProtectedRoute><WithLayout><CatalogImportPage /></WithLayout></ProtectedRoute>
+      } />
+      
+      {/* Orders & Finance */}
+      <Route path="/orders" element={
+        <ProtectedRoute><WithLayout><OrdersPage /></WithLayout></ProtectedRoute>
+      } />
+      <Route path="/finance" element={
+        <ProtectedRoute><WithLayout><FinanceDashboard /></WithLayout></ProtectedRoute>
+      } />
+      <Route path="/balance" element={
+        <ProtectedRoute><WithLayout><PayoutsPage /></WithLayout></ProtectedRoute>
+      } />
+      
+      {/* Legacy routes */}
+      <Route path="/products/:id/edit" element={
+        <ProtectedRoute><WithLayout><ProductEditPage /></WithLayout></ProtectedRoute>
+      } />
+      <Route path="/products-new" element={
+        <ProtectedRoute><WithLayout><ProductsPageNew /></WithLayout></ProtectedRoute>
+      } />
+      <Route path="/stock-balances" element={
+        <ProtectedRoute><WithLayout><StockBalancesPage /></WithLayout></ProtectedRoute>
+      } />
+      
+      {/* Admin routes */}
       <Route path="/admin/categories" element={
         <ProtectedRoute requiredRole="admin"><AdminCategoriesPage /></ProtectedRoute>
       } />
       <Route path="/admin/internal-categories" element={
         <ProtectedRoute requiredRole="admin"><InternalCategoriesPage /></ProtectedRoute>
       } />
-      {/* NEW: Warehouse module routes */}
-      <Route path="/warehouses" element={
-        <ProtectedRoute><WarehousesPageV2 /></ProtectedRoute>
-      } />
-      <Route path="/suppliers" element={
-        <ProtectedRoute><SuppliersPage /></ProtectedRoute>
-      } />
-      <Route path="/income-orders" element={
-        <ProtectedRoute><IncomeOrdersPage /></ProtectedRoute>
-      } />
-      <Route path="/income-orders/new" element={
-        <ProtectedRoute><IncomeOrderFormPage /></ProtectedRoute>
-      } />
-      <Route path="/income-orders/:id/edit" element={
-        <ProtectedRoute><IncomeOrderFormPage /></ProtectedRoute>
-      } />
-      <Route path="*" element={<Navigate to="/" />} />
+      
+      <Route path="*" element={<Navigate to="/catalog/products" />} />
     </Routes>
   )
 }
