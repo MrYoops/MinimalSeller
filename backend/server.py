@@ -5965,11 +5965,33 @@ async def push_prices_to_marketplaces(
                             for r in result.get("result", []):
                                 if r.get("updated"):
                                     results["ozon"]["success"] += 1
+                                    # Log success
+                                    await db.sync_logs.insert_one({
+                                        "timestamp": datetime.now().isoformat(),
+                                        "type": "price",
+                                        "marketplace": "ozon",
+                                        "product_article": r.get("offer_id", ""),
+                                        "product_name": "",
+                                        "status": "success",
+                                        "message": f"Цена обновлена успешно",
+                                        "seller_id": seller_id
+                                    })
                                 else:
                                     results["ozon"]["failed"] += 1
                                     errors = r.get("errors", [])
                                     if errors:
                                         results["ozon"]["errors"].extend([e.get("message", str(e)) for e in errors])
+                                        # Log error
+                                        await db.sync_logs.insert_one({
+                                            "timestamp": datetime.now().isoformat(),
+                                            "type": "price",
+                                            "marketplace": "ozon",
+                                            "product_article": r.get("offer_id", ""),
+                                            "product_name": "",
+                                            "status": "error",
+                                            "error": errors[0].get("message", str(errors[0])) if errors else "Unknown error",
+                                            "seller_id": seller_id
+                                        })
                             logger.info(f"Ozon prices update: {results['ozon']}")
                         else:
                             error_text = resp.text[:200]
@@ -6022,9 +6044,32 @@ async def push_prices_to_marketplaces(
                             if result.get("data", {}).get("id"):
                                 results["wb"]["success"] = len(wb_prices)
                                 logger.info(f"WB prices update task created: {result}")
+                                # Log success for each product
+                                for price_item in wb_prices:
+                                    await db.sync_logs.insert_one({
+                                        "timestamp": datetime.now().isoformat(),
+                                        "type": "price",
+                                        "marketplace": "wb",
+                                        "product_article": "",
+                                        "product_name": "",
+                                        "status": "success",
+                                        "message": f"Задача обновления цены создана (nmID: {price_item['nmID']})",
+                                        "seller_id": seller_id
+                                    })
                             else:
                                 results["wb"]["failed"] = len(wb_prices)
                                 results["wb"]["errors"].append("Failed to create task")
+                                # Log error
+                                await db.sync_logs.insert_one({
+                                    "timestamp": datetime.now().isoformat(),
+                                    "type": "price",
+                                    "marketplace": "wb",
+                                    "product_article": "",
+                                    "product_name": "",
+                                    "status": "error",
+                                    "error": "Failed to create price update task",
+                                    "seller_id": seller_id
+                                })
                         else:
                             error_text = resp.text[:200]
                             results["wb"]["errors"].append(f"HTTP {resp.status_code}: {error_text}")
