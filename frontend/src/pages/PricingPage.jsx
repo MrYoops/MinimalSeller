@@ -541,7 +541,6 @@ const PricingPage = () => {
                 )}
                 
                 <th className="text-center p-2 font-medium text-mm-text-secondary uppercase text-xs border-l border-mm-border w-[80px]" rowSpan="2">Мин.<br/>цена</th>
-                <th className="text-center p-2 font-medium text-mm-text-secondary uppercase text-xs w-[40px]" rowSpan="2"></th>
               </tr>
               
               {/* Sub-headers */}
