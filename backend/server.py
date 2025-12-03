@@ -1865,6 +1865,7 @@ async def sync_inventory_from_catalog(
     """
     Синхронизация inventory с product_catalog
     Создает записи в inventory для всех товаров, у которых их нет
+    Избегает дубликатов проверяя по SKU (article)
     """
     seller_id = str(current_user["_id"])
     
@@ -1872,34 +1873,49 @@ async def sync_inventory_from_catalog(
     products = await db.product_catalog.find({"seller_id": seller_id}).to_list(length=10000)
     
     created_count = 0
+    skipped_duplicates = 0
+    
+    # Track SKUs we've already seen to avoid duplicates
+    processed_skus = set()
+    
+    # First, get all existing inventory SKUs for this seller
+    existing_inventory = await db.inventory.find({"seller_id": seller_id}).to_list(length=10000)
+    existing_skus = {inv.get("sku") for inv in existing_inventory}
     
     for product in products:
         product_id = product["_id"]
         article = product.get("article", "")
         
-        # Check if inventory exists
-        existing = await db.inventory.find_one({
-            "product_id": product_id,
-            "seller_id": seller_id
-        })
+        # Skip if SKU is empty
+        if not article:
+            continue
         
-        if not existing:
-            # Create inventory record
-            inventory = {
-                "product_id": product_id,
-                "seller_id": seller_id,
-                "sku": article,
-                "quantity": 0,
-                "reserved": 0,
-                "available": 0,
-                "alert_threshold": 10
-            }
-            await db.inventory.insert_one(inventory)
-            created_count += 1
+        # Skip if SKU already exists in inventory
+        if article in existing_skus or article in processed_skus:
+            skipped_duplicates += 1
+            continue
+        
+        # Mark this SKU as processed
+        processed_skus.add(article)
+        
+        # Create inventory record
+        inventory = {
+            "product_id": product_id,
+            "seller_id": seller_id,
+            "sku": article,
+            "quantity": 0,
+            "reserved": 0,
+            "available": 0,
+            "alert_threshold": 10
+        }
+        await db.inventory.insert_one(inventory)
+        created_count += 1
+        existing_skus.add(article)
     
     return {
-        "message": f"Синхронизировано {created_count} товаров",
+        "message": f"Синхронизировано {created_count} товаров (пропущено дубликатов: {skipped_duplicates})",
         "created": created_count,
+        "skipped_duplicates": skipped_duplicates,
         "total_products": len(products)
     }
 
