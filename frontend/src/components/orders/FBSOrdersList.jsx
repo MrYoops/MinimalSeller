@@ -23,15 +23,48 @@ function FBSOrdersList() {
     loadOrders()
   }, [])
 
+  useEffect(() => {
+    applyFilters()
+  }, [orders, activeStatusFilter])
+
   const loadOrders = async () => {
     try {
       setLoading(true)
       const response = await api.get('/api/orders/fbs')
       setOrders(response.data)
+      calculateStats(response.data)
     } catch (error) {
       console.error('Failed to load FBS orders:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const calculateStats = (ordersList) => {
+    const newStats = {
+      total: ordersList.length,
+      new: 0,
+      imported: 0,
+      awaiting_shipment: 0,
+      delivering: 0,
+      delivered: 0,
+      cancelled: 0
+    }
+
+    ordersList.forEach(order => {
+      if (newStats.hasOwnProperty(order.status)) {
+        newStats[order.status]++
+      }
+    })
+
+    setStats(newStats)
+  }
+
+  const applyFilters = () => {
+    if (activeStatusFilter === 'all') {
+      setFilteredOrders(orders)
+    } else {
+      setFilteredOrders(orders.filter(o => o.status === activeStatusFilter))
     }
   }
 
