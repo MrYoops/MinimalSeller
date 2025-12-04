@@ -85,7 +85,8 @@ async def sync_product_to_marketplace(
             
             # Если нет данных для этого МП - пропускаем товар
             if not marketplace_data:
-                logger.warning(f"[SYNC] Product {product_article} не импортирован на {marketplace}, пропускаем")
+                logger.warning(f"[SYNC] ⚠️ Product {product_article} not imported to {marketplace}, skipping")
+                logger.warning(f"[SYNC] ⚠️ Import product to {marketplace} first, then try sync again")
                 continue
             
             # Для каждого МП свой идентификатор
