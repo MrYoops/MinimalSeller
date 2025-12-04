@@ -44,9 +44,13 @@ function RetailOrderForm({ onCancel, onSuccess }) {
   const loadProducts = async () => {
     try {
       const response = await api.get('/api/catalog/products?limit=1000')
-      setProducts(response.data.products || [])
+      // API возвращает массив напрямую
+      const productsData = Array.isArray(response.data) ? response.data : (response.data.products || [])
+      setProducts(productsData)
+      console.log(`Loaded ${productsData.length} products for search`)
     } catch (error) {
       console.error('Failed to load products:', error)
+      toast.error('Ошибка загрузки товаров')
     }
   }
 
