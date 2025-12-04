@@ -313,10 +313,10 @@ class OzonConnector(BaseConnector):
             return all_products
                 
             except MarketplaceError as e:
-                # If /v2/product/info/list fails, fallback to basic data
+                # If /v3/product/info/list fails completely, fallback to basic data
                 logger.warning(f"[Ozon] Failed to get full info: {e.message}, using basic data")
                 
-                for item in items:
+                for item in all_items:
                     all_products.append({
                         "id": str(item.get('product_id', '')),
                         "sku": item.get('offer_id', ''),
