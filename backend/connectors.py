@@ -1077,6 +1077,89 @@ class OzonConnector(BaseConnector):
         }
         
         return status_map.get(ozon_status, "new")
+    
+    async def split_order(self, posting_number: str, packages: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Разделить FBS заказ на несколько отправлений (Ozon)
+        
+        Args:
+            posting_number: Номер отправления
+            packages: [
+                {
+                    "products": [
+                        {"product_id": int, "quantity": int},
+                        ...
+                    ]
+                },
+                ...
+            ]
+        
+        Returns:
+            {
+                "result": [
+                    {"posting_number": "new_posting_1"},
+                    {"posting_number": "new_posting_2"}
+                ]
+            }
+        """
+        logger.info(f"[Ozon] Splitting order {posting_number} into {len(packages)} packages")
+        
+        url = f"{self.base_url}/v1/posting/fbs/package"
+        headers = self._get_headers()
+        
+        payload = {
+            "posting_number": posting_number,
+            "packages": packages
+        }
+        
+        try:
+            response_data = await self._make_request("POST", url, headers, json_data=payload)
+            logger.info(f"[Ozon] Order split successfully: {response_data}")
+            return response_data
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Failed to split order: {e.message}")
+            raise
+    
+    async def get_label(self, posting_number: str) -> str:
+        """
+        Получить этикетку для FBS заказа (Ozon)
+        
+        Returns:
+            URL или base64 строка с PDF этикеткой
+        """
+        logger.info(f"[Ozon] Getting label for {posting_number}")
+        
+        url = f"{self.base_url}/v2/posting/fbs/package-label"
+        headers = self._get_headers()
+        
+        payload = {
+            "posting_number": [posting_number]
+        }
+        
+        try:
+            response_data = await self._make_request("POST", url, headers, json_data=payload)
+            
+            # Ozon может вернуть либо URL, либо base64
+            # Ищем URL в ответе
+            label_url = response_data.get('result', {}).get('url')
+            
+            if label_url:
+                logger.info(f"[Ozon] Label URL: {label_url}")
+                return label_url
+            
+            # Если нет URL, проверяем base64
+            label_base64 = response_data.get('result', {}).get('file')
+            
+            if label_base64:
+                logger.info(f"[Ozon] Label received as base64 (length: {len(label_base64)})")
+                return f"data:application/pdf;base64,{label_base64}"
+            
+            logger.warning(f"[Ozon] No label found in response")
+            return None
+            
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Failed to get label: {e.message}")
+            raise
 
 
 
