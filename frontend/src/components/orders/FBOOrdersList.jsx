@@ -2,18 +2,13 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { FiDownload, FiEye, FiTruck } from 'react-icons/fi'
 import { toast } from 'sonner'
+import ImportOrdersModal from './ImportOrdersModal'
 
 function FBOOrdersList() {
   const { api } = useAuth()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
-  const [importing, setImporting] = useState(false)
-  
-  const [importSettings, setImportSettings] = useState({
-    marketplace: 'ozon',  // По умолчанию Ozon (только он поддерживает FBO явно)
-    date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    date_to: new Date().toISOString().split('T')[0]
-  })
+  const [showImportModal, setShowImportModal] = useState(false)
 
   useEffect(() => {
     loadOrders()
@@ -28,34 +23,6 @@ function FBOOrdersList() {
       console.error('Failed to load FBO orders:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleImport = async () => {
-    if (!importSettings.date_from || !importSettings.date_to) {
-      toast.error('Выберите период')
-      return
-    }
-    
-    try {
-      setImporting(true)
-      
-      const response = await api.post('/api/orders/fbo/import', {
-        marketplace: importSettings.marketplace,
-        date_from: importSettings.date_from,
-        date_to: importSettings.date_to
-      })
-      
-      toast.success(`Загружено ${response.data.imported} FBO заказов (без обновления остатков)`)
-      
-      // Перезагрузить список
-      await loadOrders()
-      
-    } catch (error) {
-      console.error('Failed to import FBO orders:', error)
-      toast.error(error.response?.data?.detail || 'Ошибка загрузки заказов FBO')
-    } finally {
-      setImporting(false)
     }
   }
 
@@ -83,63 +50,22 @@ function FBOOrdersList() {
         </p>
       </div>
       
-      {/* ПАНЕЛЬ ЗАГРУЗКИ */}
-      <div className="card-neon p-6">
-        <h3 className="text-lg font-mono text-mm-purple uppercase mb-4">Загрузка заказов FBO</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Маркетплейс *</label>
-            <select
-              className="input-neon w-full"
-              value={importSettings.marketplace}
-              onChange={(e) => setImportSettings({...importSettings, marketplace: e.target.value})}
-              data-testid="import-marketplace"
-            >
-              <option value="ozon">Ozon</option>
-            </select>
-            <p className="text-xs text-mm-text-tertiary mt-1">// Только Ozon поддерживает FBO явно</p>
-          </div>
-          <div>
-            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата от *</label>
-            <input
-              type="date"
-              className="input-neon w-full"
-              value={importSettings.date_from}
-              onChange={(e) => setImportSettings({...importSettings, date_from: e.target.value})}
-              data-testid="import-date-from"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата до *</label>
-            <input
-              type="date"
-              className="input-neon w-full"
-              value={importSettings.date_to}
-              onChange={(e) => setImportSettings({...importSettings, date_to: e.target.value})}
-              data-testid="import-date-to"
-            />
-          </div>
-        </div>
-        
-        <button
-          onClick={handleImport}
-          disabled={importing}
-          className="btn-neon w-full flex items-center justify-center space-x-2"
-          data-testid="import-orders-btn"
-        >
-          <FiDownload />
-          <span>{importing ? 'Загрузка заказов...' : 'ЗАГРУЗИТЬ ЗАКАЗЫ FBO'}</span>
-        </button>
-      </div>
-
-      {/* СПИСОК */}
+      {/* Кнопка импорта */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-mm-text-secondary font-mono">
           Всего заказов: <span className="text-mm-purple">{orders.length}</span>
         </p>
+        <button
+          onClick={() => setShowImportModal(true)}
+          className="btn-neon flex items-center space-x-2"
+          data-testid="open-import-modal"
+        >
+          <FiDownload />
+          <span>ИМПОРТ ЗАКАЗОВ FBO</span>
+        </button>
       </div>
 
+      {/* Список */}
       {loading ? (
         <div className="card-neon text-center py-12">
           <p className="text-mm-cyan animate-pulse font-mono">// Загрузка...</p>
@@ -148,7 +74,14 @@ function FBOOrdersList() {
         <div className="card-neon text-center py-12">
           <FiTruck className="mx-auto text-mm-text-tertiary mb-4" size={48} />
           <p className="text-mm-text-secondary mb-2 font-mono">Заказы FBO не найдены</p>
-          <p className="text-sm text-mm-text-tertiary font-mono">// Используйте форму выше для загрузки</p>
+          <p className="text-sm text-mm-text-tertiary font-mono mb-4">// Нажмите "ИМПОРТ ЗАКАЗОВ FBO" для загрузки</p>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="btn-neon inline-flex items-center space-x-2"
+          >
+            <FiDownload />
+            <span>ИМПОРТ ЗАКАЗОВ FBO</span>
+          </button>
         </div>
       ) : (
         <div className="card-neon overflow-hidden">
@@ -205,6 +138,15 @@ function FBOOrdersList() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Модалка импорта */}
+      {showImportModal && (
+        <ImportOrdersModal
+          type="fbo"
+          onClose={() => setShowImportModal(false)}
+          onSuccess={loadOrders}
+        />
       )}
     </div>
   )
