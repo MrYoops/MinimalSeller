@@ -986,33 +986,34 @@ async def get_inventory_history(
     
     return history
 
-# ========== ORDER MANAGEMENT ROUTES ==========
+# ========== ORDER MANAGEMENT ROUTES (СТАРАЯ СИСТЕМА - ОТКЛЮЧЕНА) ==========
+# Заменена на новую систему FBS/FBO/Retail с резервами
 
-@app.get("/api/orders")
-async def get_orders(
-    status: Optional[str] = None,
-    source: Optional[str] = None,
-    current_user: dict = Depends(get_current_user)
-):
-    """Получить список заказов"""
-    query = {}
-    
-    if current_user['role'] == 'seller':
-        query['seller_id'] = current_user['_id']
-    
-    if status:
-        query['status'] = status
-    
-    if source:
-        query['source'] = source
-    
-    orders = await db.orders.find(query).sort('dates.created_at', -1).to_list(length=100)
-    
-    for order in orders:
-        order['id'] = str(order.pop('_id'))
-        order['seller_id'] = str(order['seller_id'])
-    
-    return orders
+# @app.get("/api/orders")
+# async def get_orders(
+#     status: Optional[str] = None,
+#     source: Optional[str] = None,
+#     current_user: dict = Depends(get_current_user)
+# ):
+#     """Получить список заказов"""
+#     query = {}
+#     
+#     if current_user['role'] == 'seller':
+#         query['seller_id'] = current_user['_id']
+#     
+#     if status:
+#         query['status'] = status
+#     
+#     if source:
+#         query['source'] = source
+#     
+#     orders = await db.orders.find(query).sort('dates.created_at', -1).to_list(length=100)
+#     
+#     for order in orders:
+#         order['id'] = str(order.pop('_id'))
+#         order['seller_id'] = str(order['seller_id'])
+#     
+#     return orders
 
 # СТАРАЯ СИСТЕМА ЗАКАЗОВ - ENDPOINT ОТКЛЮЧЁН
 # Конфликтует с новыми routes /api/orders/fbs, /api/orders/fbo, /api/orders/retail
@@ -1036,28 +1037,28 @@ async def get_orders(
 #     
 #     return order
 
-@app.put("/api/orders/{order_id}/status")
-async def update_order_status(
-    order_id: str,
-    status: str,
-    current_user: dict = Depends(get_current_user)
-):
-    """Изменить статус заказа"""
-    order = await db.orders.find_one({'_id': ObjectId(order_id)})
-    
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    
-    # Проверка доступа
-    if current_user['role'] == 'seller' and str(order['seller_id']) != str(current_user['_id']):
-        raise HTTPException(status_code=403, detail="Access denied")
-    
-    await db.orders.update_one(
-        {'_id': ObjectId(order_id)},
-        {'$set': {'status': status, 'dates.updated_at': datetime.utcnow()}}
-    )
-    
-    return {'message': 'Order status updated'}
+# @app.put("/api/orders/{order_id}/status")
+# async def update_order_status(
+#     order_id: str,
+#     status: str,
+#     current_user: dict = Depends(get_current_user)
+# ):
+#     """Изменить статус заказа"""
+#     order = await db.orders.find_one({'_id': ObjectId(order_id)})
+#     
+#     if not order:
+#         raise HTTPException(status_code=404, detail="Order not found")
+#     
+#     # Проверка доступа
+#     if current_user['role'] == 'seller' and str(order['seller_id']) != str(current_user['_id']):
+#         raise HTTPException(status_code=403, detail="Access denied")
+#     
+#     await db.orders.update_one(
+#         {'_id': ObjectId(order_id)},
+#         {'$set': {'status': status, 'dates.updated_at': datetime.utcnow()}}
+#     )
+#     
+#     return {'message': 'Order status updated'}
 
 @app.get("/api/returns")
 async def get_returns(
