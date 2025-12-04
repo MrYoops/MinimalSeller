@@ -74,6 +74,8 @@ const MainLayout = ({ children }) => {
   
   const isProductsActive = location.pathname.startsWith('/catalog') ||
                            location.pathname.startsWith('/products');
+  
+  const isOrdersActive = location.pathname.startsWith('/orders');
 
   const warehouseItems = [
     { label: 'Склады', path: '/warehouses', icon: BsBoxSeam },
@@ -89,6 +91,12 @@ const MainLayout = ({ children }) => {
     { label: 'Цены', path: '/catalog/pricing', icon: FiDollarSign },
     { label: 'Сопоставление', path: '/catalog/matching', icon: FiLink },
     { label: 'Импорт товаров', path: '/catalog/import', icon: FiUpload },
+  ];
+
+  const ordersItems = [
+    { label: 'FBS (со своего склада)', path: '/orders/fbs', icon: FiPackage },
+    { label: 'FBO (со склада МП)', path: '/orders/fbo', icon: FiBox },
+    { label: 'Розничные заказы', path: '/orders/retail', icon: FiShoppingCart },
   ];
 
   return (
@@ -142,15 +150,13 @@ const MainLayout = ({ children }) => {
               isActive={isProductsActive}
             />
             
-            <button
-              onClick={() => navigate('/orders')}
-              className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap flex items-center gap-1 h-12 ${
-                location.pathname === '/orders' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
-              }`}
-            >
-              <FiShoppingCart className="inline" />
-              ЗАКАЗЫ
-            </button>
+            {/* Заказы dropdown */}
+            <MainNavDropdown
+              title="ЗАКАЗЫ"
+              icon={FiShoppingCart}
+              items={ordersItems}
+              isActive={isOrdersActive}
+            />
             
             <button
               onClick={() => navigate('/finance')}
