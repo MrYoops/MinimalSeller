@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { FiX, FiDownload } from 'react-icons/fi'
 import { toast } from 'sonner'
 import { useAuth } from '../../context/AuthContext'
@@ -6,15 +6,51 @@ import { useAuth } from '../../context/AuthContext'
 function ImportOrdersModal({ type = 'fbs', onClose, onSuccess }) {
   const { api } = useAuth()
   const [importing, setImporting] = useState(false)
+  const [integrations, setIntegrations] = useState([])
+  const [loadingIntegrations, setLoadingIntegrations] = useState(true)
   
   const [settings, setSettings] = useState({
-    marketplace: type === 'fbo' ? 'ozon' : 'all',
+    integration_id: '',  // ID интеграции
     date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     date_to: new Date().toISOString().split('T')[0],
     update_stock: true
   })
 
+  useEffect(() => {
+    loadIntegrations()
+  }, [])
+
+  const loadIntegrations = async () => {
+    try {
+      setLoadingIntegrations(true)
+      const response = await api.get('/api/seller/api-keys')
+      const keys = response.data || []
+      
+      // Фильтровать по типу (FBS или FBO)
+      const filtered = type === 'fbo' 
+        ? keys.filter(k => k.marketplace === 'ozon')  // Только Ozon поддерживает FBO
+        : keys  // Все интеграции
+      
+      setIntegrations(filtered)
+      
+      // Автовыбор первой
+      if (filtered.length > 0) {
+        setSettings(prev => ({...prev, integration_id: filtered[0].id}))
+      }
+    } catch (error) {
+      console.error('Failed to load integrations:', error)
+      toast.error('Ошибка загрузки интеграций')
+    } finally {
+      setLoadingIntegrations(false)
+    }
+  }
+
   const handleImport = async () => {
+    if (!settings.integration_id) {
+      toast.error('Выберите интеграцию')
+      return
+    }
+    
     if (!settings.date_from || !settings.date_to) {
       toast.error('Выберите период')
       return
@@ -26,7 +62,7 @@ function ImportOrdersModal({ type = 'fbs', onClose, onSuccess }) {
       const endpoint = type === 'fbs' ? '/api/orders/fbs/import' : '/api/orders/fbo/import'
       const payload = type === 'fbs' 
         ? { ...settings }
-        : { marketplace: settings.marketplace, date_from: settings.date_from, date_to: settings.date_to }
+        : { integration_id: settings.integration_id, date_from: settings.date_from, date_to: settings.date_to }
       
       const response = await api.post(endpoint, payload)
       
@@ -44,6 +80,47 @@ function ImportOrdersModal({ type = 'fbs', onClose, onSuccess }) {
     } finally {
       setImporting(false)
     }
+  }
+
+  const getIntegrationLabel = (integration) => {
+    const mpNames = {
+      'ozon': 'Ozon',
+      'wb': 'Wildberries',
+      'yandex': 'Yandex Market'
+    }
+    const mpName = mpNames[integration.marketplace] || integration.marketplace
+    return integration.name || `${mpName} (${integration.client_id || 'API'})`
+  }
+
+  if (loadingIntegrations) {
+    return (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div className="bg-mm-darker border border-mm-cyan rounded-lg p-6">
+          <p className="text-mm-cyan font-mono">Загрузка интеграций...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (integrations.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={onClose}>
+        <div className="bg-mm-darker border border-mm-red rounded-lg p-6 max-w-md" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-xl font-mono text-mm-red mb-4">❗ Интеграции не найдены</h3>
+          <p className="text-mm-text-secondary mb-4">
+            {type === 'fbo' 
+              ? 'Для загрузки FBO заказов необходима интеграция Ozon.'
+              : 'Не настроено ни одной интеграции с маркетплейсами.'}
+          </p>
+          <p className="text-sm text-mm-text-tertiary mb-4">
+            Перейдите в раздел "Интеграции" и добавьте API ключи.
+          </p>
+          <button onClick={onClose} className="btn-neon w-full">
+            Закрыть
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -64,29 +141,20 @@ function ImportOrdersModal({ type = 'fbs', onClose, onSuccess }) {
 
         {/* Форма */}
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-mono text-mm-text-secondary mb-2">Маркетплейс *</label>
-              <select
-                className="input-neon w-full"
-                value={settings.marketplace}
-                onChange={(e) => setSettings({...settings, marketplace: e.target.value})}
-                disabled={type === 'fbo'}
-              >
-                {type === 'fbs' && <option value="all">Все маркетплейсы</option>}
-                <option value="ozon">Ozon</option>
-                {type === 'fbs' && (
-                  <>
-                    <option value="wb">Wildberries</option>
-                    <option value="yandex">Yandex Market</option>
-                  </>
-                )}
-              </select>
-              {type === 'fbo' && (
-                <p className="text-xs text-mm-text-tertiary mt-1">// Только Ozon поддерживает FBO</p>
-              )}
-            </div>
-            <div></div>
+          <div>
+            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Интеграция *</label>
+            <select
+              className="input-neon w-full"
+              value={settings.integration_id}
+              onChange={(e) => setSettings({...settings, integration_id: e.target.value})}
+            >
+              {integrations.map(integration => (
+                <option key={integration.id} value={integration.id}>
+                  {getIntegrationLabel(integration)}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-mm-text-tertiary mt-1">// Выберите настроенную интеграцию из раздела "Интеграции"</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
