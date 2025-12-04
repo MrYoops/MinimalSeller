@@ -187,15 +187,22 @@ async def sync_all_stocks(
     
     synced_count = 0
     failed_count = 0
+    skipped_count = 0
+    
+    logger.info(f"[MANUAL SYNC] Total inventory records to process: {len(inventories)}")
     
     for inv in inventories:
         product = await db.product_catalog.find_one({"_id": inv["product_id"]})
         
         if not product:
+            skipped_count += 1
+            logger.warning(f"[MANUAL SYNC] ⚠️ Product not found for inventory {inv.get('_id')}, skipping")
             continue
         
         article = product.get("article")
         available = inv.get("available", 0)
+        
+        logger.info(f"[MANUAL SYNC] Processing: {article} (available: {available})")
         
         try:
             await sync_product_to_marketplace(
@@ -211,9 +218,12 @@ async def sync_all_stocks(
             failed_count += 1
             logger.error(f"[MANUAL SYNC] ❌ {article} failed: {e}")
     
+    logger.info(f"[MANUAL SYNC] SUMMARY: synced={synced_count}, failed={failed_count}, skipped={skipped_count}")
+    
     return {
         "message": f"Синхронизировано {synced_count} товаров",
         "synced": synced_count,
         "failed": failed_count,
+        "skipped": skipped_count,
         "warehouse_name": warehouse.get("name")
     }
