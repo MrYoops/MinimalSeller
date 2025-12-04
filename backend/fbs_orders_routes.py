@@ -480,6 +480,9 @@ async def import_fbs_orders(
             
             logger.info(f"[FBS Import] {marketplace}: получено {len(mp_orders)} заказов")
             
+            if len(mp_orders) > 0:
+                logger.info(f"[FBS Import] Первый заказ (пример): {mp_orders[0].get('posting_number', 'NO_ID')}")
+            
             # Обработать каждый заказ
             for mp_order_data in mp_orders:
                 # Парсинг данных заказа
