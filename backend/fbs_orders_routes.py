@@ -477,14 +477,14 @@ async def import_fbs_orders(
             mp_orders = await connector.get_orders(date_from, date_to, campaign_id)
         else:
             raise HTTPException(status_code=400, detail=f"Неизвестный маркетплейс: {marketplace}")
-            
-            logger.info(f"[FBS Import] {marketplace}: получено {len(mp_orders)} заказов")
-            
-            if len(mp_orders) > 0:
-                logger.info(f"[FBS Import] Первый заказ (пример): {mp_orders[0].get('posting_number', 'NO_ID')}")
-            
-            # Обработать каждый заказ
-            for mp_order_data in mp_orders:
+        
+        logger.info(f"[FBS Import] {marketplace}: получено {len(mp_orders)} заказов")
+        
+        if len(mp_orders) > 0:
+            logger.info(f"[FBS Import] Первый заказ (пример): {mp_orders[0].get('posting_number', 'NO_ID')}")
+        
+        # Обработать каждый заказ
+        for mp_order_data in mp_orders:
                 # Парсинг данных заказа
                 if marketplace == "ozon":
                     external_id = mp_order_data.get("posting_number")
