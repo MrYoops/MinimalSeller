@@ -198,7 +198,19 @@ class OrderSyncScheduler:
             date_from = datetime.utcnow() - timedelta(days=1)
             date_to = datetime.utcnow()
             
-            mp_orders = await connector.get_fbo_orders(date_from, date_to)
+            # Получить FBO заказы с МП
+            if marketplace == "ozon":
+                mp_orders = await connector.get_fbo_orders(date_from, date_to)
+            elif marketplace in ["wb", "wildberries"]:
+                # Wildberries не разделяет FBS/FBO в API, пропускаем
+                logger.info(f"[OrderSync FBO] Wildberries не поддерживает отдельную синхронизацию FBO")
+                return
+            elif marketplace == "yandex":
+                # Yandex тоже не разделяет явно
+                logger.info(f"[OrderSync FBO] Yandex Market не поддерживает отдельную синхронизацию FBO")
+                return
+            else:
+                return
             
             logger.info(f"[OrderSync FBO] {marketplace}: получено {len(mp_orders)} заказов")
             
