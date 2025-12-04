@@ -305,12 +305,12 @@ function RetailOrderForm({ onCancel, onSuccess }) {
                     </div>
                     <span className="font-mono text-sm text-mm-text-secondary pt-5">×</span>
                     <div>
-                      <label className="text-xs text-mm-text-secondary block mb-1">Цена</label>
+                      <label className="text-xs text-mm-text-secondary block mb-1">Цена, ₽</label>
                       <input
                         type="number"
                         min="0"
                         step="0.01"
-                        className="input-neon w-28 text-right"
+                        className="input-neon w-32 text-right"
                         value={item.price}
                         onChange={(e) => updatePrice(index, e.target.value)}
                         data-testid={`price-${index}`}
@@ -320,7 +320,7 @@ function RetailOrderForm({ onCancel, onSuccess }) {
                       <span className="font-mono text-sm text-mm-text-secondary">=</span>
                     </div>
                     <div className="pt-5">
-                      <span className="font-mono text-sm text-mm-green w-28 text-right block">{item.total.toFixed(2)}₽</span>
+                      <span className="font-mono text-sm text-mm-green w-32 text-right block font-bold">{item.total.toFixed(2)}₽</span>
                     </div>
                     <button
                       type="button"
