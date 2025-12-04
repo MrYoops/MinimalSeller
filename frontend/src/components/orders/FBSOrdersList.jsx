@@ -142,6 +142,7 @@ function FBSOrdersList() {
                     </td>
                     <td className="py-4 px-4 text-right">
                       <button
+                        onClick={() => handleOpenDetail(order)}
                         className="btn-neon-sm flex items-center space-x-1 ml-auto"
                         data-testid={`view-order-${order.id}`}
                       >
