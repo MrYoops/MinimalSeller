@@ -36,7 +36,9 @@ async def sync_product_to_marketplace(
         return
     
     # Проверка: передавать ли остатки?
-    if not warehouse.get("transfer_stock", True):
+    # Проверяем оба поля для совместимости: transfer_stock (новое) и sends_stock (старое)
+    transfer_enabled = warehouse.get("transfer_stock", warehouse.get("sends_stock", True))
+    if not transfer_enabled:
         logger.info(f"[SYNC] Warehouse {warehouse.get('name')} has transfer_stock=False, skipping")
         return
     
