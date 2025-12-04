@@ -454,6 +454,21 @@ function WarehouseModal({ warehouse, onClose, onSuccess }) {
                   data-testid="fbo-accounting-toggle"
                 />
               </label>
+
+              <label className="flex items-center justify-between p-3 border border-mm-border hover:border-mm-cyan transition-colors cursor-pointer">
+                <div>
+                  <div className="font-semibold text-mm-text">Возвращать при отмене</div>
+                  <div className="text-xs text-mm-text-tertiary">Возвращать товар на склад при отмене заказа</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={formData.return_on_cancel !== undefined ? formData.return_on_cancel : true}
+                  onChange={(e) => setFormData({...formData, return_on_cancel: e.target.checked})}
+                  className="toggle-switch"
+                  data-testid="return-on-cancel-toggle"
+                />
+              </label>
+
             </div>
           </div>
 
