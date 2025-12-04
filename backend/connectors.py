@@ -1499,6 +1499,91 @@ class WildberriesConnector(BaseConnector):
             logger.error(f"[WB] Failed to update prices: {e.message}")
             raise
 
+    
+    # ========== МЕТОДЫ ДЛЯ РАБОТЫ С ЗАКАЗАМИ ==========
+    
+    async def get_orders(self, date_from: datetime, date_to: datetime, limit: int = 1000) -> List[Dict[str, Any]]:
+        """
+        Получить заказы Wildberries за период
+        
+        API: GET /api/v3/orders/new
+        Docs: https://openapi.wildberries.ru/#tag/Sborka-Orders
+        """
+        url = f"{self.base_url}/api/v3/orders/new"
+        headers = self._get_headers()
+        
+        params = {
+            "limit": limit,
+            "dateFrom": int(date_from.timestamp())
+        }
+        
+        try:
+            response = await self._make_request("GET", url, headers, params=params)
+            orders = response.get("orders", [])
+            
+            logger.info(f"[Wildberries] Получено {len(orders)} заказов")
+            return orders
+            
+        except MarketplaceError as e:
+            logger.error(f"[Wildberries] Ошибка получения заказов: {e.message}")
+            raise
+    
+    async def get_order_status(self, order_id: int) -> Dict[str, Any]:
+        """
+        Получить статус конкретного заказа
+        
+        API: GET /api/v3/orders/status
+        Docs: https://openapi.wildberries.ru/#tag/Sborka-Orders
+        """
+        url = f"{self.base_url}/api/v3/orders/status"
+        headers = self._get_headers()
+        
+        params = {
+            "id": order_id
+        }
+        
+        try:
+            response = await self._make_request("GET", url, headers, params=params)
+            orders = response.get("orders", [])
+            
+            if orders and len(orders) > 0:
+                order = orders[0]
+                logger.info(f"[Wildberries] Получен статус заказа {order_id}")
+                return order
+            else:
+                raise MarketplaceError(
+                    marketplace="Wildberries",
+                    status_code=404,
+                    message=f"Заказ {order_id} не найден"
+                )
+            
+        except MarketplaceError as e:
+            logger.error(f"[Wildberries] Ошибка получения статуса заказа {order_id}: {e.message}")
+            raise
+    
+    def map_wb_status_to_internal(self, wb_status: int) -> str:
+        """
+        Маппинг статусов Wildberries на внутренние статусы системы
+        
+        WB статусы (коды):
+        0: новый
+        1: на сборке
+        2: в пути к клиенту
+        3: доставлен
+        4: отменён клиентом
+        5: отменён продавцом
+        """
+        status_map = {
+            0: "new",
+            1: "awaiting_shipment",
+            2: "delivering",  # ← КЛЮЧЕВОЙ СТАТУС ДЛЯ СПИСАНИЯ!
+            3: "delivered",
+            4: "cancelled",
+            5: "cancelled"
+        }
+        
+        return status_map.get(wb_status, "new")
+
 class YandexMarketConnector(BaseConnector):
     """Yandex.Market connector - REAL API with full headers"""
     
