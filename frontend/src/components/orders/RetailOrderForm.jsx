@@ -156,21 +156,37 @@ function RetailOrderForm({ onCancel, onSuccess }) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Выбор склада */}
+        {/* Дата и выбор склада */}
         <div className="card-neon p-4">
-          <h4 className="text-sm font-mono text-mm-text-secondary mb-4 uppercase">Склад</h4>
-          <select
-            className="input-neon w-full"
-            value={formData.warehouse_id}
-            onChange={(e) => setFormData({...formData, warehouse_id: e.target.value})}
-            required
-            data-testid="select-warehouse"
-          >
-            <option value="">Выберите склад</option>
-            {warehouses.map(wh => (
-              <option key={wh.id} value={wh.id}>{wh.name}</option>
-            ))}
-          </select>
+          <h4 className="text-sm font-mono text-mm-text-secondary mb-4 uppercase">Основная информация</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата заказа *</label>
+              <input
+                type="date"
+                className="input-neon w-full"
+                value={formData.order_date}
+                onChange={(e) => setFormData({...formData, order_date: e.target.value})}
+                required
+                data-testid="order-date"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-mono text-mm-text-secondary mb-2">Склад *</label>
+              <select
+                className="input-neon w-full"
+                value={formData.warehouse_id}
+                onChange={(e) => setFormData({...formData, warehouse_id: e.target.value})}
+                required
+                data-testid="select-warehouse"
+              >
+                <option value="">Выберите склад</option>
+                {warehouses.map(wh => (
+                  <option key={wh.id} value={wh.id}>{wh.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Данные клиента */}
