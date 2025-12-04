@@ -505,16 +505,19 @@ async def import_fbs_orders(
                             "seller_id": str(current_user["_id"])
                         })
                         
-                        if product:
-                            items.append({
-                                "product_id": str(product["_id"]),
-                                "article": offer_id,
-                                "name": prod.get("name", product.get("name", "")),
-                                "price": price,
-                                "quantity": quantity,
-                                "total": price * quantity
-                            })
-                            total_sum += price * quantity
+                        # ВСЕГДА добавляем товар в заказ, даже если не найден в каталоге
+                        items.append({
+                            "product_id": str(product["_id"]) if product else "",
+                            "article": offer_id,
+                            "name": prod.get("name", product.get("name", "") if product else ""),
+                            "price": price,
+                            "quantity": quantity,
+                            "total": price * quantity
+                        })
+                        total_sum += price * quantity
+                        
+                        if not product:
+                            logger.warning(f"[FBS Import] Товар {offer_id} не найден в каталоге, но добавлен в заказ")
                     
                     customer_data = {
                         "full_name": (mp_order_data.get("customer") or {}).get("name", ""),
