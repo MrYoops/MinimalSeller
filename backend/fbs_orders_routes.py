@@ -452,24 +452,18 @@ async def import_fbs_orders(
     
     marketplace = selected_integration.get("marketplace")
     
-    if not api_keys:
-        raise HTTPException(status_code=400, detail="API ключи не настроены")
-    
     imported_count = 0
     updated_count = 0
     stock_updated_count = 0
     errors = []
     
-    # Для каждого МП
-    for api_key_data in api_keys:
-        marketplace = api_key_data.get("marketplace")
-        
-        try:
-            connector = get_connector(
-                marketplace,
-                api_key_data.get("client_id", ""),
-                api_key_data["api_key"]
-            )
+    # Использовать ТОЛЬКО выбранную интеграцию
+    try:
+        connector = get_connector(
+            marketplace,
+            selected_integration.get("client_id", ""),
+            selected_integration["api_key"]
+        )
             
             # Получить FBS заказы
             if marketplace == "ozon":
