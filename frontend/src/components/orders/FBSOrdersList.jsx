@@ -148,10 +148,22 @@ function FBSOrdersList() {
   return (
     <div className="space-y-4" data-testid="fbs-orders-list">
       
+      {/* Фильтры по статусам */}
+      <StatusFilters
+        activeStatus={activeStatusFilter}
+        onStatusChange={setActiveStatusFilter}
+        stats={stats}
+      />
+      
       {/* Кнопка импорта */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-mm-text-secondary font-mono">
-          Всего заказов: <span className="text-mm-cyan">{orders.length}</span>
+          Всего заказов: <span className="text-mm-cyan">{filteredOrders.length}</span>
+          {selectedOrderIds.length > 0 && (
+            <span className="ml-4">
+              Выбрано: <span className="text-mm-cyan">{selectedOrderIds.length}</span>
+            </span>
+          )}
         </p>
         <button
           onClick={() => setShowImportModal(true)}
