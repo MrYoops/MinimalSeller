@@ -288,32 +288,46 @@ async def bulk_import_products(
 @router.get("/marketplaces/{marketplace}/products")
 async def get_marketplace_products(
     marketplace: str,
+    integration_id: Optional[str] = Query(None, description="Specific integration ID"),
     current_user: dict = Depends(get_current_user)
 ):
-    """Получить товары с маркетплейса (mock)"""
+    """Получить товары с маркетплейса для конкретной интеграции"""
     # Получаем API ключи продавца
     profile = await db.seller_profiles.find_one({'user_id': current_user['_id']})
     
     if not profile:
         raise HTTPException(status_code=404, detail="Seller profile not found")
     
-    # Находим ключ для маркетплейса
     api_keys = profile.get('api_keys', [])
-    marketplace_key = next(
-        (k for k in api_keys if k['marketplace'] == marketplace),
-        None
-    )
     
-    if not marketplace_key:
-        raise HTTPException(
-            status_code=400,
-            detail=f"No API key found for {marketplace}"
+    # Находим ключ для интеграции
+    if integration_id:
+        # Ищем по конкретному ID интеграции
+        marketplace_key = next(
+            (k for k in api_keys if k.get('id') == integration_id),
+            None
         )
+        if not marketplace_key:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Integration with ID {integration_id} not found"
+            )
+    else:
+        # Fallback: берём первый ключ для маркетплейса (старое поведение)
+        marketplace_key = next(
+            (k for k in api_keys if k['marketplace'] == marketplace),
+            None
+        )
+        if not marketplace_key:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No API key found for {marketplace}"
+            )
     
     # Получаем товары через коннектор
     connector = get_connector(
-        marketplace,
-        marketplace_key['client_id'],
+        marketplace_key['marketplace'],
+        marketplace_key.get('client_id', ''),
         marketplace_key['api_key']
     )
     
