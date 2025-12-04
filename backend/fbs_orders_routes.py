@@ -416,7 +416,7 @@ async def import_fbs_orders(
     РУЧНАЯ ЗАГРУЗКА заказов FBS за период
     
     Body: {
-        marketplace: str ('all', 'ozon', 'wb', 'yandex'),
+        integration_id: str (ID интеграции из seller_profiles.api_keys),
         date_from: str (ISO date),
         date_to: str (ISO date),
         update_stock: bool (списывать ли товары со склада)
@@ -424,10 +424,13 @@ async def import_fbs_orders(
     """
     db = await get_database()
     
-    marketplace_filter = data.get("marketplace", "all")
+    integration_id = data.get("integration_id")
     date_from_str = data.get("date_from")
     date_to_str = data.get("date_to")
     update_stock = data.get("update_stock", True)
+    
+    if not integration_id:
+        raise HTTPException(status_code=400, detail="integration_id обязателен")
     
     if not date_from_str or not date_to_str:
         raise HTTPException(status_code=400, detail="date_from и date_to обязательны")
@@ -435,13 +438,19 @@ async def import_fbs_orders(
     date_from = datetime.fromisoformat(date_from_str)
     date_to = datetime.fromisoformat(date_to_str)
     
-    # Получить API ключи
+    # Получить конкретную интеграцию
     profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
     
     if not profile:
         raise HTTPException(status_code=404, detail="Профиль не найден")
     
     api_keys = profile.get("api_keys", [])
+    selected_integration = next((k for k in api_keys if k.get("id") == integration_id), None)
+    
+    if not selected_integration:
+        raise HTTPException(status_code=404, detail="Интеграция не найдена")
+    
+    marketplace = selected_integration.get("marketplace")
     
     if not api_keys:
         raise HTTPException(status_code=400, detail="API ключи не настроены")
