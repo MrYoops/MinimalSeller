@@ -36,7 +36,7 @@ async def get_fbo_orders(
         query["created_at"] = {"$gte": datetime.fromisoformat(date_from)}
     if date_to:
         if "created_at" in query:
-            query["created_at"]["$lte"] = datetime.fromisoformat(date_to)}
+            query["created_at"]["$lte"] = datetime.fromisoformat(date_to)
         else:
             query["created_at"] = {"$lte": datetime.fromisoformat(date_to)}
     
