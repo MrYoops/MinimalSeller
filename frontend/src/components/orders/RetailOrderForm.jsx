@@ -101,6 +101,13 @@ function RetailOrderForm({ onCancel, onSuccess }) {
     setFormData({ ...formData, items: newItems })
   }
 
+  const updatePrice = (index, price) => {
+    const newItems = [...formData.items]
+    newItems[index].price = parseFloat(price) || 0
+    newItems[index].total = newItems[index].price * newItems[index].quantity
+    setFormData({ ...formData, items: newItems })
+  }
+
   const calculateTotal = () => {
     return formData.items.reduce((sum, item) => sum + item.total, 0)
   }
