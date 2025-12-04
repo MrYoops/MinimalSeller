@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { FiDownload, FiEye, FiPackage } from 'react-icons/fi'
+import { FiDownload, FiEye, FiPackage, FiPrinter } from 'react-icons/fi'
 import { toast } from 'sonner'
 import ImportOrdersModal from './ImportOrdersModal'
 import OrderDetailModal from './OrderDetailModal'
+import StatusFilters from './StatusFilters'
+import BulkActionsPanel from './BulkActionsPanel'
 
 function FBSOrdersList() {
   const { api } = useAuth()
   const [orders, setOrders] = useState([])
+  const [filteredOrders, setFilteredOrders] = useState([])
   const [loading, setLoading] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [activeStatusFilter, setActiveStatusFilter] = useState('all')
+  const [selectedOrderIds, setSelectedOrderIds] = useState([])
+  const [stats, setStats] = useState({})
 
   useEffect(() => {
     loadOrders()
