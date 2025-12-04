@@ -939,6 +939,9 @@ class OzonConnector(BaseConnector):
             postings = result.get("postings", [])
             
             logger.info(f"[Ozon] Получено {len(postings)} FBS заказов")
+            logger.info(f"[Ozon] Response keys: {list(response.keys())}")
+            logger.info(f"[Ozon] Result keys: {list(result.keys()) if result else 'EMPTY'}")
+            
             return postings
             
         except MarketplaceError as e:
