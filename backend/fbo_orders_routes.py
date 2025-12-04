@@ -81,12 +81,14 @@ async def import_fbo_orders(
     FBO заказы НЕ обновляют остатки (только аналитика)
     
     Body: {
+        marketplace: str ('ozon'),
         date_from: str (ISO date),
         date_to: str (ISO date)
     }
     """
     db = await get_database()
     
+    marketplace_filter = data.get("marketplace", "ozon")
     date_from_str = data.get("date_from")
     date_to_str = data.get("date_to")
     
@@ -114,6 +116,10 @@ async def import_fbo_orders(
     # Для каждого МП (только Ozon поддерживает явное разделение FBO)
     for api_key_data in api_keys:
         marketplace = api_key_data.get("marketplace")
+        
+        # Фильтр
+        if marketplace_filter != marketplace:
+            continue
         
         if marketplace != "ozon":
             # WB и Yandex не разделяют FBS/FBO явно в API

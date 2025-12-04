@@ -416,6 +416,7 @@ async def import_fbs_orders(
     РУЧНАЯ ЗАГРУЗКА заказов FBS за период
     
     Body: {
+        marketplace: str ('all', 'ozon', 'wb', 'yandex'),
         date_from: str (ISO date),
         date_to: str (ISO date),
         update_stock: bool (списывать ли товары со склада)
@@ -423,6 +424,7 @@ async def import_fbs_orders(
     """
     db = await get_database()
     
+    marketplace_filter = data.get("marketplace", "all")
     date_from_str = data.get("date_from")
     date_to_str = data.get("date_to")
     update_stock = data.get("update_stock", True)
