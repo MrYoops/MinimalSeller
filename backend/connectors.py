@@ -186,32 +186,54 @@ class OzonConnector(BaseConnector):
         return headers
     
     async def get_products(self) -> List[Dict[str, Any]]:
-        """Get products from Ozon with full details (images, attributes)"""
-        logger.info("[Ozon] Fetching products with full details")
+        """Get products from Ozon with full details (images, attributes) - WITH PAGINATION"""
+        logger.info("[Ozon] Fetching ALL products with full details (pagination enabled)")
         
-        # Step 1: Get list of all products
+        # Step 1: Get list of all products with pagination
         list_url = f"{self.base_url}/v3/product/list"
         headers = self._get_headers()
         
-        list_payload = {
-            "filter": {
-                "visibility": "ALL"
-            },
-            "last_id": "",
-            "limit": 100
-        }
+        logger.info("[Ozon] Step 1: Getting product list with pagination")
         
-        logger.info("[Ozon] Step 1: Getting product list")
+        all_items = []
+        last_id = ""
+        page = 1
+        
+        # Pagination loop to get ALL products
+        while True:
+            list_payload = {
+                "filter": {
+                    "visibility": "ALL"
+                },
+                "last_id": last_id,
+                "limit": 1000  # Max limit per request
+            }
+            
+            logger.info(f"[Ozon] Fetching page {page}, last_id: {last_id}")
+            
+            list_response = await self._make_request("POST", list_url, headers, json_data=list_payload)
+            items = list_response.get('result', {}).get('items', [])
+            
+            logger.info(f"[Ozon] Page {page}: Received {len(items)} products")
+            
+            if not items:
+                break
+            
+            all_items.extend(items)
+            
+            # Check if there are more pages
+            last_id = list_response.get('result', {}).get('last_id', '')
+            if not last_id:
+                break
+            
+            page += 1
+        
+        logger.info(f"[Ozon] Total products fetched: {len(all_items)}")
         
         all_products = []
         
         try:
-            # Get product list
-            list_response = await self._make_request("POST", list_url, headers, json_data=list_payload)
-            items = list_response.get('result', {}).get('items', [])
-            logger.info(f"[Ozon] Received {len(items)} products")
-            
-            if not items:
+            if not all_items:
                 return all_products
             
             # Step 2: Get full info for each product (in batches)
