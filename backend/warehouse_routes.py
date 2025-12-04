@@ -139,6 +139,8 @@ async def update_warehouse(
         update_data["priority"] = data["priority"]
     if "fbo_accounting" in data:
         update_data["fbo_accounting"] = data["fbo_accounting"]
+    if "return_on_cancel" in data:
+        update_data["return_on_cancel"] = data["return_on_cancel"]
     
     await db.warehouses.update_one(
         {"id": warehouse_id},
