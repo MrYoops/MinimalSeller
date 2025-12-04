@@ -7,6 +7,7 @@ import CatalogNavDropdown from '../components/CatalogNavDropdown'
 export default function ProductMatchingPage() {
   const { api } = useAuth()
   const [selectedMarketplace, setSelectedMarketplace] = useState('ozon')
+  const [selectedIntegrationId, setSelectedIntegrationId] = useState('')  // НОВОЕ!
   const [integrations, setIntegrations] = useState([])
   const [loading, setLoading] = useState(false)
   
@@ -30,7 +31,15 @@ export default function ProductMatchingPage() {
   const loadIntegrations = async () => {
     try {
       const response = await api.get('/api/seller/api-keys')
-      setIntegrations(response.data)
+      const ints = response.data || []
+      setIntegrations(ints)
+      
+      // Автовыбор последней интеграции
+      if (ints.length > 0) {
+        const lastInt = ints[ints.length - 1]
+        setSelectedIntegrationId(lastInt.id)
+        setSelectedMarketplace(lastInt.marketplace)
+      }
     } catch (error) {
       console.error('Failed to load integrations:', error)
     }
@@ -256,17 +265,21 @@ export default function ProductMatchingPage() {
       <div className="bg-mm-secondary p-4 rounded-lg space-y-4">
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm text-mm-text-secondary mb-2 uppercase">Маркетплейс</label>
+            <label className="block text-sm text-mm-text-secondary mb-2 uppercase">Интеграция</label>
             <select
-              value={selectedMarketplace}
-              onChange={(e) => setSelectedMarketplace(e.target.value)}
+              value={selectedIntegrationId}
+              onChange={(e) => {
+                setSelectedIntegrationId(e.target.value)
+                const int = integrations.find(i => i.id === e.target.value)
+                if (int) setSelectedMarketplace(int.marketplace)
+              }}
               className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
             >
               {integrations
                 .filter(int => ['ozon', 'wb', 'yandex'].includes(int.marketplace))
                 .map(int => (
-                  <option key={int.id} value={int.marketplace}>
-                    {int.marketplace.toUpperCase()} - {int.name || 'Интеграция'}
+                  <option key={int.id} value={int.id}>
+                    {int.marketplace.toUpperCase()}: {int.name || int.client_id || 'API'}
                   </option>
                 ))}
             </select>
