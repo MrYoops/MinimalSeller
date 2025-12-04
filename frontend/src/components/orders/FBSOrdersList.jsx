@@ -1,44 +1,61 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { FiEye, FiPackage } from 'react-icons/fi'
+import { FiDownload, FiEye, FiPackage } from 'react-icons/fi'
 import { toast } from 'sonner'
 
 function FBSOrdersList() {
   const { api } = useAuth()
   const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [filters, setFilters] = useState({
-    marketplace: '',
-    status: '',
-    date_from: '',
-    date_to: ''
+  const [loading, setLoading] = useState(false)
+  const [importing, setImporting] = useState(false)
+  
+  const [importSettings, setImportSettings] = useState({
+    date_from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    date_to: new Date().toISOString().split('T')[0],
+    update_stock: true  // ОТКЛЮЧАЕМЫЙ ЧЕКБОКС!
   })
 
   useEffect(() => {
     loadOrders()
-    // Автообновление каждые 30 секунд
-    const interval = setInterval(loadOrders, 30000)
-    return () => clearInterval(interval)
-  }, [filters])
+  }, [])
 
   const loadOrders = async () => {
     try {
       setLoading(true)
-      const params = new URLSearchParams()
-      if (filters.marketplace) params.append('marketplace', filters.marketplace)
-      if (filters.status) params.append('status', filters.status)
-      if (filters.date_from) params.append('date_from', filters.date_from)
-      if (filters.date_to) params.append('date_to', filters.date_to)
-      
-      const response = await api.get(`/api/orders/fbs?${params.toString()}`)
+      const response = await api.get('/api/orders/fbs')
       setOrders(response.data)
     } catch (error) {
       console.error('Failed to load FBS orders:', error)
-      if (error.response?.status !== 401) {
-        toast.error('Ошибка загрузки заказов FBS')
-      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleImport = async () => {
+    if (!importSettings.date_from || !importSettings.date_to) {
+      toast.error('Выберите период')
+      return
+    }
+    
+    try {
+      setImporting(true)
+      
+      const response = await api.post('/api/orders/fbs/import', {
+        date_from: importSettings.date_from,
+        date_to: importSettings.date_to,
+        update_stock: importSettings.update_stock
+      })
+      
+      toast.success(`Загружено ${response.data.imported} заказов${importSettings.update_stock ? ' с обновлением остатков' : ''}`)
+      
+      // Перезагрузить список
+      await loadOrders()
+      
+    } catch (error) {
+      console.error('Failed to import orders:', error)
+      toast.error(error.response?.data?.detail || 'Ошибка загрузки заказов')
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -58,87 +75,69 @@ function FBSOrdersList() {
     )
   }
 
-  const getReserveBadge = (reserveStatus) => {
-    const config = {
-      'reserved': { color: 'text-mm-yellow border-mm-yellow', label: 'Зарезервирован' },
-      'deducted': { color: 'text-mm-green border-mm-green', label: 'Списан' },
-      'returned': { color: 'text-mm-blue border-mm-blue', label: 'Возвращён' },
-      'none': { color: 'text-mm-text-tertiary border-mm-border', label: '-' }
-    }
-    const c = config[reserveStatus] || config['none']
-    return (
-      <span className={`px-2 py-1 text-xs font-mono border ${c.color} rounded`}>
-        {c.label}
-      </span>
-    )
-  }
-
   return (
     <div className="space-y-4" data-testid="fbs-orders-list">
-      {/* Фильтры */}
-      <div className="card-neon p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      
+      {/* ПАНЕЛЬ ЗАГРУЗКИ ЗАКАЗОВ */}
+      <div className="card-neon p-6">
+        <h3 className="text-lg font-mono text-mm-cyan uppercase mb-4">Загрузка заказов FBS</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Маркетплейс</label>
-            <select
-              className="input-neon w-full"
-              value={filters.marketplace}
-              onChange={(e) => setFilters({...filters, marketplace: e.target.value})}
-              data-testid="filter-marketplace"
-            >
-              <option value="">Все</option>
-              <option value="ozon">Ozon</option>
-              <option value="wb">Wildberries</option>
-              <option value="yandex">Yandex Market</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Статус</label>
-            <select
-              className="input-neon w-full"
-              value={filters.status}
-              onChange={(e) => setFilters({...filters, status: e.target.value})}
-              data-testid="filter-status"
-            >
-              <option value="">Все</option>
-              <option value="new">Новый</option>
-              <option value="awaiting_shipment">Ожидает отгрузки</option>
-              <option value="delivering">Доставляется</option>
-              <option value="delivered">Доставлен</option>
-              <option value="cancelled">Отменён</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата от</label>
+            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата от *</label>
             <input
               type="date"
               className="input-neon w-full"
-              value={filters.date_from}
-              onChange={(e) => setFilters({...filters, date_from: e.target.value})}
-              data-testid="filter-date-from"
+              value={importSettings.date_from}
+              onChange={(e) => setImportSettings({...importSettings, date_from: e.target.value})}
+              data-testid="import-date-from"
             />
           </div>
           <div>
-            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата до</label>
+            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата до *</label>
             <input
               type="date"
               className="input-neon w-full"
-              value={filters.date_to}
-              onChange={(e) => setFilters({...filters, date_to: e.target.value})}
-              data-testid="filter-date-to"
+              value={importSettings.date_to}
+              onChange={(e) => setImportSettings({...importSettings, date_to: e.target.value})}
+              data-testid="import-date-to"
             />
+          </div>
+          <div className="flex items-end">
+            <label className="flex items-center space-x-3 border border-mm-border p-3 rounded hover:border-mm-cyan transition-colors cursor-pointer w-full">
+              <input
+                type="checkbox"
+                checked={importSettings.update_stock}
+                onChange={(e) => setImportSettings({...importSettings, update_stock: e.target.checked})}
+                className="toggle-switch"
+                data-testid="update-stock-checkbox"
+              />
+              <div>
+                <div className="font-semibold text-mm-text text-sm">Обновить остатки</div>
+                <div className="text-xs text-mm-text-tertiary">Списать товары со склада</div>
+              </div>
+            </label>
           </div>
         </div>
+        
+        <button
+          onClick={handleImport}
+          disabled={importing}
+          className="btn-neon w-full flex items-center justify-center space-x-2"
+          data-testid="import-orders-btn"
+        >
+          <FiDownload />
+          <span>{importing ? 'Загрузка заказов...' : 'ЗАГРУЗИТЬ ЗАКАЗЫ'}</span>
+        </button>
       </div>
 
+      {/* СПИСОК ЗАКАЗОВ */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-mm-text-secondary font-mono">
-          Найдено заказов: <span className="text-mm-cyan">{orders.length}</span>
-          <span className="text-mm-text-tertiary ml-4">// Автообновление каждые 30 сек</span>
+          Всего заказов: <span className="text-mm-cyan">{orders.length}</span>
         </p>
       </div>
 
-      {/* Таблица заказов */}
       {loading ? (
         <div className="card-neon text-center py-12">
           <p className="text-mm-cyan animate-pulse font-mono">// Загрузка...</p>
@@ -147,7 +146,7 @@ function FBSOrdersList() {
         <div className="card-neon text-center py-12">
           <FiPackage className="mx-auto text-mm-text-tertiary mb-4" size={48} />
           <p className="text-mm-text-secondary mb-2 font-mono">Заказы FBS не найдены</p>
-          <p className="text-sm text-mm-text-tertiary font-mono">// Заказы подтягиваются автоматически каждые 5 минут</p>
+          <p className="text-sm text-mm-text-tertiary font-mono">// Используйте форму выше для загрузки</p>
         </div>
       ) : (
         <div className="card-neon overflow-hidden">
@@ -161,7 +160,7 @@ function FBSOrdersList() {
                   <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-xs font-mono">Товары</th>
                   <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-xs font-mono">Сумма</th>
                   <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-xs font-mono">Статус</th>
-                  <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-xs font-mono">Резерв</th>
+                  <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-xs font-mono">Остаток обновлён</th>
                   <th className="text-right py-4 px-4 text-mm-text-secondary uppercase text-xs font-mono">Действия</th>
                 </tr>
               </thead>
@@ -186,8 +185,12 @@ function FBSOrdersList() {
                     <td className="py-4 px-4">
                       {getStatusBadge(order.status)}
                     </td>
-                    <td className="py-4 px-4">
-                      {getReserveBadge(order.reserve_status)}
+                    <td className="py-4 px-4 text-center">
+                      {order.stock_updated ? (
+                        <span className="text-mm-green">✓</span>
+                      ) : (
+                        <span className="text-mm-text-tertiary">-</span>
+                      )}
                     </td>
                     <td className="py-4 px-4 text-right">
                       <button

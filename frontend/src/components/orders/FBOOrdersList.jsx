@@ -1,44 +1,59 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { FiEye, FiTruck } from 'react-icons/fi'
+import { FiDownload, FiEye, FiTruck } from 'react-icons/fi'
 import { toast } from 'sonner'
 
 function FBOOrdersList() {
   const { api } = useAuth()
   const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [filters, setFilters] = useState({
-    marketplace: '',
-    status: '',
-    date_from: '',
-    date_to: ''
+  const [loading, setLoading] = useState(false)
+  const [importing, setImporting] = useState(false)
+  
+  const [importSettings, setImportSettings] = useState({
+    date_from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    date_to: new Date().toISOString().split('T')[0]
   })
 
   useEffect(() => {
     loadOrders()
-    // Автообновление каждые 30 секунд
-    const interval = setInterval(loadOrders, 30000)
-    return () => clearInterval(interval)
-  }, [filters])
+  }, [])
 
   const loadOrders = async () => {
     try {
       setLoading(true)
-      const params = new URLSearchParams()
-      if (filters.marketplace) params.append('marketplace', filters.marketplace)
-      if (filters.status) params.append('status', filters.status)
-      if (filters.date_from) params.append('date_from', filters.date_from)
-      if (filters.date_to) params.append('date_to', filters.date_to)
-      
-      const response = await api.get(`/api/orders/fbo?${params.toString()}`)
+      const response = await api.get('/api/orders/fbo')
       setOrders(response.data)
     } catch (error) {
       console.error('Failed to load FBO orders:', error)
-      if (error.response?.status !== 401) {
-        toast.error('Ошибка загрузки заказов FBO')
-      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleImport = async () => {
+    if (!importSettings.date_from || !importSettings.date_to) {
+      toast.error('Выберите период')
+      return
+    }
+    
+    try {
+      setImporting(true)
+      
+      const response = await api.post('/api/orders/fbo/import', {
+        date_from: importSettings.date_from,
+        date_to: importSettings.date_to
+      })
+      
+      toast.success(`Загружено ${response.data.imported} FBO заказов (без обновления остатков)`)
+      
+      // Перезагрузить список
+      await loadOrders()
+      
+    } catch (error) {
+      console.error('Failed to import FBO orders:', error)
+      toast.error(error.response?.data?.detail || 'Ошибка загрузки заказов FBO')
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -64,68 +79,52 @@ function FBOOrdersList() {
           <span className="text-mm-purple font-bold">ℹ️ FBO заказы:</span> Заказы со складов маркетплейсов. Отображаются только для аналитики, не влияют на остатки вашего склада.
         </p>
       </div>
-
-      {/* Фильтры */}
-      <div className="card-neon p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      
+      {/* ПАНЕЛЬ ЗАГРУЗКИ */}
+      <div className="card-neon p-6">
+        <h3 className="text-lg font-mono text-mm-purple uppercase mb-4">Загрузка заказов FBO</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Маркетплейс</label>
-            <select
-              className="input-neon w-full"
-              value={filters.marketplace}
-              onChange={(e) => setFilters({...filters, marketplace: e.target.value})}
-              data-testid="filter-marketplace"
-            >
-              <option value="">Все</option>
-              <option value="ozon">Ozon</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Статус</label>
-            <select
-              className="input-neon w-full"
-              value={filters.status}
-              onChange={(e) => setFilters({...filters, status: e.target.value})}
-              data-testid="filter-status"
-            >
-              <option value="">Все</option>
-              <option value="processing">Обработка</option>
-              <option value="shipped">Отправлен</option>
-              <option value="delivered">Доставлен</option>
-              <option value="cancelled">Отменён</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата от</label>
+            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата от *</label>
             <input
               type="date"
               className="input-neon w-full"
-              value={filters.date_from}
-              onChange={(e) => setFilters({...filters, date_from: e.target.value})}
-              data-testid="filter-date-from"
+              value={importSettings.date_from}
+              onChange={(e) => setImportSettings({...importSettings, date_from: e.target.value})}
+              data-testid="import-date-from"
             />
           </div>
           <div>
-            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата до</label>
+            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата до *</label>
             <input
               type="date"
               className="input-neon w-full"
-              value={filters.date_to}
-              onChange={(e) => setFilters({...filters, date_to: e.target.value})}
-              data-testid="filter-date-to"
+              value={importSettings.date_to}
+              onChange={(e) => setImportSettings({...importSettings, date_to: e.target.value})}
+              data-testid="import-date-to"
             />
           </div>
         </div>
+        
+        <button
+          onClick={handleImport}
+          disabled={importing}
+          className="btn-neon w-full flex items-center justify-center space-x-2"
+          data-testid="import-orders-btn"
+        >
+          <FiDownload />
+          <span>{importing ? 'Загрузка заказов...' : 'ЗАГРУЗИТЬ ЗАКАЗЫ FBO'}</span>
+        </button>
       </div>
 
+      {/* СПИСОК */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-mm-text-secondary font-mono">
-          Найдено заказов: <span className="text-mm-purple">{orders.length}</span>
-          <span className="text-mm-text-tertiary ml-4">// Автообновление каждые 30 сек</span>
+          Всего заказов: <span className="text-mm-purple">{orders.length}</span>
         </p>
       </div>
 
-      {/* Таблица заказов */}
       {loading ? (
         <div className="card-neon text-center py-12">
           <p className="text-mm-cyan animate-pulse font-mono">// Загрузка...</p>
@@ -134,7 +133,7 @@ function FBOOrdersList() {
         <div className="card-neon text-center py-12">
           <FiTruck className="mx-auto text-mm-text-tertiary mb-4" size={48} />
           <p className="text-mm-text-secondary mb-2 font-mono">Заказы FBO не найдены</p>
-          <p className="text-sm text-mm-text-tertiary font-mono">// Заказы подтягиваются автоматически каждые 5 минут</p>
+          <p className="text-sm text-mm-text-tertiary font-mono">// Используйте форму выше для загрузки</p>
         </div>
       ) : (
         <div className="card-neon overflow-hidden">
