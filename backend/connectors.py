@@ -311,33 +311,29 @@ class OzonConnector(BaseConnector):
             
             logger.info(f"[Ozon] Successfully transformed {len(all_products)} products with full details")
             return all_products
-                
-            except MarketplaceError as e:
-                # If /v3/product/info/list fails completely, fallback to basic data
-                logger.warning(f"[Ozon] Failed to get full info: {e.message}, using basic data")
-                
-                for item in all_items:
-                    all_products.append({
-                        "id": str(item.get('product_id', '')),
-                        "sku": item.get('offer_id', ''),
-                        "name": item.get('offer_id', 'Unnamed product'),
-                        "description": '',
-                        "price": 0,
-                        "stock": 0,
-                        "images": [],
-                        "attributes": {},
-                        "category": '',
-                        "marketplace": "ozon",
-                        "status": 'archived' if item.get('archived') else 'active',
-                        "barcode": ''
-                    })
-                
-                logger.info(f"[Ozon] Successfully transformed {len(all_products)} products (basic info only)")
-                return all_products
             
         except MarketplaceError as e:
-            logger.error(f"[Ozon] Failed to fetch products: {e.message}")
-            raise
+            # If /v3/product/info/list fails completely, fallback to basic data
+            logger.warning(f"[Ozon] Failed to get full info: {e.message}, using basic data")
+            
+            for item in all_items:
+                all_products.append({
+                    "id": str(item.get('product_id', '')),
+                    "sku": item.get('offer_id', ''),
+                    "name": item.get('offer_id', 'Unnamed product'),
+                    "description": '',
+                    "price": 0,
+                    "stock": 0,
+                    "images": [],
+                    "attributes": {},
+                    "category": '',
+                    "marketplace": "ozon",
+                    "status": 'archived' if item.get('archived') else 'active',
+                    "barcode": ''
+                })
+            
+            logger.info(f"[Ozon] Successfully transformed {len(all_products)} products (basic info only)")
+            return all_products
     
     async def get_warehouses(self) -> List[Dict[str, Any]]:
         """Get FBS warehouses from Ozon (seller's own warehouses)"""
