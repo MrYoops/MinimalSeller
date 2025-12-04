@@ -166,6 +166,16 @@ function FBSOrdersList() {
           onSuccess={loadOrders}
         />
       )}
+
+      {/* Модалка детального просмотра */}
+      {showDetailModal && selectedOrder && (
+        <OrderDetailModal
+          order={selectedOrder}
+          isOpen={showDetailModal}
+          onClose={handleCloseDetail}
+          onUpdate={handleOrderUpdate}
+        />
+      )}
     </div>
   )
 }
