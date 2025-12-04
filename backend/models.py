@@ -945,6 +945,23 @@ class OrderSyncRequest(BaseModel):
     force: bool = False  # Принудительная синхронизация всех
 
 
+# ---------- РАЗДЕЛЕНИЕ ЗАКАЗОВ ----------
+
+class OrderItemSplit(BaseModel):
+    """Товар для разделения"""
+    article: str
+    quantity: int
+
+class OrderBoxSplit(BaseModel):
+    """Короб для разделения"""
+    box_number: int
+    items: List[OrderItemSplit]
+
+class OrderSplitRequest(BaseModel):
+    """Запрос на разделение заказа"""
+    boxes: List[OrderBoxSplit]
+
+
 # ---------- WAREHOUSE ОБНОВЛЕНИЕ ----------
 
 class WarehouseUpdate(BaseModel):
