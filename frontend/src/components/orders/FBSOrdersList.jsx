@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { FiRefreshCw, FiEye, FiPackage } from 'react-icons/fi'
+import { FiEye, FiPackage } from 'react-icons/fi'
 import { toast } from 'sonner'
 
 function FBSOrdersList() {
   const { api } = useAuth()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
-  const [syncing, setSyncing] = useState(false)
   const [filters, setFilters] = useState({
     marketplace: '',
     status: '',
@@ -17,6 +16,9 @@ function FBSOrdersList() {
 
   useEffect(() => {
     loadOrders()
+    // Автообновление каждые 30 секунд
+    const interval = setInterval(loadOrders, 30000)
+    return () => clearInterval(interval)
   }, [filters])
 
   const loadOrders = async () => {
@@ -32,26 +34,11 @@ function FBSOrdersList() {
       setOrders(response.data)
     } catch (error) {
       console.error('Failed to load FBS orders:', error)
-      toast.error('Ошибка загрузки заказов FBS')
+      if (error.response?.status !== 401) {
+        toast.error('Ошибка загрузки заказов FBS')
+      }
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSync = async () => {
-    try {
-      setSyncing(true)
-      const response = await api.post('/api/orders/fbs/sync', {
-        marketplace: 'all',
-        force: false
-      })
-      toast.success(`Синхронизация завершена: ${response.data.synced} новых, ${response.data.updated} обновлено`)
-      await loadOrders()
-    } catch (error) {
-      console.error('Failed to sync FBS orders:', error)
-      toast.error('Ошибка синхронизации')
-    } finally {
-      setSyncing(false)
     }
   }
 
@@ -144,20 +131,11 @@ function FBSOrdersList() {
         </div>
       </div>
 
-      {/* Кнопка синхронизации */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-mm-text-secondary font-mono">
           Найдено заказов: <span className="text-mm-cyan">{orders.length}</span>
+          <span className="text-mm-text-tertiary ml-4">// Автообновление каждые 30 сек</span>
         </p>
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          className="btn-neon flex items-center space-x-2"
-          data-testid="sync-fbs-orders"
-        >
-          <FiRefreshCw className={syncing ? 'animate-spin' : ''} />
-          <span>{syncing ? 'Синхронизация...' : 'Синхронизировать'}</span>
-        </button>
       </div>
 
       {/* Таблица заказов */}
@@ -169,7 +147,7 @@ function FBSOrdersList() {
         <div className="card-neon text-center py-12">
           <FiPackage className="mx-auto text-mm-text-tertiary mb-4" size={48} />
           <p className="text-mm-text-secondary mb-2 font-mono">Заказы FBS не найдены</p>
-          <p className="text-sm text-mm-text-tertiary font-mono">// Нажмите "Синхронизировать" для загрузки</p>
+          <p className="text-sm text-mm-text-tertiary font-mono">// Заказы подтягиваются автоматически каждые 5 минут</p>
         </div>
       ) : (
         <div className="card-neon overflow-hidden">
