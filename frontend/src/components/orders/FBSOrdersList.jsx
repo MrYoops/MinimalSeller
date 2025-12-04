@@ -180,18 +180,24 @@ function FBSOrdersList() {
         <div className="card-neon text-center py-12">
           <p className="text-mm-cyan animate-pulse font-mono">// Загрузка...</p>
         </div>
-      ) : orders.length === 0 ? (
+      ) : filteredOrders.length === 0 ? (
         <div className="card-neon text-center py-12">
           <FiPackage className="mx-auto text-mm-text-tertiary mb-4" size={48} />
-          <p className="text-mm-text-secondary mb-2 font-mono">Заказы FBS не найдены</p>
-          <p className="text-sm text-mm-text-tertiary font-mono mb-4">// Нажмите "ИМПОРТ ЗАКАЗОВ" для загрузки</p>
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="btn-neon inline-flex items-center space-x-2"
-          >
-            <FiDownload />
-            <span>ИМПОРТ ЗАКАЗОВ</span>
-          </button>
+          <p className="text-mm-text-secondary mb-2 font-mono">
+            {activeStatusFilter === 'all' ? 'Заказы FBS не найдены' : `Нет заказов со статусом "${activeStatusFilter}"`}
+          </p>
+          <p className="text-sm text-mm-text-tertiary font-mono mb-4">
+            // {activeStatusFilter === 'all' ? 'Нажмите "ИМПОРТ ЗАКАЗОВ" для загрузки' : 'Измените фильтр или импортируйте заказы'}
+          </p>
+          {activeStatusFilter === 'all' && (
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="btn-neon inline-flex items-center space-x-2"
+            >
+              <FiDownload />
+              <span>ИМПОРТ ЗАКАЗОВ</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="card-neon overflow-hidden">
@@ -199,6 +205,15 @@ function FBSOrdersList() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-mm-border">
+                  <th className="py-4 px-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 bg-mm-dark border-mm-border rounded cursor-pointer"
+                      data-testid="select-all-checkbox"
+                    />
+                  </th>
                   <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-xs font-mono">Номер</th>
                   <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-xs font-mono">МП</th>
                   <th className="text-left py-4 px-4 text-mm-text-secondary uppercase text-xs font-mono">Дата</th>
@@ -210,8 +225,17 @@ function FBSOrdersList() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
                   <tr key={order.id} className="border-b border-mm-border hover:bg-mm-gray transition-colors" data-testid={`order-row-${order.id}`}>
+                    <td className="py-4 px-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedOrderIds.includes(order.id)}
+                        onChange={() => toggleSelectOrder(order.id)}
+                        className="w-4 h-4 bg-mm-dark border-mm-border rounded cursor-pointer"
+                        data-testid={`select-order-${order.id}`}
+                      />
+                    </td>
                     <td className="py-4 px-4 font-mono text-sm text-mm-cyan">
                       {order.order_number}
                     </td>
