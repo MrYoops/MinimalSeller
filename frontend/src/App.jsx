@@ -134,6 +134,15 @@ function AppRoutes() {
       <Route path="/orders" element={
         <ProtectedRoute><WithLayout><OrdersPageNew /></WithLayout></ProtectedRoute>
       } />
+      <Route path="/orders/fbs" element={
+        <ProtectedRoute><WithLayout><OrdersPageNew section="fbs" /></WithLayout></ProtectedRoute>
+      } />
+      <Route path="/orders/fbo" element={
+        <ProtectedRoute><WithLayout><OrdersPageNew section="fbo" /></WithLayout></ProtectedRoute>
+      } />
+      <Route path="/orders/retail" element={
+        <ProtectedRoute><WithLayout><OrdersPageNew section="retail" /></WithLayout></ProtectedRoute>
+      } />
       <Route path="/finance" element={
         <ProtectedRoute><WithLayout><FinanceDashboard /></WithLayout></ProtectedRoute>
       } />
