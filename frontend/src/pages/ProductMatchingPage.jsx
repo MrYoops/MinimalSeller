@@ -57,17 +57,20 @@ export default function ProductMatchingPage() {
   }
 
   const loadMarketplaceProducts = async () => {
-    if (!selectedMarketplace) {
-      alert('Выберите маркетплейс')
+    if (!selectedIntegrationId) {
+      alert('Выберите интеграцию')
       return
     }
 
     setLoading(true)
     try {
-      const response = await api.get(`/api/marketplaces/${selectedMarketplace}/products`)
+      // Передаём integration_id в запросе
+      const response = await api.get(`/api/marketplaces/${selectedMarketplace}/products`, {
+        params: { integration_id: selectedIntegrationId }
+      })
       const products = response.data
       
-      console.log(`✅ Loaded ${products.length} products from ${selectedMarketplace}`)
+      console.log(`✅ Loaded ${products.length} products from ${selectedMarketplace} (integration: ${selectedIntegrationId})`)
       setMpProducts(products)
       
       // Сопоставляем
