@@ -78,6 +78,7 @@ async def create_warehouse(
         "use_for_orders": data.get("use_for_orders", True),
         "priority": data.get("priority", 1),
         "fbo_accounting": data.get("fbo_accounting", False),
+        "return_on_cancel": data.get("return_on_cancel", True),  # НОВОЕ!
         
         # Marketplace-specific
         "marketplace_warehouse_id": data.get("marketplace_warehouse_id"),
