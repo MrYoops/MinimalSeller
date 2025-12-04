@@ -1735,9 +1735,11 @@ except Exception as e:
 #     logger.error(f"Failed to include warehouse_links_routes: {e}")
 
 try:
-    from order_routes import router as order_router
-    app.include_router(order_router)
-    logger.info("Order routes included")
+    # СТАРАЯ СИСТЕМА ЗАКАЗОВ - ОТКЛЮЧЕНА (заменена на FBS/FBO/Retail)
+    # from order_routes import router as order_router
+    # app.include_router(order_router)
+    # logger.info("Order routes included")
+    logger.info("Old order routes DISABLED (replaced with FBS/FBO/Retail system)")
 except Exception as e:
     logger.error(f"Failed to include order_routes: {e}")
 
