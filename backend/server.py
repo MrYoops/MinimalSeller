@@ -1857,6 +1857,57 @@ try:
 except Exception as e:
     logger.error(f"Failed to include inventory_stock_routes: {e}")
 
+
+# ============================================================================
+# НОВАЯ СИСТЕМА ЗАКАЗОВ (FBS / FBO / RETAIL)
+# ============================================================================
+
+try:
+    from fbs_orders_routes import router as fbs_orders_router
+    app.include_router(fbs_orders_router)
+    logger.info("FBS orders routes included")
+except Exception as e:
+    logger.error(f"Failed to include fbs_orders_routes: {e}")
+
+try:
+    from fbo_orders_routes import router as fbo_orders_router
+    app.include_router(fbo_orders_router)
+    logger.info("FBO orders routes included")
+except Exception as e:
+    logger.error(f"Failed to include fbo_orders_routes: {e}")
+
+try:
+    from retail_orders_routes import router as retail_orders_router
+    app.include_router(retail_orders_router)
+    logger.info("Retail orders routes included")
+except Exception as e:
+    logger.error(f"Failed to include retail_orders_routes: {e}")
+
+# Запуск планировщика синхронизации заказов
+try:
+    from order_sync_scheduler import order_sync_scheduler
+    
+    @app.on_event("startup")
+    async def start_order_sync_scheduler():
+        """Запустить планировщик при старте приложения"""
+        try:
+            order_sync_scheduler.start()
+            logger.info("✅ Order sync scheduler started successfully")
+        except Exception as e:
+            logger.error(f"Failed to start order sync scheduler: {e}")
+    
+    @app.on_event("shutdown")
+    async def stop_order_sync_scheduler():
+        """Остановить планировщик при остановке приложения"""
+        try:
+            order_sync_scheduler.stop()
+            logger.info("Order sync scheduler stopped")
+        except Exception as e:
+            logger.error(f"Failed to stop order sync scheduler: {e}")
+except Exception as e:
+    logger.error(f"Failed to setup order sync scheduler: {e}")
+
+
 # Sync inventory for existing products
 @app.post("/api/inventory/sync-catalog")
 async def sync_inventory_from_catalog(
