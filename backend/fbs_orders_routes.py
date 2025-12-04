@@ -543,8 +543,13 @@ async def import_fbs_orders(
                 else:
                     continue
                 
-                if not external_id or not items:
+                if not external_id:
+                    logger.warning(f"[FBS Import] Пропущен заказ без ID")
                     continue
+                
+                # СОЗДАЁМ ЗАКАЗ ДАЖЕ ЕСЛИ ТОВАРЫ НЕ НАЙДЕНЫ В СИСТЕМЕ
+                if not items:
+                    logger.warning(f"[FBS Import] Заказ {external_id}: товары не найдены в каталоге, создаём с пустым списком")
                 
                 # Проверить существует ли заказ
                 existing = await db.orders_fbs.find_one({
