@@ -288,21 +288,40 @@ function RetailOrderForm({ onCancel, onSuccess }) {
                     <p className="font-mono text-xs text-mm-text-secondary">{item.name}</p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <input
-                      type="number"
-                      min="1"
-                      className="input-neon w-20"
-                      value={item.quantity}
-                      onChange={(e) => updateQuantity(index, e.target.value)}
-                      data-testid={`quantity-${index}`}
-                    />
-                    <span className="font-mono text-sm text-mm-text-secondary">×</span>
-                    <span className="font-mono text-sm w-24 text-right">{item.price.toFixed(2)}₽</span>
-                    <span className="font-mono text-sm text-mm-green w-24 text-right">{item.total.toFixed(2)}₽</span>
+                    <div>
+                      <label className="text-xs text-mm-text-secondary block mb-1">Кол-во</label>
+                      <input
+                        type="number"
+                        min="1"
+                        className="input-neon w-20 text-center"
+                        value={item.quantity}
+                        onChange={(e) => updateQuantity(index, e.target.value)}
+                        data-testid={`quantity-${index}`}
+                      />
+                    </div>
+                    <span className="font-mono text-sm text-mm-text-secondary pt-5">×</span>
+                    <div>
+                      <label className="text-xs text-mm-text-secondary block mb-1">Цена</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="input-neon w-28 text-right"
+                        value={item.price}
+                        onChange={(e) => updatePrice(index, e.target.value)}
+                        data-testid={`price-${index}`}
+                      />
+                    </div>
+                    <div className="pt-5">
+                      <span className="font-mono text-sm text-mm-text-secondary">=</span>
+                    </div>
+                    <div className="pt-5">
+                      <span className="font-mono text-sm text-mm-green w-28 text-right block">{item.total.toFixed(2)}₽</span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => removeProduct(index)}
-                      className="text-mm-red hover:text-mm-red/80"
+                      className="text-mm-red hover:text-mm-red/80 pt-5"
                       data-testid={`remove-${index}`}
                     >
                       <FiTrash2 />
