@@ -634,10 +634,10 @@ async def import_fbs_orders(
                         stock_updated_count += 1
                         
                         logger.info(f"[FBS Import] Списан товар {item['article']}: -{item['quantity']} шт")
-        
-        except Exception as e:
-            logger.error(f"[FBS Import] Ошибка {marketplace}: {e}")
-            errors.append({"marketplace": marketplace, "error": str(e)})
+    
+    except Exception as e:
+        logger.error(f"[FBS Import] Ошибка {marketplace}: {e}")
+        errors.append({"marketplace": marketplace, "error": str(e)})
     
     return {
         "message": f"Загружено {imported_count} заказов",
