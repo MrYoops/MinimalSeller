@@ -11,7 +11,7 @@ function ImportOrdersModal({ type = 'fbs', onClose, onSuccess }) {
   
   const [settings, setSettings] = useState({
     integration_id: '',  // ID интеграции
-    date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    date_from: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],  // 6 месяцев назад
     date_to: new Date().toISOString().split('T')[0],
     update_stock: true
   })
@@ -33,9 +33,10 @@ function ImportOrdersModal({ type = 'fbs', onClose, onSuccess }) {
       
       setIntegrations(filtered)
       
-      // Автовыбор первой
+      // Автовыбор ПОСЛЕДНЕЙ интеграции (самая новая)
       if (filtered.length > 0) {
-        setSettings(prev => ({...prev, integration_id: filtered[0].id}))
+        const lastIntegration = filtered[filtered.length - 1]
+        setSettings(prev => ({...prev, integration_id: lastIntegration.id}))
       }
     } catch (error) {
       console.error('Failed to load integrations:', error)
