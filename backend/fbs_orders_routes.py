@@ -512,9 +512,9 @@ async def import_fbs_orders(
                             total_sum += price * quantity
                     
                     customer_data = {
-                        "full_name": mp_order_data.get("customer", {}).get("name", ""),
-                        "phone": mp_order_data.get("customer", {}).get("phone", ""),
-                        "address": mp_order_data.get("delivery_method", {}).get("address", "")
+                        "full_name": (mp_order_data.get("customer") or {}).get("name", ""),
+                        "phone": (mp_order_data.get("customer") or {}).get("phone", ""),
+                        "address": (mp_order_data.get("delivery_method") or {}).get("address", "")
                     }
                     
                 elif marketplace in ["wb", "wildberries"]:
