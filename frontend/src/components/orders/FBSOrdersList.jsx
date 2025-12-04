@@ -297,6 +297,15 @@ function FBSOrdersList() {
           onUpdate={handleOrderUpdate}
         />
       )}
+
+      {/* Панель массовых действий */}
+      <BulkActionsPanel
+        selectedCount={selectedOrderIds.length}
+        onPrintLabels={handleBulkPrintLabels}
+        onExportExcel={handleBulkExportExcel}
+        onChangeStatus={handleBulkChangeStatus}
+        onClearSelection={() => setSelectedOrderIds([])}
+      />
     </div>
   )
 }
