@@ -746,3 +746,361 @@ async def sync_fbs_orders(
         "updated": updated_count,
         "errors": errors
     }
+
+
+
+# ============================================================================
+# РАЗДЕЛЕНИЕ ЗАКАЗОВ
+# ============================================================================
+
+@router.post("/{order_id}/split")
+async def split_fbs_order(
+    order_id: str,
+    split_data: OrderSplitRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Разделить FBS заказ на несколько коробов
+    
+    Body: {
+        boxes: [
+            {box_number: 1, items: [{article: "123", quantity: 2}]},
+            {box_number: 2, items: [{article: "456", quantity: 1}]}
+        ]
+    }
+    
+    Логика:
+    - Ozon: создаются новые заказы на МП
+    - Yandex/МегаМаркет: обновляется разделение на короба
+    - WB: не поддерживается
+    """
+    db = await get_database()
+    
+    # Найти заказ
+    order = await db.orders_fbs.find_one({
+        "_id": ObjectId(order_id),
+        "seller_id": str(current_user["_id"])
+    })
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    marketplace = order["marketplace"]
+    external_id = order["external_order_id"]
+    
+    # WB не поддерживает разделение
+    if marketplace == "wb":
+        raise HTTPException(
+            status_code=400,
+            detail="Разделение заказов не поддерживается для Wildberries"
+        )
+    
+    # Валидация: количество товаров должно совпадать
+    original_items = {item["article"]: item["quantity"] for item in order["items"]}
+    split_items = {}
+    
+    for box in split_data.boxes:
+        for item in box.items:
+            split_items[item.article] = split_items.get(item.article, 0) + item.quantity
+    
+    for article, qty in original_items.items():
+        if split_items.get(article, 0) != qty:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Неверное количество для артикула {article}. Ожидается: {qty}, указано: {split_items.get(article, 0)}"
+            )
+    
+    # Получить коннектор
+    profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    api_keys = profile.get("api_keys", [])
+    
+    # Найти интеграцию для этого маркетплейса
+    integration = next((k for k in api_keys if k["marketplace"] == marketplace), None)
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail=f"Интеграция {marketplace} не найдена")
+    
+    connector = get_connector(
+        marketplace,
+        integration.get("client_id", ""),
+        integration["api_key"]
+    )
+    
+    try:
+        if marketplace == "ozon":
+            # Ozon: разделение создаёт новые заказы
+            # Формат для API Ozon
+            ozon_packages = []
+            
+            for box in split_data.boxes:
+                products_list = []
+                
+                for item in box.items:
+                    # Найти product_id в order.items
+                    orig_item = next((oi for oi in order["items"] if oi["article"] == item.article), None)
+                    
+                    if not orig_item or not orig_item.get("product_id"):
+                        logger.warning(f"[Ozon Split] Product ID not found for {item.article}")
+                        continue
+                    
+                    products_list.append({
+                        "product_id": int(orig_item["product_id"]) if isinstance(orig_item["product_id"], str) and orig_item["product_id"].isdigit() else orig_item["product_id"],
+                        "quantity": item.quantity
+                    })
+                
+                ozon_packages.append({"products": products_list})
+            
+            logger.info(f"[Ozon Split] Packages prepared: {ozon_packages}")
+            
+            result = await connector.split_order(external_id, ozon_packages)
+            
+            # Получить новые posting_numbers
+            new_postings = result.get("result", [])
+            
+            logger.info(f"[Ozon Split] Created {len(new_postings)} new orders")
+            
+            # Обновить текущий заказ
+            await db.orders_fbs.update_one(
+                {"_id": ObjectId(order_id)},
+                {
+                    "$set": {
+                        "is_split": True,
+                        "split_into": [p.get("posting_number") for p in new_postings],
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+            
+            # Добавить в историю
+            await db.orders_fbs.update_one(
+                {"_id": ObjectId(order_id)},
+                {
+                    "$push": {
+                        "status_history": {
+                            "status": order["status"],
+                            "action": "split",
+                            "changed_at": datetime.utcnow(),
+                            "changed_by": str(current_user["_id"]),
+                            "comment": f"Заказ разделён на {len(split_data.boxes)} короба",
+                            "details": {"new_postings": [p.get("posting_number") for p in new_postings]}
+                        }
+                    }
+                }
+            )
+            
+            return {
+                "message": f"Заказ разделён на {len(new_postings)} отправлений",
+                "new_orders": new_postings
+            }
+        
+        elif marketplace == "yandex":
+            # Yandex: разделение на короба (заказ остаётся один)
+            # TODO: implement Yandex split API
+            # API: POST /campaigns/{id}/orders/{orderId}/boxes
+            
+            # Пока просто сохраняем разделение в БД
+            await db.orders_fbs.update_one(
+                {"_id": ObjectId(order_id)},
+                {
+                    "$set": {
+                        "split_info": {
+                            "is_split": True,
+                            "boxes": [box.dict() for box in split_data.boxes]
+                        },
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+            
+            # Добавить в историю
+            await db.orders_fbs.update_one(
+                {"_id": ObjectId(order_id)},
+                {
+                    "$push": {
+                        "status_history": {
+                            "status": order["status"],
+                            "action": "split",
+                            "changed_at": datetime.utcnow(),
+                            "changed_by": str(current_user["_id"]),
+                            "comment": f"Заказ разделён на {len(split_data.boxes)} короба",
+                            "details": {"boxes": len(split_data.boxes)}
+                        }
+                    }
+                }
+            )
+            
+            return {
+                "message": f"Заказ разделён на {len(split_data.boxes)} короба",
+                "boxes": len(split_data.boxes)
+            }
+        
+        else:
+            raise HTTPException(status_code=400, detail=f"Разделение не поддерживается для {marketplace}")
+    
+    except MarketplaceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"[Split] Unexpected error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# ПЕЧАТЬ ЭТИКЕТОК
+# ============================================================================
+
+@router.get("/{order_id}/label")
+async def get_order_label(
+    order_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Получить этикетку для заказа
+    
+    Если этикетка уже загружена - вернуть из БД
+    Иначе - получить с МП и сохранить
+    """
+    db = await get_database()
+    
+    # Найти заказ
+    order = await db.orders_fbs.find_one({
+        "_id": ObjectId(order_id),
+        "seller_id": str(current_user["_id"])
+    })
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    # Проверить есть ли уже этикетка
+    if order.get("label_url"):
+        logger.info(f"[Label] Returning cached label for {order['order_number']}")
+        return {
+            "label_url": order["label_url"],
+            "cached": True
+        }
+    
+    # Загрузить этикетку с МП
+    marketplace = order["marketplace"]
+    external_id = order["external_order_id"]
+    
+    # Получить коннектор
+    profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    api_keys = profile.get("api_keys", [])
+    integration = next((k for k in api_keys if k["marketplace"] == marketplace), None)
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail=f"Интеграция {marketplace} не найдена")
+    
+    connector = get_connector(
+        marketplace,
+        integration.get("client_id", ""),
+        integration["api_key"]
+    )
+    
+    try:
+        label_url = await connector.get_label(external_id)
+        
+        if not label_url:
+            raise HTTPException(status_code=404, detail="Этикетка недоступна")
+        
+        # Сохранить в БД
+        await db.orders_fbs.update_one(
+            {"_id": ObjectId(order_id)},
+            {
+                "$set": {
+                    "label_url": label_url,
+                    "label_updated_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        # Добавить в историю
+        await db.orders_fbs.update_one(
+            {"_id": ObjectId(order_id)},
+            {
+                "$push": {
+                    "status_history": {
+                        "status": order["status"],
+                        "action": "label_printed",
+                        "changed_at": datetime.utcnow(),
+                        "changed_by": str(current_user["_id"]),
+                        "comment": "Этикетка загружена"
+                    }
+                }
+            }
+        )
+        
+        logger.info(f"[Label] Label saved for {order['order_number']}")
+        
+        return {
+            "label_url": label_url,
+            "cached": False
+        }
+    
+    except MarketplaceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"[Label] Unexpected error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{order_id}/label/refresh")
+async def refresh_order_label(
+    order_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Обновить этикетку (получить заново с МП)
+    """
+    db = await get_database()
+    
+    # Удалить старую этикетку
+    await db.orders_fbs.update_one(
+        {"_id": ObjectId(order_id)},
+        {
+            "$unset": {"label_url": "", "label_updated_at": ""}
+        }
+    )
+    
+    # Получить заново
+    return await get_order_label(order_id, current_user)
+
+
+@router.post("/labels/bulk")
+async def get_bulk_labels(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Массовая загрузка этикеток
+    
+    Body: {
+        order_ids: [str, ...]
+    }
+    """
+    db = await get_database()
+    order_ids = data.get("order_ids", [])
+    
+    if not order_ids:
+        raise HTTPException(status_code=400, detail="order_ids обязателен")
+    
+    results = []
+    errors = []
+    
+    for order_id in order_ids:
+        try:
+            label_data = await get_order_label(order_id, current_user)
+            results.append({
+                "order_id": order_id,
+                "label_url": label_data["label_url"]
+            })
+        except Exception as e:
+            errors.append({
+                "order_id": order_id,
+                "error": str(e)
+            })
+    
+    return {
+        "message": f"Загружено {len(results)} этикеток",
+        "labels": results,
+        "errors": errors
+    }
