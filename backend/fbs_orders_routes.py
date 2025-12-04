@@ -464,20 +464,19 @@ async def import_fbs_orders(
             selected_integration.get("client_id", ""),
             selected_integration["api_key"]
         )
-            
-            # Получить FBS заказы
-            if marketplace == "ozon":
-                mp_orders = await connector.get_fbs_orders(date_from, date_to)
-            elif marketplace in ["wb", "wildberries"]:
-                mp_orders = await connector.get_orders(date_from, date_to)
-            elif marketplace == "yandex":
-                campaign_id = api_key_data.get("metadata", {}).get("campaign_id")
-                if not campaign_id:
-                    errors.append({"marketplace": marketplace, "error": "campaign_id не найден"})
-                    continue
-                mp_orders = await connector.get_orders(date_from, date_to, campaign_id)
-            else:
-                continue
+        
+        # Получить FBS заказы
+        if marketplace == "ozon":
+            mp_orders = await connector.get_fbs_orders(date_from, date_to)
+        elif marketplace in ["wb", "wildberries"]:
+            mp_orders = await connector.get_orders(date_from, date_to)
+        elif marketplace == "yandex":
+            campaign_id = selected_integration.get("metadata", {}).get("campaign_id")
+            if not campaign_id:
+                raise HTTPException(status_code=400, detail="campaign_id не найден для Yandex")
+            mp_orders = await connector.get_orders(date_from, date_to, campaign_id)
+        else:
+            raise HTTPException(status_code=400, detail=f"Неизвестный маркетплейс: {marketplace}")
             
             logger.info(f"[FBS Import] {marketplace}: получено {len(mp_orders)} заказов")
             
