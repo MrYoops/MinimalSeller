@@ -190,7 +190,8 @@ function WarehouseModal({ warehouse, onClose, onSuccess }) {
     load_orders: true,
     use_for_orders: true,
     priority: 1,
-    fbo_accounting: false
+    fbo_accounting: false,
+    return_on_cancel: true  // НОВОЕ ПОЛЕ!
   })
   
   // NEW: Links management
@@ -211,7 +212,8 @@ function WarehouseModal({ warehouse, onClose, onSuccess }) {
         load_orders: warehouse.load_orders !== false,
         use_for_orders: warehouse.use_for_orders !== false,
         priority: warehouse.priority || 1,
-        fbo_accounting: warehouse.fbo_accounting || false
+        fbo_accounting: warehouse.fbo_accounting || false,
+        return_on_cancel: warehouse.return_on_cancel !== undefined ? warehouse.return_on_cancel : true
       })
       
       // Load links and integrations
