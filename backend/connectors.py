@@ -935,12 +935,19 @@ class OzonConnector(BaseConnector):
         
         try:
             response = await self._make_request("POST", url, headers, json_data=payload)
+            
+            # ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ
+            logger.info(f"[Ozon FBS] RAW Response: {json.dumps(response, ensure_ascii=False)[:500]}")
+            
             result = response.get("result", {})
             postings = result.get("postings", [])
             
             logger.info(f"[Ozon] Получено {len(postings)} FBS заказов")
             logger.info(f"[Ozon] Response keys: {list(response.keys())}")
             logger.info(f"[Ozon] Result keys: {list(result.keys()) if result else 'EMPTY'}")
+            
+            if len(postings) > 0:
+                logger.info(f"[Ozon] Пример заказа: {json.dumps(postings[0], ensure_ascii=False)[:300]}")
             
             return postings
             
