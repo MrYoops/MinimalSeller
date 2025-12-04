@@ -3,12 +3,15 @@ import { useAuth } from '../../context/AuthContext'
 import { FiDownload, FiEye, FiPackage } from 'react-icons/fi'
 import { toast } from 'sonner'
 import ImportOrdersModal from './ImportOrdersModal'
+import OrderDetailModal from './OrderDetailModal'
 
 function FBSOrdersList() {
   const { api } = useAuth()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
 
   useEffect(() => {
     loadOrders()
