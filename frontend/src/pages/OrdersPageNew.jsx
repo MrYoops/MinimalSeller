@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import FBSOrdersList from '../components/orders/FBSOrdersList'
 import FBOOrdersList from '../components/orders/FBOOrdersList'
 import RetailOrdersList from '../components/orders/RetailOrdersList'
@@ -17,46 +16,53 @@ function OrdersPageNew() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-mm-gray border border-mm-border">
-          <TabsTrigger 
-            value="fbs" 
-            className="data-[state=active]:bg-mm-cyan data-[state=active]:text-mm-bg font-mono"
+      {/* Custom Tabs */}
+      <div className="w-full">
+        <div className="grid grid-cols-3 gap-2 bg-mm-gray border border-mm-border p-2 rounded">
+          <button
+            onClick={() => setActiveTab('fbs')}
+            className={`flex items-center justify-center space-x-2 px-4 py-3 font-mono text-sm transition-all rounded ${
+              activeTab === 'fbs' 
+                ? 'bg-mm-cyan text-mm-bg' 
+                : 'text-mm-text hover:bg-mm-cyan/10'
+            }`}
             data-testid="tab-fbs"
           >
-            <FiPackage className="mr-2" />
-            FBS (со своего склада)
-          </TabsTrigger>
-          <TabsTrigger 
-            value="fbo" 
-            className="data-[state=active]:bg-mm-purple data-[state=active]:text-mm-bg font-mono"
+            <FiPackage />
+            <span>FBS (со своего склада)</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('fbo')}
+            className={`flex items-center justify-center space-x-2 px-4 py-3 font-mono text-sm transition-all rounded ${
+              activeTab === 'fbo' 
+                ? 'bg-mm-purple text-mm-bg' 
+                : 'text-mm-text hover:bg-mm-purple/10'
+            }`}
             data-testid="tab-fbo"
           >
-            <FiTruck className="mr-2" />
-            FBO (со склада МП)
-          </TabsTrigger>
-          <TabsTrigger 
-            value="retail" 
-            className="data-[state=active]:bg-mm-green data-[state=active]:text-mm-bg font-mono"
+            <FiTruck />
+            <span>FBO (со склада МП)</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('retail')}
+            className={`flex items-center justify-center space-x-2 px-4 py-3 font-mono text-sm transition-all rounded ${
+              activeTab === 'retail' 
+                ? 'bg-mm-green text-mm-bg' 
+                : 'text-mm-text hover:bg-mm-green/10'
+            }`}
             data-testid="tab-retail"
           >
-            <FiShoppingBag className="mr-2" />
-            Розничные заказы
-          </TabsTrigger>
-        </TabsList>
+            <FiShoppingBag />
+            <span>Розничные заказы</span>
+          </button>
+        </div>
 
-        <TabsContent value="fbs" className="mt-6">
-          <FBSOrdersList />
-        </TabsContent>
-
-        <TabsContent value="fbo" className="mt-6">
-          <FBOOrdersList />
-        </TabsContent>
-
-        <TabsContent value="retail" className="mt-6">
-          <RetailOrdersList />
-        </TabsContent>
-      </Tabs>
+        <div className="mt-6">
+          {activeTab === 'fbs' && <FBSOrdersList />}
+          {activeTab === 'fbo' && <FBOOrdersList />}
+          {activeTab === 'retail' && <RetailOrdersList />}
+        </div>
+      </div>
     </div>
   )
 }
