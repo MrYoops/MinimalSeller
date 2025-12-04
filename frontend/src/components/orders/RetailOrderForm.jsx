@@ -11,6 +11,7 @@ function RetailOrderForm({ onCancel, onSuccess }) {
   
   const [formData, setFormData] = useState({
     warehouse_id: '',
+    order_date: new Date().toISOString().split('T')[0], // Добавлено поле даты
     customer: {
       full_name: '',
       phone: '',
