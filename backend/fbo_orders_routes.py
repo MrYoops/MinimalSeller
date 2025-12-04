@@ -81,16 +81,39 @@ async def import_fbo_orders(
     FBO заказы НЕ обновляют остатки (только аналитика)
     
     Body: {
-        marketplace: str ('ozon'),
+        integration_id: str (ID интеграции),
         date_from: str (ISO date),
         date_to: str (ISO date)
     }
     """
     db = await get_database()
     
-    marketplace_filter = data.get("marketplace", "ozon")
+    integration_id = data.get("integration_id")
     date_from_str = data.get("date_from")
     date_to_str = data.get("date_to")
+    
+    if not integration_id:
+        raise HTTPException(status_code=400, detail="integration_id обязателен")
+    
+    if not date_from_str or not date_to_str:
+        raise HTTPException(status_code=400, detail="date_from и date_to обязательны")
+    
+    date_from = datetime.fromisoformat(date_from_str)
+    date_to = datetime.fromisoformat(date_to_str)
+    
+    # Получить конкретную интеграцию
+    profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Профиль не найден")
+    
+    api_keys = profile.get("api_keys", [])
+    selected_integration = next((k for k in api_keys if k.get("id") == integration_id), None)
+    
+    if not selected_integration:
+        raise HTTPException(status_code=404, detail="Интеграция не найдена")
+    
+    marketplace = selected_integration.get("marketplace")
     
     if not date_from_str or not date_to_str:
         raise HTTPException(status_code=400, detail="date_from и date_to обязательны")
@@ -106,31 +129,20 @@ async def import_fbo_orders(
     
     api_keys = profile.get("api_keys", [])
     
-    if not api_keys:
-        raise HTTPException(status_code=400, detail="API ключи не настроены")
-    
     imported_count = 0
     updated_count = 0
     errors = []
     
-    # Для каждого МП (только Ozon поддерживает явное разделение FBO)
-    for api_key_data in api_keys:
-        marketplace = api_key_data.get("marketplace")
-        
-        # Фильтр
-        if marketplace_filter != marketplace:
-            continue
-        
-        if marketplace != "ozon":
-            # WB и Yandex не разделяют FBS/FBO явно в API
-            continue
-        
-        try:
-            connector = get_connector(
-                marketplace,
-                api_key_data.get("client_id", ""),
-                api_key_data["api_key"]
-            )
+    # Только Ozon поддерживает FBO
+    if marketplace != "ozon":
+        raise HTTPException(status_code=400, detail="Только Ozon поддерживает FBO заказы")
+    
+    try:
+        connector = get_connector(
+            marketplace,
+            selected_integration.get("client_id", ""),
+            selected_integration["api_key"]
+        )
             
             # Получить FBO заказы (только Ozon)
             mp_orders = await connector.get_fbo_orders(date_from, date_to)
