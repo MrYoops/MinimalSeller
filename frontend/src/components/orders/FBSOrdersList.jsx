@@ -122,11 +122,62 @@ function FBSOrdersList() {
       }
     } catch (error) {
       toast.dismiss()
-      toast.error('\u041e\u0448\u0438\u0431\u043a\u0430 \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0438 \u044d\u0442\u0438\u043a\u0435\u0442\u043e\u043a')\n    }\n  }
+      toast.error('Ошибка загрузки этикеток')
+    }
+  }
 
   const handleBulkExportExcel = async () => {
-    try {\n      toast.loading('\u041f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0430 \u044d\u043a\u0441\u043f\u043e\u0440\u0442\u0430...')
-      \n      // \u0413\u0435\u043d\u0435\u0440\u0430\u0446\u0438\u044f CSV\n      const selectedOrders = filteredOrders.filter(o => selectedOrderIds.includes(o.id))\n      \n      const csvHeaders = [\n        'ID \u0437\u0430\u043a\u0430\u0437\u0430',\n        '\u041c\u0430\u0440\u043a\u0435\u0442\u043f\u043b\u0435\u0439\u0441',\n        '\u0414\u0430\u0442\u0430 \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u044f',\n        '\u0421\u0442\u0430\u0442\u0443\u0441',\n        '\u041f\u043e\u043a\u0443\u043f\u0430\u0442\u0435\u043b\u044c',\n        '\u0422\u043e\u0432\u0430\u0440\u044b',\n        '\u0421\u0443\u043c\u043c\u0430',\n        '\u041e\u0441\u0442\u0430\u0442\u043e\u043a \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d'\n      ]\n      \n      const csvRows = selectedOrders.map(order => [\n        order.order_number,\n        order.marketplace.toUpperCase(),\n        new Date(order.created_at).toLocaleString('ru-RU'),\n        order.status,\n        order.customer?.full_name || '',\n        order.items?.map(i => `${i.article} (${i.quantity})`).join('; '),\n        order.totals?.total || 0,\n        order.stock_updated ? '\u0414\u0430' : '\u041d\u0435\u0442'\n      ])\n      \n      const csvContent = [\n        csvHeaders.join(','),\n        ...csvRows.map(row => row.map(cell => `\"${cell}\"`).join(','))\n      ].join('\\n')\n      \n      // \u0421\u043a\u0430\u0447\u0438\u0432\u0430\u043d\u0438\u0435 \u0444\u0430\u0439\u043b\u0430\n      const blob = new Blob([\"\\uFEFF\" + csvContent], { type: 'text/csv;charset=utf-8;' })\n      const link = document.createElement('a')\n      link.href = URL.createObjectURL(blob)\n      link.download = `orders_fbs_${new Date().toISOString().split('T')[0]}.csv`\n      link.click()\n      \n      toast.dismiss()\n      toast.success('\u042d\u043a\u0441\u043f\u043e\u0440\u0442 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d')\n    } catch (error) {\n      toast.dismiss()\n      toast.error('\u041e\u0448\u0438\u0431\u043a\u0430 \u044d\u043a\u0441\u043f\u043e\u0440\u0442\u0430')\n    }\n  }\n\n  const handleBulkChangeStatus = () => {\n    toast.info('\u0424\u0443\u043d\u043a\u0446\u0438\u044f \u0432 \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0435')\n  }
+    try {
+      toast.loading('Подготовка экспорта...')
+      
+      // Генерация CSV
+      const selectedOrders = filteredOrders.filter(o => selectedOrderIds.includes(o.id))
+      
+      const csvHeaders = [
+        'ID заказа',
+        'Маркетплейс',
+        'Дата создания',
+        'Статус',
+        'Покупатель',
+        'Товары',
+        'Сумма',
+        'Остаток обновлён'
+      ]
+      
+      const csvRows = selectedOrders.map(order => [
+        order.order_number,
+        order.marketplace.toUpperCase(),
+        new Date(order.created_at).toLocaleString('ru-RU'),
+        order.status,
+        order.customer?.full_name || '',
+        order.items?.map(i => `${i.article} (${i.quantity})`).join('; '),
+        order.totals?.total || 0,
+        order.stock_updated ? 'Да' : 'Нет'
+      ])
+      
+      const csvContent = [
+        csvHeaders.join(','),
+        ...csvRows.map(row => row.map(cell => `\"${cell}\"`).join(','))
+      ].join('\n')
+      
+      // Скачивание файла
+      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `orders_fbs_${new Date().toISOString().split('T')[0]}.csv`
+      link.click()
+      
+      toast.dismiss()
+      toast.success('Экспорт завершён')
+    } catch (error) {
+      toast.dismiss()
+      toast.error('Ошибка экспорта')
+    }
+  }
+
+  const handleBulkChangeStatus = () => {
+    toast.info('Функция в разработке')
+  }
 
   const getStatusBadge = (status) => {
     const statusConfig = {
