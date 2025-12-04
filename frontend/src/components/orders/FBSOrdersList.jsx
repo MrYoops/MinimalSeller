@@ -180,6 +180,27 @@ function FBSOrdersList() {
     toast.info('Функция в разработке')
   }
 
+  const handleRefreshStatuses = async () => {
+    try {
+      setRefreshingStatuses(true)
+      toast.loading('Обновление статусов с маркетплейсов...')
+      
+      const response = await api.post('/api/orders/fbs/refresh-statuses', {})
+      
+      toast.dismiss()
+      toast.success(`Обновлено статусов: ${response.data.updated}`)
+      
+      // Перезагрузить заказы
+      await loadOrders()
+      
+    } catch (error) {
+      toast.dismiss()
+      toast.error('Ошибка обновления статусов: ' + (error.response?.data?.detail || error.message))
+    } finally {
+      setRefreshingStatuses(false)
+    }
+  }
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       'new': { color: 'text-mm-blue border-mm-blue', label: 'Новый' },
