@@ -10,7 +10,7 @@ import sys
 from typing import Dict, Any, Optional
 
 # Backend URL
-BACKEND_URL = "https://ordermagic.preview.emergentagent.com/api"
+BACKEND_URL = "https://shopflow-123.preview.emergentagent.com/api"
 
 # Test credentials
 TEST_EMAIL = "seller@minimalmod.com"

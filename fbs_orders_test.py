@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
 # Backend URL
-BACKEND_URL = "https://ordermagic.preview.emergentagent.com/api"
+BACKEND_URL = "https://shopflow-123.preview.emergentagent.com/api"
 
 # Test credentials
 TEST_SELLER_EMAIL = "seller@test.com"
