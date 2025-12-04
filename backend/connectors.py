@@ -1509,7 +1509,7 @@ class WildberriesConnector(BaseConnector):
         API: GET /api/v3/orders/new
         Docs: https://openapi.wildberries.ru/#tag/Sborka-Orders
         """
-        url = f"{self.base_url}/api/v3/orders/new"
+        url = f"{self.marketplace_api_url}/api/v3/orders/new"
         headers = self._get_headers()
         
         params = {
@@ -1535,7 +1535,7 @@ class WildberriesConnector(BaseConnector):
         API: GET /api/v3/orders/status
         Docs: https://openapi.wildberries.ru/#tag/Sborka-Orders
         """
-        url = f"{self.base_url}/api/v3/orders/status"
+        url = f"{self.marketplace_api_url}/api/v3/orders/status"
         headers = self._get_headers()
         
         params = {
