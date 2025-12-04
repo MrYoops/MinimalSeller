@@ -18,6 +18,7 @@ function FBSOrdersList() {
   const [activeStatusFilter, setActiveStatusFilter] = useState('all')
   const [selectedOrderIds, setSelectedOrderIds] = useState([])
   const [stats, setStats] = useState({})
+  const [refreshingStatuses, setRefreshingStatuses] = useState(false)
 
   useEffect(() => {
     loadOrders()
