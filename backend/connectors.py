@@ -905,6 +905,140 @@ class OzonConnector(BaseConnector):
             raise
 
 
+    
+    # ========== МЕТОДЫ ДЛЯ РАБОТЫ С ЗАКАЗАМИ ==========
+    
+    async def get_fbs_orders(self, date_from: datetime, date_to: datetime) -> List[Dict[str, Any]]:
+        """
+        Получить заказы FBS (со своего склада) за период
+        
+        API: POST /v3/posting/fbs/list
+        Docs: https://docs.ozon.ru/api/seller/#operation/PostingAPI_GetFbsPostingList
+        """
+        url = f"{self.base_url}/v3/posting/fbs/list"
+        headers = self._get_headers()
+        
+        payload = {
+            "dir": "ASC",
+            "filter": {
+                "since": date_from.isoformat() + "Z",
+                "to": date_to.isoformat() + "Z",
+                "status": ""  # Все статусы
+            },
+            "limit": 1000,
+            "offset": 0,
+            "with": {
+                "analytics_data": False,
+                "financial_data": False
+            }
+        }
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            result = response.get("result", {})
+            postings = result.get("postings", [])
+            
+            logger.info(f"[Ozon] Получено {len(postings)} FBS заказов")
+            return postings
+            
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Ошибка получения FBS заказов: {e.message}")
+            raise
+    
+    async def get_fbo_orders(self, date_from: datetime, date_to: datetime) -> List[Dict[str, Any]]:
+        """
+        Получить заказы FBO (со склада Ozon) за период
+        
+        API: POST /v3/posting/fbo/list
+        Docs: https://docs.ozon.ru/api/seller/#operation/PostingAPI_GetFboPostingList
+        """
+        url = f"{self.base_url}/v3/posting/fbo/list"
+        headers = self._get_headers()
+        
+        payload = {
+            "dir": "ASC",
+            "filter": {
+                "since": date_from.isoformat() + "Z",
+                "to": date_to.isoformat() + "Z",
+                "status": ""  # Все статусы
+            },
+            "limit": 1000,
+            "offset": 0,
+            "with": {
+                "analytics_data": False,
+                "financial_data": False
+            }
+        }
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            result = response.get("result", {})
+            postings = result.get("postings", [])
+            
+            logger.info(f"[Ozon] Получено {len(postings)} FBO заказов")
+            return postings
+            
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Ошибка получения FBO заказов: {e.message}")
+            raise
+    
+    async def get_order_status(self, posting_number: str) -> Dict[str, Any]:
+        """
+        Получить детали и статус конкретного заказа
+        
+        API: POST /v3/posting/fbs/get
+        Docs: https://docs.ozon.ru/api/seller/#operation/PostingAPI_GetFbsPosting
+        """
+        url = f"{self.base_url}/v3/posting/fbs/get"
+        headers = self._get_headers()
+        
+        payload = {
+            "posting_number": posting_number,
+            "with": {
+                "analytics_data": False,
+                "financial_data": False
+            }
+        }
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            result = response.get("result", {})
+            
+            logger.info(f"[Ozon] Получен статус заказа {posting_number}: {result.get('status')}")
+            return result
+            
+        except MarketplaceError as e:
+            logger.error(f"[Ozon] Ошибка получения статуса заказа {posting_number}: {e.message}")
+            raise
+    
+    def map_ozon_status_to_internal(self, ozon_status: str) -> str:
+        """
+        Маппинг статусов Ozon на внутренние статусы системы
+        
+        Ozon статусы:
+        - awaiting_packaging: ожидает сборки
+        - awaiting_deliver: ожидает отгрузки
+        - arbitration: арбитраж
+        - client_arbitration: клиентский арбитраж
+        - delivering: доставляется
+        - driver_pickup: у водителя
+        - delivered: доставлен
+        - cancelled: отменён
+        """
+        status_map = {
+            "awaiting_registration": "new",
+            "awaiting_packaging": "new",
+            "awaiting_deliver": "awaiting_shipment",
+            "arbitration": "awaiting_shipment",
+            "client_arbitration": "awaiting_shipment",
+            "delivering": "delivering",  # ← КЛЮЧЕВОЙ СТАТУС ДЛЯ СПИСАНИЯ!
+            "driver_pickup": "delivering",
+            "delivered": "delivered",
+            "cancelled": "cancelled"
+        }
+        
+        return status_map.get(ozon_status, "new")
+
 
 
 class WildberriesConnector(BaseConnector):
