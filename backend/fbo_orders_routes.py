@@ -143,14 +143,14 @@ async def import_fbo_orders(
             selected_integration.get("client_id", ""),
             selected_integration["api_key"]
         )
-            
-            # Получить FBO заказы (только Ozon)
-            mp_orders = await connector.get_fbo_orders(date_from, date_to)
-            
-            logger.info(f"[FBO Import] {marketplace}: получено {len(mp_orders)} заказов")
-            
-            # Обработать каждый заказ
-            for mp_order_data in mp_orders:
+        
+        # Получить FBO заказы (только Ozon)
+        mp_orders = await connector.get_fbo_orders(date_from, date_to)
+        
+        logger.info(f"[FBO Import] {marketplace}: получено {len(mp_orders)} заказов")
+        
+        # Обработать каждый заказ
+        for mp_order_data in mp_orders:
                 external_id = mp_order_data.get("posting_number")
                 products = mp_order_data.get("products", [])
                 
