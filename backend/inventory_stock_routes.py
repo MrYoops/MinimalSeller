@@ -168,6 +168,18 @@ async def sync_all_stocks(
     if not warehouse:
         raise HTTPException(status_code=404, detail="Warehouse not found")
     
+    logger.info(f"[MANUAL SYNC] Starting sync for warehouse: {warehouse.get('name')} (ID: {warehouse_id})")
+    
+    # Проверить наличие warehouse_links
+    links = await db.warehouse_links.find({"warehouse_id": warehouse_id}).to_list(length=100)
+    if not links:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"У склада '{warehouse.get('name')}' нет связей с маркетплейсами! Создайте связи в настройках склада."
+        )
+    
+    logger.info(f"[MANUAL SYNC] Found {len(links)} warehouse links")
+    
     # Получить все inventory записи
     inventories = await db.inventory.find({
         "seller_id": str(current_user["_id"])
