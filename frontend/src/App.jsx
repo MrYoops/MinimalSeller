@@ -29,7 +29,7 @@ import IncomeOrderFormPage from './pages/IncomeOrderFormPage'
 import StockPageV3 from './pages/StockPageV3'
 import StockSyncHistoryPage from './pages/StockSyncHistoryPage'
 // Orders & Finance
-import OrdersPage from './pages/OrdersPage'
+import OrdersPageNew from './pages/OrdersPageNew'
 import FinanceDashboard from './pages/FinanceDashboard'
 import PayoutsPage from './pages/PayoutsPage'
 // Layout
@@ -132,7 +132,7 @@ function AppRoutes() {
       
       {/* Orders & Finance */}
       <Route path="/orders" element={
-        <ProtectedRoute><WithLayout><OrdersPage /></WithLayout></ProtectedRoute>
+        <ProtectedRoute><WithLayout><OrdersPageNew /></WithLayout></ProtectedRoute>
       } />
       <Route path="/finance" element={
         <ProtectedRoute><WithLayout><FinanceDashboard /></WithLayout></ProtectedRoute>
