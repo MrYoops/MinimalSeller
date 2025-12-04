@@ -655,6 +655,121 @@ async def import_fbs_orders(
     }
 
 
+
+@router.post("/refresh-statuses")
+async def refresh_fbs_order_statuses(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Обновить статусы FBS заказов с маркетплейса
+    
+    Загружает актуальные статусы с МП и обновляет в БД
+    
+    Body: {
+        integration_id: str (опционально, если не указан - обновит все)
+    }
+    """
+    db = await get_database()
+    
+    integration_id = data.get("integration_id")
+    
+    # Получить интеграции
+    profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Профиль не найден")
+    
+    api_keys = profile.get("api_keys", [])
+    
+    # Фильтровать по integration_id если указан
+    if integration_id:
+        api_keys = [k for k in api_keys if k.get("id") == integration_id]
+    
+    updated_count = 0
+    errors = []
+    
+    for integration in api_keys:
+        marketplace = integration.get("marketplace")
+        
+        try:
+            connector = get_connector(
+                marketplace,
+                integration.get("client_id", ""),
+                integration["api_key"]
+            )
+            
+            # Получить заказы за последние 30 дней
+            date_from = datetime.utcnow() - timedelta(days=30)
+            date_to = datetime.utcnow()
+            
+            if marketplace == "ozon":
+                mp_orders = await connector.get_fbs_orders(date_from, date_to)
+            else:
+                continue  # Пока только Ozon
+            
+            logger.info(f"[Refresh Statuses] {marketplace}: получено {len(mp_orders)} заказов")
+            
+            # Обновить статусы
+            for mp_order in mp_orders:
+                external_id = mp_order.get("posting_number")
+                ozon_status = mp_order.get("status")
+                
+                # Найти заказ в БД
+                existing = await db.orders_fbs.find_one({
+                    "external_order_id": external_id,
+                    "seller_id": str(current_user["_id"])
+                })
+                
+                if existing:
+                    # Маппинг статуса Ozon → наш статус
+                    status_map = {
+                        "awaiting_packaging": "imported",
+                        "awaiting_deliver": "awaiting_shipment",
+                        "delivering": "delivering",
+                        "delivered": "delivered",
+                        "cancelled": "cancelled"
+                    }
+                    
+                    new_status = status_map.get(ozon_status, "imported")
+                    old_status = existing.get("status")
+                    
+                    if new_status != old_status:
+                        # Обновить статус
+                        await db.orders_fbs.update_one(
+                            {"_id": existing["_id"]},
+                            {
+                                "$set": {
+                                    "status": new_status,
+                                    "updated_at": datetime.utcnow()
+                                },
+                                "$push": {
+                                    "status_history": {
+                                        "status": new_status,
+                                        "action": "status_synced",
+                                        "changed_at": datetime.utcnow(),
+                                        "changed_by": "system",
+                                        "comment": f"Автосинхронизация с {marketplace}: {old_status} → {new_status}"
+                                    }
+                                }
+                            }
+                        )
+                        
+                        updated_count += 1
+                        logger.info(f"[Refresh Statuses] {existing['order_number']}: {old_status} → {new_status}")
+        
+        except Exception as e:
+            logger.error(f"[Refresh Statuses] Ошибка {marketplace}: {e}")
+            errors.append({"marketplace": marketplace, "error": str(e)})
+    
+    return {
+        "message": f"Обновлено статусов: {updated_count}",
+        "updated": updated_count,
+        "errors": errors
+    }
+
+
+
 @router.post("/sync")
 async def sync_fbs_orders(
     sync_request: OrderSyncRequest,
