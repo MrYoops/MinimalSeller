@@ -29,6 +29,20 @@ function FBSOrdersList() {
     }
   }
 
+  const handleOpenDetail = (order) => {
+    setSelectedOrder(order)
+    setShowDetailModal(true)
+  }
+
+  const handleCloseDetail = () => {
+    setShowDetailModal(false)
+    setSelectedOrder(null)
+  }
+
+  const handleOrderUpdate = () => {
+    loadOrders()
+  }
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       'new': { color: 'text-mm-blue border-mm-blue', label: 'Новый' },
