@@ -1014,25 +1014,27 @@ async def get_orders(
     
     return orders
 
-@app.get("/api/orders/{order_id}")
-async def get_order(
-    order_id: str,
-    current_user: dict = Depends(get_current_user)
-):
-    """Получить детали заказа"""
-    order = await db.orders.find_one({'_id': ObjectId(order_id)})
-    
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    
-    # Проверка доступа
-    if current_user['role'] == 'seller' and str(order['seller_id']) != str(current_user['_id']):
-        raise HTTPException(status_code=403, detail="Access denied")
-    
-    order['id'] = str(order.pop('_id'))
-    order['seller_id'] = str(order['seller_id'])
-    
-    return order
+# СТАРАЯ СИСТЕМА ЗАКАЗОВ - ENDPOINT ОТКЛЮЧЁН
+# Конфликтует с новыми routes /api/orders/fbs, /api/orders/fbo, /api/orders/retail
+# @app.get("/api/orders/{order_id}")
+# async def get_order(
+#     order_id: str,
+#     current_user: dict = Depends(get_current_user)
+# ):
+#     """Получить детали заказа"""
+#     order = await db.orders.find_one({'_id': ObjectId(order_id)})
+#     
+#     if not order:
+#         raise HTTPException(status_code=404, detail="Order not found")
+#     
+#     # Проверка доступа
+#     if current_user['role'] == 'seller' and str(order['seller_id']) != str(current_user['_id']):
+#         raise HTTPException(status_code=403, detail="Access denied")
+#     
+#     order['id'] = str(order.pop('_id'))
+#     order['seller_id'] = str(order['seller_id'])
+#     
+#     return order
 
 @app.put("/api/orders/{order_id}/status")
 async def update_order_status(
