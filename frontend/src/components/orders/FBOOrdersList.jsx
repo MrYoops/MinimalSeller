@@ -10,7 +10,8 @@ function FBOOrdersList() {
   const [importing, setImporting] = useState(false)
   
   const [importSettings, setImportSettings] = useState({
-    date_from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    marketplace: 'ozon',  // По умолчанию Ozon (только он поддерживает FBO явно)
+    date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     date_to: new Date().toISOString().split('T')[0]
   })
 
@@ -40,6 +41,7 @@ function FBOOrdersList() {
       setImporting(true)
       
       const response = await api.post('/api/orders/fbo/import', {
+        marketplace: importSettings.marketplace,
         date_from: importSettings.date_from,
         date_to: importSettings.date_to
       })
@@ -62,7 +64,8 @@ function FBOOrdersList() {
       'processing': { color: 'text-mm-blue border-mm-blue', label: 'Обработка' },
       'shipped': { color: 'text-mm-cyan border-mm-cyan', label: 'Отправлен' },
       'delivered': { color: 'text-mm-green border-mm-green', label: 'Доставлен' },
-      'cancelled': { color: 'text-mm-red border-mm-red', label: 'Отменён' }
+      'cancelled': { color: 'text-mm-red border-mm-red', label: 'Отменён' },
+      'imported': { color: 'text-mm-blue border-mm-blue', label: 'Загружен' }
     }
     const config = statusConfig[status] || { color: 'text-mm-text-secondary border-mm-border', label: status }
     return (
@@ -84,7 +87,19 @@ function FBOOrdersList() {
       <div className="card-neon p-6">
         <h3 className="text-lg font-mono text-mm-purple uppercase mb-4">Загрузка заказов FBO</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Маркетплейс *</label>
+            <select
+              className="input-neon w-full"
+              value={importSettings.marketplace}
+              onChange={(e) => setImportSettings({...importSettings, marketplace: e.target.value})}
+              data-testid="import-marketplace"
+            >
+              <option value="ozon">Ozon</option>
+            </select>
+            <p className="text-xs text-mm-text-tertiary mt-1">// Только Ozon поддерживает FBO явно</p>
+          </div>
           <div>
             <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата от *</label>
             <input

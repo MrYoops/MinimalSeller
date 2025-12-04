@@ -10,9 +10,10 @@ function FBSOrdersList() {
   const [importing, setImporting] = useState(false)
   
   const [importSettings, setImportSettings] = useState({
-    date_from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    marketplace: 'all',  // ВЫБОР МАРКЕТПЛЕЙСА!
+    date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     date_to: new Date().toISOString().split('T')[0],
-    update_stock: true  // ОТКЛЮЧАЕМЫЙ ЧЕКБОКС!
+    update_stock: true
   })
 
   useEffect(() => {
@@ -37,16 +38,26 @@ function FBSOrdersList() {
       return
     }
     
+    if (!importSettings.marketplace) {
+      toast.error('Выберите маркетплейс')
+      return
+    }
+    
     try {
       setImporting(true)
       
       const response = await api.post('/api/orders/fbs/import', {
+        marketplace: importSettings.marketplace,
         date_from: importSettings.date_from,
         date_to: importSettings.date_to,
         update_stock: importSettings.update_stock
       })
       
-      toast.success(`Загружено ${response.data.imported} заказов${importSettings.update_stock ? ' с обновлением остатков' : ''}`)
+      const msg = importSettings.update_stock 
+        ? `Загружено ${response.data.imported} заказов, списано ${response.data.stock_updated} товаров`
+        : `Загружено ${response.data.imported} заказов (без обновления остатков)`
+      
+      toast.success(msg)
       
       // Перезагрузить список
       await loadOrders()
@@ -65,7 +76,8 @@ function FBSOrdersList() {
       'awaiting_shipment': { color: 'text-mm-yellow border-mm-yellow', label: 'Ожидает отгрузки' },
       'delivering': { color: 'text-mm-cyan border-mm-cyan', label: 'Доставляется' },
       'delivered': { color: 'text-mm-green border-mm-green', label: 'Доставлен' },
-      'cancelled': { color: 'text-mm-red border-mm-red', label: 'Отменён' }
+      'cancelled': { color: 'text-mm-red border-mm-red', label: 'Отменён' },
+      'imported': { color: 'text-mm-blue border-mm-blue', label: 'Загружен' }
     }
     const config = statusConfig[status] || { color: 'text-mm-text-secondary border-mm-border', label: status }
     return (
@@ -82,7 +94,21 @@ function FBSOrdersList() {
       <div className="card-neon p-6">
         <h3 className="text-lg font-mono text-mm-cyan uppercase mb-4">Загрузка заказов FBS</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-mono text-mm-text-secondary mb-2">Маркетплейс *</label>
+            <select
+              className="input-neon w-full"
+              value={importSettings.marketplace}
+              onChange={(e) => setImportSettings({...importSettings, marketplace: e.target.value})}
+              data-testid="import-marketplace"
+            >
+              <option value="all">Все маркетплейсы</option>
+              <option value="ozon">Ozon</option>
+              <option value="wb">Wildberries</option>
+              <option value="yandex">Yandex Market</option>
+            </select>
+          </div>
           <div>
             <label className="block text-sm font-mono text-mm-text-secondary mb-2">Дата от *</label>
             <input

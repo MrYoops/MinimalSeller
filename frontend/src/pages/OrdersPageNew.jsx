@@ -1,11 +1,20 @@
 import React, { useState } from 'react'
+import { FiChevronDown } from 'react-icons/fi'
 import FBSOrdersList from '../components/orders/FBSOrdersList'
 import FBOOrdersList from '../components/orders/FBOOrdersList'
 import RetailOrdersList from '../components/orders/RetailOrdersList'
-import { FiPackage, FiTruck, FiShoppingBag } from 'react-icons/fi'
 
 function OrdersPageNew() {
-  const [activeTab, setActiveTab] = useState('fbs')
+  const [selectedSection, setSelectedSection] = useState('fbs')
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+
+  const sections = [
+    { value: 'fbs', label: 'FBS (со своего склада)', color: 'text-mm-cyan' },
+    { value: 'fbo', label: 'FBO (со склада МП)', color: 'text-mm-purple' },
+    { value: 'retail', label: 'Розничные заказы', color: 'text-mm-green' }
+  ]
+
+  const currentSection = sections.find(s => s.value === selectedSection)
 
   return (
     <div className="space-y-6" data-testid="orders-page">
@@ -16,52 +25,45 @@ function OrdersPageNew() {
         </div>
       </div>
 
-      {/* Custom Tabs */}
-      <div className="w-full">
-        <div className="grid grid-cols-3 gap-2 bg-mm-gray border border-mm-border p-2 rounded">
-          <button
-            onClick={() => setActiveTab('fbs')}
-            className={`flex items-center justify-center space-x-2 px-4 py-3 font-mono text-sm transition-all rounded ${
-              activeTab === 'fbs' 
-                ? 'bg-mm-cyan text-mm-bg' 
-                : 'text-mm-text hover:bg-mm-cyan/10'
-            }`}
-            data-testid="tab-fbs"
-          >
-            <FiPackage />
-            <span>FBS (со своего склада)</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('fbo')}
-            className={`flex items-center justify-center space-x-2 px-4 py-3 font-mono text-sm transition-all rounded ${
-              activeTab === 'fbo' 
-                ? 'bg-mm-purple text-mm-bg' 
-                : 'text-mm-text hover:bg-mm-purple/10'
-            }`}
-            data-testid="tab-fbo"
-          >
-            <FiTruck />
-            <span>FBO (со склада МП)</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('retail')}
-            className={`flex items-center justify-center space-x-2 px-4 py-3 font-mono text-sm transition-all rounded ${
-              activeTab === 'retail' 
-                ? 'bg-mm-green text-mm-bg' 
-                : 'text-mm-text hover:bg-mm-green/10'
-            }`}
-            data-testid="tab-retail"
-          >
-            <FiShoppingBag />
-            <span>Розничные заказы</span>
-          </button>
-        </div>
+      {/* ВЫПАДАЮЩИЙ СПИСОК РАЗДЕЛОВ */}
+      <div className="relative">
+        <button
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className="w-full md:w-96 flex items-center justify-between px-4 py-3 bg-mm-gray border border-mm-border rounded hover:border-mm-cyan transition-colors"
+          data-testid="section-dropdown"
+        >
+          <span className={`font-mono text-sm ${currentSection.color}`}>
+            {currentSection.label}
+          </span>
+          <FiChevronDown className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+        </button>
 
-        <div className="mt-6">
-          {activeTab === 'fbs' && <FBSOrdersList />}
-          {activeTab === 'fbo' && <FBOOrdersList />}
-          {activeTab === 'retail' && <RetailOrdersList />}
-        </div>
+        {isDropdownOpen && (
+          <div className="absolute z-10 w-full md:w-96 mt-2 bg-mm-gray border border-mm-border rounded shadow-lg">
+            {sections.map(section => (
+              <button
+                key={section.value}
+                onClick={() => {
+                  setSelectedSection(section.value)
+                  setIsDropdownOpen(false)
+                }}
+                className={`w-full text-left px-4 py-3 font-mono text-sm hover:bg-mm-cyan/10 transition-colors border-b border-mm-border last:border-b-0 ${
+                  selectedSection === section.value ? 'bg-mm-cyan/20' : ''
+                } ${section.color}`}
+                data-testid={`section-${section.value}`}
+              >
+                {section.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* КОНТЕНТ РАЗДЕЛА */}
+      <div className="mt-6">
+        {selectedSection === 'fbs' && <FBSOrdersList />}
+        {selectedSection === 'fbo' && <FBOOrdersList />}
+        {selectedSection === 'retail' && <RetailOrdersList />}
       </div>
     </div>
   )
