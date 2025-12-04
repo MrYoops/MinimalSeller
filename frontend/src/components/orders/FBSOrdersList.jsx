@@ -238,14 +238,26 @@ function FBSOrdersList() {
             </span>
           )}
         </p>
-        <button
-          onClick={() => setShowImportModal(true)}
-          className="btn-neon flex items-center space-x-2"
-          data-testid="open-import-modal"
-        >
-          <FiDownload />
-          <span>ИМПОРТ ЗАКАЗОВ</span>
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={handleRefreshStatuses}
+            disabled={refreshingStatuses}
+            className="px-4 py-2 border border-mm-cyan text-mm-cyan rounded hover:bg-mm-cyan/10 transition-colors font-mono text-sm flex items-center space-x-2 disabled:opacity-50"
+            data-testid="refresh-statuses-btn"
+          >
+            <FiRefreshCw className={refreshingStatuses ? 'animate-spin' : ''} />
+            <span>{refreshingStatuses ? 'Обновление...' : 'ОБНОВИТЬ СТАТУСЫ'}</span>
+          </button>
+          
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="btn-neon flex items-center space-x-2"
+            data-testid="open-import-modal"
+          >
+            <FiDownload />
+            <span>ИМПОРТ ЗАКАЗОВ</span>
+          </button>
+        </div>
       </div>
 
       {/* Список заказов */}
