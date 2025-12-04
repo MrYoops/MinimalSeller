@@ -267,7 +267,7 @@ async def sync_stocks_after_order_change(db, items: List[OrderItemNew], seller_i
 # CRUD ENDPOINTS
 # ============================================================================
 
-@router.get("", response_model=List[OrderFBSResponse])
+@router.get("")  # Убрал response_model
 async def get_fbs_orders(
     marketplace: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
@@ -303,7 +303,7 @@ async def get_fbs_orders(
     return orders
 
 
-@router.get("/{order_id}", response_model=OrderFBSResponse)
+@router.get("/{order_id}")  # Убрал response_model
 async def get_fbs_order(
     order_id: str,
     current_user: dict = Depends(get_current_user)
