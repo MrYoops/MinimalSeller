@@ -1777,6 +1777,115 @@ class YandexMarketConnector(BaseConnector):
 
 def get_connector(marketplace: str, client_id: str, api_key: str) -> BaseConnector:
     """Factory function to get appropriate connector"""
+    
+    # ========== МЕТОДЫ ДЛЯ РАБОТЫ С ЗАКАЗАМИ ==========
+    
+    async def get_orders(self, date_from: datetime, date_to: datetime, campaign_id: str = None) -> List[Dict[str, Any]]:
+        """
+        Получить заказы Yandex Market за период
+        
+        API: GET /campaigns/{campaignId}/orders
+        Docs: https://yandex.ru/dev/market/partner-api/doc/ru/reference/orders/getOrders
+        
+        NOTE: campaign_id можно получить из seller_profile.api_keys[].metadata.campaign_id
+        """
+        if not campaign_id:
+            raise MarketplaceError(
+                marketplace="YandexMarket",
+                status_code=400,
+                message="campaign_id обязателен для Yandex Market"
+            )
+        
+        url = f"{self.base_url}/campaigns/{campaign_id}/orders"
+        headers = self._get_headers()
+        
+        params = {
+            "status": "PROCESSING,DELIVERY,DELIVERED,CANCELLED",
+            "fromDate": date_from.strftime("%d-%m-%Y"),
+            "toDate": date_to.strftime("%d-%m-%Y"),
+            "page": 1,
+            "pageSize": 50
+        }
+        
+        all_orders = []
+        
+        try:
+            # Пагинация (может быть несколько страниц)
+            while True:
+                response = await self._make_request("GET", url, headers, params=params)
+                orders = response.get("orders", [])
+                all_orders.extend(orders)
+                
+                pager = response.get("pager", {})
+                current_page = pager.get("currentPage", 1)
+                pages_count = pager.get("pagesCount", 1)
+                
+                if current_page >= pages_count:
+                    break
+                
+                params["page"] = current_page + 1
+            
+            logger.info(f"[YandexMarket] Получено {len(all_orders)} заказов")
+            return all_orders
+            
+        except MarketplaceError as e:
+            logger.error(f"[YandexMarket] Ошибка получения заказов: {e.message}")
+            raise
+    
+    async def get_order_status(self, order_id: str, campaign_id: str = None) -> Dict[str, Any]:
+        """
+        Получить детали конкретного заказа
+        
+        API: GET /campaigns/{campaignId}/orders/{orderId}
+        Docs: https://yandex.ru/dev/market/partner-api/doc/ru/reference/orders/getOrder
+        """
+        if not campaign_id:
+            raise MarketplaceError(
+                marketplace="YandexMarket",
+                status_code=400,
+                message="campaign_id обязателен для Yandex Market"
+            )
+        
+        url = f"{self.base_url}/campaigns/{campaign_id}/orders/{order_id}"
+        headers = self._get_headers()
+        
+        try:
+            response = await self._make_request("GET", url, headers)
+            order = response.get("order", {})
+            
+            logger.info(f"[YandexMarket] Получен статус заказа {order_id}")
+            return order
+            
+        except MarketplaceError as e:
+            logger.error(f"[YandexMarket] Ошибка получения статуса заказа {order_id}: {e.message}")
+            raise
+    
+    def map_yandex_status_to_internal(self, yandex_status: str, substatus: str = None) -> str:
+        """
+        Маппинг статусов Yandex Market на внутренние статусы системы
+        
+        Yandex статусы:
+        - RESERVED: зарезервирован
+        - PROCESSING: в обработке
+        - DELIVERY: передан в доставку
+        - PICKUP: готов к выдаче
+        - DELIVERED: доставлен
+        - CANCELLED: отменён
+        - RETURNED: возвращён
+        """
+        status_map = {
+            "RESERVED": "new",
+            "PROCESSING": "awaiting_shipment",
+            "DELIVERY": "delivering",  # ← КЛЮЧЕВОЙ СТАТУС ДЛЯ СПИСАНИЯ!
+            "PICKUP": "delivering",
+            "DELIVERED": "delivered",
+            "CANCELLED": "cancelled",
+            "RETURNED": "cancelled"
+        }
+        
+        return status_map.get(yandex_status, "new")
+
+
     connectors = {
         "ozon": OzonConnector,
         "wb": WildberriesConnector,
