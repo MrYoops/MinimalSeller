@@ -240,15 +240,21 @@ class OzonConnector(BaseConnector):
             # Use v3 API which returns images correctly
             info_url = f"{self.base_url}/v3/product/info/list"
             
-            # Prepare offer IDs
-            offer_ids = [item.get('offer_id') for item in items if item.get('offer_id')]
+            # Prepare offer IDs from ALL items
+            offer_ids = [item.get('offer_id') for item in all_items if item.get('offer_id')]
             
-            logger.info(f"[Ozon] Step 2: Getting full info for {len(offer_ids)} products via v3 API")
+            logger.info(f"[Ozon] Step 2: Getting full info for {len(offer_ids)} products via v3 API (in batches)")
             
-            # Get full info - v3 API uses simpler payload
-            info_payload = {
-                "offer_id": offer_ids[:100]  # Max 100 per request
-            }
+            # Process in batches of 100 (API limit)
+            batch_size = 100
+            for i in range(0, len(offer_ids), batch_size):
+                batch = offer_ids[i:i + batch_size]
+                logger.info(f"[Ozon] Processing batch {i//batch_size + 1}: {len(batch)} products")
+                
+                # Get full info - v3 API uses simpler payload
+                info_payload = {
+                    "offer_id": batch
+                }
             
             try:
                 info_response = await self._make_request("POST", info_url, headers, json_data=info_payload)
