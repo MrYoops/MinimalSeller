@@ -46,7 +46,9 @@ async def sync_product_to_marketplace(
     links = await db.warehouse_links.find({"warehouse_id": warehouse_id}).to_list(length=100)
     
     if not links:
-        logger.info(f"[SYNC] No links found for warehouse {warehouse_id}")
+        logger.warning(f"[SYNC] ⚠️ No warehouse_links found for warehouse {warehouse_id} ({warehouse.get('name')})")
+        logger.warning(f"[SYNC] ⚠️ Cannot send stock to marketplaces without warehouse links!")
+        logger.warning(f"[SYNC] ⚠️ Please create warehouse links in the 'Warehouses' section")
         return
     
     logger.info(f"[SYNC] Found {len(links)} marketplace links for warehouse {warehouse.get('name')}")
