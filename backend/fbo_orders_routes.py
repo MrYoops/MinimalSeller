@@ -173,8 +173,8 @@ async def import_fbo_orders(
                     total_sum += price * quantity
                 
                 customer_data = {
-                    "full_name": mp_order_data.get("customer", {}).get("name", ""),
-                    "phone": mp_order_data.get("customer", {}).get("phone", "")
+                    "full_name": (mp_order_data.get("customer") or {}).get("name", ""),
+                    "phone": (mp_order_data.get("customer") or {}).get("phone", "")
                 }
                 
                 # Проверить существование
@@ -193,7 +193,7 @@ async def import_fbo_orders(
                     "marketplace": marketplace,
                     "external_order_id": external_id,
                     "order_number": f"FBO-{marketplace.upper()}-{external_id[:8]}",
-                    "warehouse_name": mp_order_data.get("warehouse", {}).get("name", "Склад Ozon"),
+                    "warehouse_name": (mp_order_data.get("warehouse") or {}).get("name", "Склад Ozon"),
                     "status": "imported",
                     "customer": customer_data,
                     "items": items,
@@ -212,10 +212,10 @@ async def import_fbo_orders(
                 imported_count += 1
                 
                 logger.info(f"[FBO Import] Создан заказ {order_doc['order_number']} (БЕЗ обновления остатков)")
-        
-        except Exception as e:
-            logger.error(f"[FBO Import] Ошибка {marketplace}: {e}")
-            errors.append({"marketplace": marketplace, "error": str(e)})
+    
+    except Exception as e:
+        logger.error(f"[FBO Import] Ошибка {marketplace}: {e}")
+        errors.append({"marketplace": marketplace, "error": str(e)})
     
     return {
         "message": f"Загружено {imported_count} FBO заказов (без обновления остатков)",
