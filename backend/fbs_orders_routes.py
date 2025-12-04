@@ -407,6 +407,242 @@ async def update_fbs_order_status(
     }
 
 
+@router.post("/import")
+async def import_fbs_orders(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    РУЧНАЯ ЗАГРУЗКА заказов FBS за период
+    
+    Body: {
+        date_from: str (ISO date),
+        date_to: str (ISO date),
+        update_stock: bool (списывать ли товары со склада)
+    }
+    """
+    db = await get_database()
+    
+    date_from_str = data.get("date_from")
+    date_to_str = data.get("date_to")
+    update_stock = data.get("update_stock", True)
+    
+    if not date_from_str or not date_to_str:
+        raise HTTPException(status_code=400, detail="date_from и date_to обязательны")
+    
+    date_from = datetime.fromisoformat(date_from_str)
+    date_to = datetime.fromisoformat(date_to_str)
+    
+    # Получить API ключи
+    profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Профиль не найден")
+    
+    api_keys = profile.get("api_keys", [])
+    
+    if not api_keys:
+        raise HTTPException(status_code=400, detail="API ключи не настроены")
+    
+    imported_count = 0
+    updated_count = 0
+    stock_updated_count = 0
+    errors = []
+    
+    # Для каждого МП
+    for api_key_data in api_keys:
+        marketplace = api_key_data.get("marketplace")
+        
+        try:
+            connector = get_connector(
+                marketplace,
+                api_key_data.get("client_id", ""),
+                api_key_data["api_key"]
+            )
+            
+            # Получить FBS заказы
+            if marketplace == "ozon":
+                mp_orders = await connector.get_fbs_orders(date_from, date_to)
+            elif marketplace in ["wb", "wildberries"]:
+                mp_orders = await connector.get_orders(date_from, date_to)
+            elif marketplace == "yandex":
+                campaign_id = api_key_data.get("metadata", {}).get("campaign_id")
+                if not campaign_id:
+                    errors.append({"marketplace": marketplace, "error": "campaign_id не найден"})
+                    continue
+                mp_orders = await connector.get_orders(date_from, date_to, campaign_id)
+            else:
+                continue
+            
+            logger.info(f"[FBS Import] {marketplace}: получено {len(mp_orders)} заказов")
+            
+            # Обработать каждый заказ
+            for mp_order_data in mp_orders:
+                # Парсинг данных заказа
+                if marketplace == "ozon":
+                    external_id = mp_order_data.get("posting_number")
+                    mp_status = mp_order_data.get("status")
+                    products = mp_order_data.get("products", [])
+                    
+                    items = []
+                    total_sum = 0
+                    
+                    for prod in products:
+                        offer_id = prod.get("offer_id")
+                        quantity = prod.get("quantity", 1)
+                        price = float(prod.get("price", 0))
+                        
+                        # Найти товар в системе
+                        product = await db.product_catalog.find_one({
+                            "article": offer_id,
+                            "seller_id": str(current_user["_id"])
+                        })
+                        
+                        if product:
+                            items.append({
+                                "product_id": str(product["_id"]),
+                                "article": offer_id,
+                                "name": prod.get("name", product.get("name", "")),
+                                "price": price,
+                                "quantity": quantity,
+                                "total": price * quantity
+                            })
+                            total_sum += price * quantity
+                    
+                    customer_data = {
+                        "full_name": mp_order_data.get("customer", {}).get("name", ""),
+                        "phone": mp_order_data.get("customer", {}).get("phone", ""),
+                        "address": mp_order_data.get("delivery_method", {}).get("address", "")
+                    }
+                    
+                elif marketplace in ["wb", "wildberries"]:
+                    external_id = str(mp_order_data.get("id"))
+                    mp_status = mp_order_data.get("wbStatus", 0)
+                    
+                    # TODO: парсинг WB заказов
+                    items = []
+                    total_sum = 0
+                    customer_data = {"full_name": "", "phone": ""}
+                    
+                elif marketplace == "yandex":
+                    external_id = str(mp_order_data.get("id"))
+                    mp_status = mp_order_data.get("status")
+                    
+                    # TODO: парсинг Yandex заказов
+                    items = []
+                    total_sum = 0
+                    customer_data = {"full_name": "", "phone": ""}
+                
+                else:
+                    continue
+                
+                if not external_id or not items:
+                    continue
+                
+                # Проверить существует ли заказ
+                existing = await db.orders_fbs.find_one({
+                    "external_order_id": external_id,
+                    "seller_id": str(current_user["_id"])
+                })
+                
+                if existing:
+                    updated_count += 1
+                    continue
+                
+                # Найти склад с use_for_orders=True
+                warehouse = await db.warehouses.find_one({
+                    "seller_id": str(current_user["_id"]),
+                    "use_for_orders": True
+                })
+                
+                if not warehouse:
+                    errors.append({"order": external_id, "error": "Склад для заказов не найден"})
+                    continue
+                
+                # СОЗДАТЬ ЗАКАЗ
+                order_doc = {
+                    "seller_id": str(current_user["_id"]),
+                    "warehouse_id": warehouse["id"],
+                    "marketplace": marketplace,
+                    "external_order_id": external_id,
+                    "order_number": f"FBS-{marketplace.upper()}-{external_id[:8]}",
+                    "status": "imported",
+                    "stock_updated": update_stock,
+                    "customer": customer_data,
+                    "items": items,
+                    "totals": {
+                        "subtotal": total_sum,
+                        "shipping_cost": 0,
+                        "marketplace_commission": 0,
+                        "seller_payout": total_sum,
+                        "total": total_sum
+                    },
+                    "created_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
+                }
+                
+                await db.orders_fbs.insert_one(order_doc)
+                imported_count += 1
+                
+                # ОБНОВИТЬ ОСТАТКИ (если чекбокс включен)
+                if update_stock:
+                    for item in items:
+                        product = await db.product_catalog.find_one({
+                            "article": item["article"],
+                            "seller_id": str(current_user["_id"])
+                        })
+                        
+                        if not product:
+                            continue
+                        
+                        inventory = await db.inventory.find_one({
+                            "product_id": product["_id"],
+                            "seller_id": str(current_user["_id"])
+                        })
+                        
+                        if not inventory:
+                            continue
+                        
+                        # СПИСАТЬ СО СКЛАДА
+                        new_qty = max(0, inventory.get("quantity", 0) - item["quantity"])
+                        new_avail = max(0, inventory.get("available", 0) - item["quantity"])
+                        
+                        await db.inventory.update_one(
+                            {"_id": inventory["_id"]},
+                            {"$set": {
+                                "quantity": new_qty,
+                                "available": new_avail
+                            }}
+                        )
+                        
+                        # Записать в историю
+                        await db.inventory_history.insert_one({
+                            "product_id": product["_id"],
+                            "seller_id": str(current_user["_id"]),
+                            "operation_type": "fbs_order",
+                            "quantity_change": -item["quantity"],
+                            "reason": f"FBS заказ {order_doc['order_number']}",
+                            "user_id": str(current_user["_id"]),
+                            "created_at": datetime.utcnow()
+                        })
+                        
+                        stock_updated_count += 1
+                        
+                        logger.info(f"[FBS Import] Списан товар {item['article']}: -{item['quantity']} шт")
+        
+        except Exception as e:
+            logger.error(f"[FBS Import] Ошибка {marketplace}: {e}")
+            errors.append({"marketplace": marketplace, "error": str(e)})
+    
+    return {
+        "message": f"Загружено {imported_count} заказов",
+        "imported": imported_count,
+        "updated": updated_count,
+        "stock_updated": stock_updated_count if update_stock else 0,
+        "errors": errors
+    }
+
+
 @router.post("/sync")
 async def sync_fbs_orders(
     sync_request: OrderSyncRequest,
