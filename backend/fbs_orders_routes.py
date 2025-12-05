@@ -1222,3 +1222,135 @@ async def get_bulk_labels(
         "labels": results,
         "errors": errors
     }
+
+
+
+@router.post("/{order_id}/reserve")
+async def manually_reserve_order(
+    order_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Вручную зарезервировать товары для существующего заказа
+    
+    Используется когда заказ был создан до внедрения автоматического резервирования,
+    или если резервирование не сработало по какой-то причине.
+    """
+    db = await get_database()
+    seller_id = str(current_user["_id"])
+    
+    # Найти заказ
+    order = await db.orders_fbs.find_one({
+        "_id": ObjectId(order_id),
+        "seller_id": seller_id
+    })
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    order_number = order.get("order_number")
+    warehouse_id = order.get("warehouse_id")
+    items_data = order.get("items", [])
+    status = order.get("status")
+    
+    logger.info(f"[Manual Reserve] Ручное резервирование для заказа {order_number}")
+    
+    # Проверить статус - резервируем только для определенных статусов
+    if status not in ["new", "awaiting_packaging", "awaiting_deliver", "awaiting_shipment"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Нельзя зарезервировать товары для заказа со статусом '{status}'"
+        )
+    
+    # Преобразовать items в нужный формат
+    items = []
+    for item_data in items_data:
+        items.append(OrderItemNew(
+            product_id=item_data.get("product_id", ""),
+            article=item_data.get("article", ""),
+            name=item_data.get("name", ""),
+            quantity=item_data.get("quantity", 1),
+            price=item_data.get("price", 0),
+            total=item_data.get("total", 0)
+        ))
+    
+    if not items:
+        raise HTTPException(status_code=400, detail="В заказе нет товаров")
+    
+    reserved_count = 0
+    errors = []
+    
+    for item in items:
+        # Найти товар
+        product = await db.product_catalog.find_one({
+            "article": item.article,
+            "seller_id": seller_id
+        })
+        
+        if not product:
+            errors.append(f"Товар {item.article} не найден в каталоге")
+            continue
+        
+        product_id = product["_id"]
+        
+        # Найти inventory
+        inventory = await db.inventory.find_one({
+            "product_id": product_id,
+            "seller_id": seller_id
+        })
+        
+        if not inventory:
+            errors.append(f"Остаток для товара {item.article} не найден")
+            continue
+        
+        # Проверить доступность
+        if inventory.get("available", 0) < item.quantity:
+            errors.append(f"Недостаточно остатка для {item.article}. Доступно: {inventory.get('available')}, требуется: {item.quantity}")
+            continue
+        
+        # РЕЗЕРВ
+        try:
+            result = await db.inventory.update_one(
+                {"_id": inventory["_id"]},
+                {
+                    "$inc": {
+                        "reserved": item.quantity,
+                        "available": -item.quantity
+                    }
+                }
+            )
+            
+            if result.modified_count > 0:
+                # Записать в историю
+                await db.inventory_history.insert_one({
+                    "product_id": product_id,
+                    "seller_id": seller_id,
+                    "operation_type": "reserve",
+                    "quantity_change": 0,
+                    "reason": f"Ручное резервирование для заказа {order_number}",
+                    "user_id": seller_id,
+                    "created_at": datetime.utcnow()
+                })
+                
+                reserved_count += 1
+                logger.info(f"[Manual Reserve] ✅ Зарезервирован товар {item.article}: {item.quantity} шт")
+            else:
+                errors.append(f"Не удалось обновить inventory для {item.article}")
+        except Exception as e:
+            errors.append(f"Ошибка резервирования {item.article}: {str(e)}")
+            logger.error(f"[Manual Reserve] Ошибка: {e}")
+    
+    if reserved_count == 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Не удалось зарезервировать товары. Ошибки: {', '.join(errors)}"
+        )
+    
+    return {
+        "message": f"Зарезервировано {reserved_count}/{len(items)} товаров",
+        "order_number": order_number,
+        "reserved_count": reserved_count,
+        "total_items": len(items),
+        "errors": errors if errors else None
+    }
+
