@@ -388,6 +388,9 @@ async def sync_all_stocks(
     Ручная синхронизация всех остатков на выбранный склад
     ОПТИМИЗИРОВАНО: отправляет батчами для избежания rate limit
     
+    ВАЖНО: Отправляет ВСЕ товары из БД (даже с остатком 0), чтобы синхронизировать МП с базой
+    База данных - источник истины!
+    
     Body: {
       warehouse_id: str
     }
@@ -408,7 +411,11 @@ async def sync_all_stocks(
     if not warehouse:
         raise HTTPException(status_code=404, detail="Warehouse not found")
     
-    logger.info(f"[MANUAL SYNC] Starting sync for warehouse: {warehouse.get('name')} (ID: {warehouse_id})")
+    logger.info(f"")
+    logger.info(f"{'='*80}")
+    logger.info(f"[MANUAL SYNC] НАЧАЛО СИНХРОНИЗАЦИИ ОСТАТКОВ")
+    logger.info(f"[MANUAL SYNC] Склад: {warehouse.get('name')} (ID: {warehouse_id})")
+    logger.info(f"{'='*80}")
     
     # Проверить наличие warehouse_links
     links = await db.warehouse_links.find({"warehouse_id": warehouse_id}).to_list(length=100)
@@ -418,14 +425,20 @@ async def sync_all_stocks(
             detail=f"У склада '{warehouse.get('name')}' нет связей с маркетплейсами! Создайте связи в настройках склада."
         )
     
-    logger.info(f"[MANUAL SYNC] Found {len(links)} warehouse links")
+    logger.info(f"[MANUAL SYNC] Найдено связей с МП: {len(links)}")
+    for link in links:
+        logger.info(f"  - {link.get('marketplace_name')} → Склад МП: {link.get('marketplace_warehouse_id')}")
     
     # Получить все inventory записи
     inventories = await db.inventory.find({
         "seller_id": str(current_user["_id"])
     }).to_list(length=10000)
     
-    logger.info(f"[MANUAL SYNC] Total inventory records to process: {len(inventories)}")
+    logger.info(f"")
+    logger.info(f"[MANUAL SYNC] Всего записей inventory в БД: {len(inventories)}")
+    logger.info(f"[MANUAL SYNC] ⚠️ ВАЖНО: Будут отправлены ВСЕ товары, включая товары с остатком 0")
+    logger.info(f"[MANUAL SYNC] База данных = источник истины для МП")
+    logger.info(f"")
     
     # Группируем товары по маркетплейсам для батч-отправки
     from connectors import get_connector, MarketplaceError
@@ -439,11 +452,16 @@ async def sync_all_stocks(
         marketplace = link.get("marketplace_name")
         mp_warehouse_id = link.get("marketplace_warehouse_id")
         
-        logger.info(f"[MANUAL SYNC] Processing marketplace: {marketplace}, warehouse: {mp_warehouse_id}")
+        logger.info(f"")
+        logger.info(f"[MANUAL SYNC] {'='*60}")
+        logger.info(f"[MANUAL SYNC] Обработка МП: {marketplace.upper()}")
+        logger.info(f"[MANUAL SYNC] Склад МП: {mp_warehouse_id}")
+        logger.info(f"[MANUAL SYNC] {'='*60}")
         
         # Получить API ключ
         profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
         if not profile:
+            logger.error(f"[MANUAL SYNC] ❌ Профиль пользователя не найден!")
             continue
         
         api_key_data = next(
@@ -452,8 +470,10 @@ async def sync_all_stocks(
         )
         
         if not api_key_data:
-            logger.warning(f"[MANUAL SYNC] No API key for {marketplace}")
+            logger.error(f"[MANUAL SYNC] ❌ API ключ для {marketplace} не найден!")
             continue
+        
+        logger.info(f"[MANUAL SYNC] ✅ API ключ найден для {marketplace}")
         
         # Создать коннектор
         connector = get_connector(
@@ -465,57 +485,86 @@ async def sync_all_stocks(
         # Собираем товары для этого МП
         batch_items = []
         
+        logger.info(f"[MANUAL SYNC] Сбор товаров для отправки...")
+        
         for inv in inventories:
             product = await db.product_catalog.find_one({"_id": inv["product_id"]})
             
             if not product:
                 skipped_count += 1
+                logger.warning(f"[MANUAL SYNC] ⚠️ Товар с ID {inv['product_id']} не найден в каталоге")
                 continue
             
             article = product.get("article")
             available = inv.get("available", 0)
             
-            # Проверить наличие marketplace_data
-            marketplace_data = product.get("marketplace_data", {}).get(marketplace, {})
-            
-            if not marketplace_data:
-                skipped_count += 1
-                logger.debug(f"[MANUAL SYNC] {article}: no {marketplace} data, skipping")
-                continue
-            
-            # Получить MP-специфичный SKU
+            # ИЗМЕНЕНО: Отправляем ВСЕ товары, используем article как offer_id
+            # Для Ozon offer_id = article продавца
             if marketplace == "ozon":
-                mp_sku = marketplace_data.get("id") or article
-                batch_items.append({"offer_id": mp_sku, "stock": available})
+                batch_items.append({"offer_id": article, "stock": available})
+                logger.debug(f"[MANUAL SYNC] Добавлен: {article} → остаток: {available}")
             elif marketplace in ["wb", "wildberries"]:
-                mp_sku = marketplace_data.get("barcode") or marketplace_data.get("id")
-                if mp_sku:
-                    batch_items.append({"sku": mp_sku, "amount": available})
-                else:
-                    skipped_count += 1
+                # Для WB нужен barcode, если его нет - используем article
+                marketplace_data = product.get("marketplace_data", {}).get(marketplace, {})
+                mp_sku = marketplace_data.get("barcode") or marketplace_data.get("id") or article
+                batch_items.append({"sku": mp_sku, "amount": available})
+                logger.debug(f"[MANUAL SYNC] Добавлен: {mp_sku} → остаток: {available}")
+        
+        logger.info(f"[MANUAL SYNC] Собрано товаров для отправки: {len(batch_items)}")
+        logger.info(f"[MANUAL SYNC] Пропущено (не найдены в каталоге): {skipped_count}")
         
         # Отправляем БАТЧАМИ
         if batch_items:
             batch_size = 100
+            total_batches = (len(batch_items) + batch_size - 1) // batch_size
+            
+            logger.info(f"")
+            logger.info(f"[MANUAL SYNC] Начинаю отправку батчами (размер батча: {batch_size})")
+            logger.info(f"[MANUAL SYNC] Всего батчей: {total_batches}")
+            logger.info(f"")
+            
             for i in range(0, len(batch_items), batch_size):
                 batch = batch_items[i:i+batch_size]
+                batch_num = i//batch_size + 1
                 
                 try:
-                    logger.info(f"[MANUAL SYNC] Sending batch {i//batch_size + 1} to {marketplace}: {len(batch)} items")
+                    logger.info(f"[MANUAL SYNC] ▶ Отправка батча {batch_num}/{total_batches} ({len(batch)} товаров)...")
+                    
+                    # Логируем первые 3 товара из батча для проверки
+                    sample = batch[:3]
+                    logger.info(f"[MANUAL SYNC]   Пример товаров из батча:")
+                    for item in sample:
+                        if marketplace == "ozon":
+                            logger.info(f"[MANUAL SYNC]     - offer_id: {item['offer_id']}, stock: {item['stock']}")
+                        else:
+                            logger.info(f"[MANUAL SYNC]     - sku: {item['sku']}, amount: {item['amount']}")
                     
                     await connector.update_stock(mp_warehouse_id, batch)
                     synced_count += len(batch)
                     
-                    logger.info(f"[MANUAL SYNC] ✅ Batch {i//batch_size + 1} synced successfully")
+                    logger.info(f"[MANUAL SYNC] ✅ Батч {batch_num}/{total_batches} отправлен успешно!")
                     
                     # Небольшая задержка между батчами для избежания rate limit
-                    await asyncio.sleep(0.5)
+                    if batch_num < total_batches:
+                        logger.info(f"[MANUAL SYNC] ⏳ Пауза 0.5 сек перед следующим батчем...")
+                        await asyncio.sleep(0.5)
                     
                 except MarketplaceError as e:
                     failed_count += len(batch)
-                    logger.error(f"[MANUAL SYNC] ❌ Batch {i//batch_size + 1} failed: {e.message}")
+                    logger.error(f"[MANUAL SYNC] ❌ Батч {batch_num}/{total_batches} FAILED!")
+                    logger.error(f"[MANUAL SYNC] ❌ Ошибка: {e.message}")
+                    logger.error(f"[MANUAL SYNC] ❌ Status code: {e.status_code}")
+        else:
+            logger.warning(f"[MANUAL SYNC] ⚠️ Нет товаров для отправки на {marketplace}!")
     
-    logger.info(f"[MANUAL SYNC] SUMMARY: synced={synced_count}, failed={failed_count}, skipped={skipped_count}")
+    logger.info(f"")
+    logger.info(f"{'='*80}")
+    logger.info(f"[MANUAL SYNC] СИНХРОНИЗАЦИЯ ЗАВЕРШЕНА")
+    logger.info(f"[MANUAL SYNC] Успешно отправлено: {synced_count}")
+    logger.info(f"[MANUAL SYNC] Ошибок: {failed_count}")
+    logger.info(f"[MANUAL SYNC] Пропущено: {skipped_count}")
+    logger.info(f"{'='*80}")
+    logger.info(f"")
     
     return {
         "message": f"Синхронизировано {synced_count} товаров",
