@@ -535,7 +535,20 @@ function StockPageV3() {
               </tr>
             </thead>
             <tbody>
-              {stocks.map((item) => (
+              {filteredAndSortedStocks.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="py-12 text-center">
+                    <p className="text-mm-text-secondary">Нет товаров, соответствующих фильтрам</p>
+                    <button
+                      onClick={resetFilters}
+                      className="mt-2 text-sm text-mm-cyan hover:underline"
+                    >
+                      Сбросить фильтры
+                    </button>
+                  </td>
+                </tr>
+              ) : (
+                filteredAndSortedStocks.map((item) => (
                 <tr key={item.id} className="border-b border-mm-border hover:bg-mm-gray transition-colors">
                   <td className="py-4 px-4">
                     {item.product_image ? (
