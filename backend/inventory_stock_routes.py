@@ -140,6 +140,60 @@ async def update_stock(
     }
 
 
+@router.get("/marketplace-warehouses/{integration_id}")
+async def get_marketplace_warehouses(
+    integration_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Получить список складов МП для выбранной интеграции
+    
+    Используется для импорта остатков
+    """
+    db = await get_database()
+    
+    # Получить интеграцию
+    profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    api_keys = profile.get("api_keys", [])
+    integration = next((k for k in api_keys if k.get("id") == integration_id), None)
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    
+    marketplace = integration.get("marketplace")
+    
+    logger.info(f"[MP WAREHOUSES] Getting warehouses for {marketplace}")
+    
+    # Создать коннектор
+    from connectors import get_connector, MarketplaceError
+    
+    try:
+        connector = get_connector(
+            marketplace,
+            integration.get("client_id", ""),
+            integration["api_key"]
+        )
+        
+        # Получить склады
+        warehouses = await connector.get_warehouses()
+        
+        logger.info(f"[MP WAREHOUSES] Got {len(warehouses)} warehouses")
+        
+        return {
+            "marketplace": marketplace,
+            "warehouses": warehouses
+        }
+    
+    except MarketplaceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"[MP WAREHOUSES] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/import-stocks-from-marketplace")
 async def import_stocks_from_marketplace(
     data: Dict[str, Any],
