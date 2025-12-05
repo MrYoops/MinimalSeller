@@ -760,7 +760,7 @@ class OzonConnector(BaseConnector):
         Получить остатки с Ozon через аналитический API
         
         Args:
-            warehouse_id: ID склада FBS (опционально)
+            warehouse_id: ID склада FBS (опционально) - НЕ ИСПОЛЬЗУЕТСЯ в аналитике
         
         Returns:
             [{offer_id: str, product_id: int, stock: int, warehouse_id: int}, ...]
@@ -775,7 +775,7 @@ class OzonConnector(BaseConnector):
             "warehouse_type": "ALL"  # ALL, FBO, FBS, CROSSBORDER
         }
         
-        logger.info(f"[Ozon] Getting stocks via analytics API for warehouse {warehouse_id or 'all'}")
+        logger.info(f"[Ozon] Getting stocks via analytics API")
         logger.info(f"[Ozon] Request URL: {url}")
         
         try:
@@ -789,27 +789,27 @@ class OzonConnector(BaseConnector):
             logger.info(f"[Ozon] Got {len(rows)} rows from analytics API")
             
             # Преобразуем в нужный формат
+            # ВАЖНО: в аналитике используются item_code (артикул) вместо offer_id
+            # И warehouse_name вместо warehouse_id
             stocks = []
             for row in rows:
-                # Проверяем, соответствует ли склад
-                item_warehouse_id = str(row.get("warehouse_id", ""))
-                
-                # Если указан конкретный склад, фильтруем
-                if warehouse_id and item_warehouse_id != str(warehouse_id):
-                    continue
-                
                 stocks.append({
-                    "offer_id": row.get("offer_id"),
-                    "product_id": row.get("item_code"),  # в аналитике используется item_code
+                    "offer_id": row.get("item_code"),  # ВАЖНО: используем item_code как offer_id
+                    "product_id": row.get("sku"),  # SKU товара на Ozon
                     "present": row.get("free_to_sell_amount", 0),  # доступно к продаже
                     "reserved": row.get("reserved_amount", 0),  # зарезервировано
-                    "warehouse_id": item_warehouse_id,
+                    "warehouse_id": None,  # В аналитике нет warehouse_id
                     "warehouse_name": row.get("warehouse_name", "")
                 })
             
-            logger.info(f"[Ozon] ✅ Got {len(stocks)} stock records after filtering")
+            logger.info(f"[Ozon] ✅ Got {len(stocks)} stock records")
             if stocks:
                 logger.info(f"[Ozon] Sample stock record: {stocks[0]}")
+            
+            # Если нужен конкретный склад, но в аналитике его нет - используем fallback
+            if warehouse_id and len(stocks) == 0:
+                logger.info(f"[Ozon] Analytics returned 0 for warehouse {warehouse_id}, trying fallback...")
+                return await self._get_stocks_fallback(warehouse_id)
             
             return stocks
             
