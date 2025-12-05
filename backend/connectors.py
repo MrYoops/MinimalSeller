@@ -765,16 +765,19 @@ class OzonConnector(BaseConnector):
         Returns:
             [{offer_id: str, product_id: int, stock: int, warehouse_id: int}, ...]
         """
-        # Используем v2 API для получения остатков (v3/product/info/stocks не работает)
-        url = f"{self.base_url}/v2/product/info/stocks"
+        # Используем v3 API для получения остатков с правильным форматом
+        url = f"{self.base_url}/v3/product/info/stocks"
         headers = self._get_headers()
         
         payload = {
-            "filter": {},
+            "filter": {
+                "visibility": "ALL"
+            },
             "last_id": "",
             "limit": 1000
         }
         
+        # Если указан конкретный склад, добавляем в фильтр
         if warehouse_id:
             payload["filter"]["warehouse_id"] = [int(warehouse_id)]
         
@@ -785,10 +788,26 @@ class OzonConnector(BaseConnector):
         try:
             response = await self._make_request("POST", url, headers, json_data=payload)
             
-            # v2 API может возвращать другую структуру
-            stocks = response.get("result", {}).get("stocks", []) or response.get("stocks", [])
+            # v3 API возвращает items с подробной информацией
+            items = response.get("result", {}).get("items", [])
+            
+            # Преобразуем в нужный формат
+            stocks = []
+            for item in items:
+                stocks_data = item.get("stocks", [])
+                for stock in stocks_data:
+                    stocks.append({
+                        "offer_id": item.get("offer_id"),
+                        "product_id": item.get("product_id"),
+                        "present": stock.get("present", 0),
+                        "reserved": stock.get("reserved", 0),
+                        "warehouse_id": stock.get("warehouse_id"),
+                        "warehouse_name": stock.get("warehouse_name")
+                    })
+            
             logger.info(f"[Ozon] ✅ Got {len(stocks)} stock records")
-            logger.info(f"[Ozon] Sample stock record: {stocks[0] if stocks else 'none'}")
+            if stocks:
+                logger.info(f"[Ozon] Sample stock record: {stocks[0]}")
             return stocks
         except MarketplaceError as e:
             logger.error(f"[Ozon] Failed to get stocks: {e.message}")
