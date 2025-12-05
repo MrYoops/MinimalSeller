@@ -498,6 +498,11 @@ async def sync_all_stocks(
             article = product.get("article")
             available = inv.get("available", 0)
             
+            # ВАЖНО: Ozon не принимает отрицательные остатки, исправляем на 0
+            if available < 0:
+                logger.warning(f"[MANUAL SYNC] ⚠️ Товар {article} имеет отрицательный остаток {available}, исправляем на 0")
+                available = 0
+            
             # ИЗМЕНЕНО: Отправляем ВСЕ товары, используем article как offer_id
             # Для Ozon offer_id = article продавца
             if marketplace == "ozon":
