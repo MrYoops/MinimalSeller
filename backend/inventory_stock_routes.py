@@ -253,6 +253,9 @@ async def import_stocks_from_marketplace(
         
         logger.info(f"[IMPORT STOCKS] Got {len(mp_stocks)} stock records from {marketplace}")
         
+        if mp_stocks:
+            logger.info(f"[IMPORT STOCKS] Sample stock record: {mp_stocks[0]}")
+        
         updated_count = 0
         created_count = 0
         skipped_count = 0
@@ -261,7 +264,14 @@ async def import_stocks_from_marketplace(
             # Извлечь данные в зависимости от МП
             if marketplace == "ozon":
                 offer_id = mp_stock.get("offer_id")
-                stock_quantity = mp_stock.get("present", 0)  # present = доступно
+                # Пробуем разные поля для количества
+                stock_quantity = (
+                    mp_stock.get("present", 0) or  # present = доступно
+                    mp_stock.get("stock", 0) or     # stock = общий остаток
+                    mp_stock.get("stocks", {}).get("present", 0)
+                )
+                
+                logger.debug(f"[IMPORT STOCKS] Processing: {offer_id}, quantity={stock_quantity}, full_data={mp_stock}")
             elif marketplace in ["wb", "wildberries"]:
                 offer_id = mp_stock.get("sku")
                 stock_quantity = mp_stock.get("amount", 0)
