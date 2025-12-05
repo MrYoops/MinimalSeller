@@ -416,6 +416,95 @@ function StockPageV3() {
           При изменении остатка вручную, синхронизация происходит сразу на выбранный склад.
         </p>
       </div>
+
+      {/* МОДАЛЬНОЕ ОКНО ДЛЯ ИМПОРТА ОСТАТКОВ */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="card-neon max-w-md w-full p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl text-mm-cyan uppercase font-mono">Импорт остатков с МП</h3>
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="text-mm-text-secondary hover:text-mm-cyan transition-colors"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+
+            <p className="text-sm text-mm-text-secondary">
+              Загрузить остатки из маркетплейса в базу данных
+            </p>
+
+            {/* Выбор интеграции */}
+            <div>
+              <label className="block text-sm mb-2 text-mm-text-secondary uppercase">
+                Интеграция
+              </label>
+              <select
+                value={selectedIntegration || ''}
+                onChange={(e) => handleIntegrationSelect(e.target.value)}
+                className="input-neon w-full"
+              >
+                <option value="">Выберите интеграцию...</option>
+                {integrations.map(integration => (
+                  <option key={integration.id} value={integration.id}>
+                    {integration.marketplace.toUpperCase()} - {integration.name || integration.client_id}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Выбор склада МП */}
+            {selectedIntegration && (
+              <div>
+                <label className="block text-sm mb-2 text-mm-text-secondary uppercase">
+                  Склад на маркетплейсе
+                </label>
+                <select
+                  value={selectedMpWarehouse || ''}
+                  onChange={(e) => setSelectedMpWarehouse(e.target.value)}
+                  className="input-neon w-full"
+                  disabled={mpWarehouses.length === 0}
+                >
+                  <option value="">Выберите склад...</option>
+                  {mpWarehouses.map(wh => (
+                    <option key={wh.id} value={wh.id}>
+                      {wh.name}
+                    </option>
+                  ))}
+                </select>
+                {mpWarehouses.length === 0 && (
+                  <p className="text-xs text-mm-text-tertiary mt-2">Загрузка складов...</p>
+                )}
+              </div>
+            )}
+
+            {/* Кнопки */}
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="btn-secondary flex-1"
+                disabled={importing}
+              >
+                ОТМЕНА
+              </button>
+              <button
+                onClick={importStocksFromMarketplace}
+                disabled={!selectedIntegration || !selectedMpWarehouse || importing}
+                className="btn-primary flex-1 disabled:opacity-50"
+              >
+                {importing ? 'ИМПОРТ...' : 'ИМПОРТИРОВАТЬ'}
+              </button>
+            </div>
+
+            <div className="text-xs text-mm-text-tertiary space-y-1">
+              <p>• Остатки будут загружены из выбранного склада МП</p>
+              <p>• Существующие остатки будут обновлены</p>
+              <p>• Новые товары будут добавлены в инвентарь</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
