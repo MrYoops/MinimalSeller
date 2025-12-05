@@ -410,6 +410,102 @@ function StockPageV3() {
         </p>
       </div>
 
+      {/* Панель поиска и фильтров */}
+      {selectedWarehouse && stocks.length > 0 && (
+        <div className="card-neon p-4 space-y-4">
+          {/* Строка поиска и быстрых фильтров */}
+          <div className="flex flex-wrap gap-4 items-end">
+            {/* Поиск */}
+            <div className="flex-1 min-w-[250px]">
+              <label className="block text-xs text-mm-text-secondary uppercase mb-2">Поиск</label>
+              <div className="relative">
+                <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-mm-text-tertiary" />
+                <input
+                  type="text"
+                  placeholder="Поиск по артикулу или названию..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="input-neon w-full pl-10"
+                  data-testid="search-input"
+                />
+              </div>
+            </div>
+            
+            {/* Фильтр наличия */}
+            <div className="min-w-[200px]">
+              <label className="block text-xs text-mm-text-secondary uppercase mb-2">Наличие</label>
+              <select
+                value={availabilityFilter}
+                onChange={(e) => setAvailabilityFilter(e.target.value)}
+                className="input-neon w-full"
+                data-testid="availability-filter"
+              >
+                <option value="all">Все товары</option>
+                <option value="in_stock">В наличии</option>
+                <option value="out_of_stock">Нет в наличии</option>
+              </select>
+            </div>
+            
+            {/* Сортировка */}
+            <div className="min-w-[200px]">
+              <label className="block text-xs text-mm-text-secondary uppercase mb-2">Сортировка</label>
+              <select
+                value={sortConfig.field}
+                onChange={(e) => toggleSort(e.target.value)}
+                className="input-neon w-full"
+                data-testid="sort-select"
+              >
+                <option value="sku">По артикулу</option>
+                <option value="name">По названию</option>
+                <option value="quantity">По количеству</option>
+              </select>
+            </div>
+          </div>
+          
+          {/* Дополнительные фильтры */}
+          <div className="flex flex-wrap gap-4 items-center">
+            {/* Критический остаток */}
+            <label className="flex items-center space-x-2 cursor-pointer" data-testid="critical-filter">
+              <input
+                type="checkbox"
+                checked={showCriticalOnly}
+                onChange={(e) => setShowCriticalOnly(e.target.checked)}
+                className="w-4 h-4 bg-mm-dark border-mm-border rounded text-mm-cyan focus:ring-mm-cyan focus:ring-offset-0"
+              />
+              <span className="text-sm text-mm-text-secondary">Критический остаток</span>
+            </label>
+            
+            {/* Зарезервировано */}
+            <label className="flex items-center space-x-2 cursor-pointer" data-testid="reserved-filter">
+              <input
+                type="checkbox"
+                checked={showReservedOnly}
+                onChange={(e) => setShowReservedOnly(e.target.checked)}
+                className="w-4 h-4 bg-mm-dark border-mm-border rounded text-mm-cyan focus:ring-mm-cyan focus:ring-offset-0"
+              />
+              <span className="text-sm text-mm-text-secondary">Только зарезервированные</span>
+            </label>
+            
+            {/* Кнопка сброса */}
+            {(searchQuery || availabilityFilter !== 'all' || showCriticalOnly || showReservedOnly || sortConfig.field !== 'sku') && (
+              <button
+                onClick={resetFilters}
+                className="text-sm text-mm-cyan hover:text-mm-green transition-colors flex items-center space-x-1"
+                data-testid="reset-filters-btn"
+              >
+                <FiX size={16} />
+                <span>Сбросить фильтры</span>
+              </button>
+            )}
+            
+            {/* Счетчик результатов */}
+            <div className="ml-auto text-sm text-mm-text-tertiary">
+              Показано: <span className="text-mm-cyan font-mono">{filteredAndSortedStocks.length}</span> из {stocks.length}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Таблица остатков */}
       {!selectedWarehouse ? (
         <div className="card-neon text-center py-16">
