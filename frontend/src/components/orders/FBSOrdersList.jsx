@@ -380,7 +380,18 @@ function FBSOrdersList() {
                       {new Date(order.created_at).toLocaleDateString('ru-RU')}
                     </td>
                     <td className="py-4 px-4 font-mono text-sm">
-                      {order.items?.length || 0} шт
+                      {order.items?.length > 0 ? (
+                        <div className="max-w-xs">
+                          <div className="text-mm-cyan text-xs mb-1">
+                            {order.items.map(item => item.article).join(', ')}
+                          </div>
+                          <div className="text-mm-text-tertiary text-xs">
+                            {order.items.length} {order.items.length === 1 ? 'товар' : order.items.length < 5 ? 'товара' : 'товаров'}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-mm-text-tertiary">—</span>
+                      )}
                     </td>
                     <td className="py-4 px-4 font-mono text-sm">
                       {order.totals?.total?.toLocaleString('ru-RU')}₽
