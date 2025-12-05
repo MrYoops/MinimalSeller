@@ -108,23 +108,40 @@ function StockPageV3() {
   const saveStock = async (stock) => {
     const newQuantity = parseInt(editValue, 10)
     
+    console.log('[SAVE STOCK] Начало сохранения:', {
+      stock_id: stock.id,
+      product_id: stock.product_id,
+      sku: stock.sku,
+      editValue: editValue,
+      parsedQuantity: newQuantity,
+      selectedWarehouse: selectedWarehouse
+    })
+    
     if (isNaN(newQuantity) || newQuantity < 0) {
+      console.error('[SAVE STOCK] ❌ Некорректное значение:', newQuantity)
       toast.error('Некорректное значение')
       return
     }
 
     if (!selectedWarehouse) {
+      console.error('[SAVE STOCK] ❌ Склад не выбран')
       toast.error('Выберите склад')
       return
     }
 
+    const payload = {
+      product_id: stock.product_id,
+      article: stock.sku,
+      new_quantity: newQuantity,
+      warehouse_id: selectedWarehouse.id
+    }
+    
+    console.log('[SAVE STOCK] 📤 Отправка запроса на /api/inventory/update-stock:', payload)
+
     try {
-      const response = await api.put('/api/inventory/update-stock', {
-        product_id: stock.product_id,
-        article: stock.sku,
-        new_quantity: newQuantity,
-        warehouse_id: selectedWarehouse.id
-      })
+      const response = await api.put('/api/inventory/update-stock', payload)
+      
+      console.log('[SAVE STOCK] ✅ Успешный ответ от сервера:', response.data)
 
       toast.success(response.data.message || 'Остаток обновлён')
       
@@ -137,6 +154,11 @@ function StockPageV3() {
       
       cancelEdit()
     } catch (error) {
+      console.error('[SAVE STOCK] ❌ Ошибка запроса:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      })
       toast.error(error.response?.data?.detail || 'Ошибка обновления остатка')
       console.error(error)
     }
