@@ -256,37 +256,38 @@ async def import_stocks_from_marketplace(
         if mp_stocks:
             logger.info(f"[IMPORT STOCKS] Sample stock record: {mp_stocks[0]}")
         
+        # ВАЖНО: Ozon возвращает остатки со ВСЕХ складов, даже если мы указали конкретный
+        # Нужно СУММИРОВАТЬ остатки по каждому товару
+        stock_by_article = {}
+        
+        for mp_stock in mp_stocks:
+            if marketplace == "ozon":
+                offer_id = mp_stock.get("offer_id")
+                present = mp_stock.get("present", 0)
+                
+                if not offer_id:
+                    continue
+                
+                # Суммируем остатки по артикулу
+                if offer_id not in stock_by_article:
+                    stock_by_article[offer_id] = 0
+                
+                stock_by_article[offer_id] += present
+                
+                logger.debug(f"[IMPORT STOCKS] {offer_id}: +{present} (warehouse {mp_stock.get('warehouse_id')})")
+            elif marketplace in ["wb", "wildberries"]:
+                offer_id = mp_stock.get("sku")
+                stock_quantity = mp_stock.get("amount", 0)
+                stock_by_article[offer_id] = stock_quantity
+        
+        logger.info(f"[IMPORT STOCKS] Aggregated stocks for {len(stock_by_article)} unique articles")
+        
         updated_count = 0
         created_count = 0
         skipped_count = 0
         
-        for mp_stock in mp_stocks:
-            # Извлечь данные в зависимости от МП
-            if marketplace == "ozon":
-                offer_id = mp_stock.get("offer_id")
-                
-                # ВАЖНО: Сначала проверяем склад, ПОТОМ берем количество
-                # Если warehouse_id указан, проверяем соответствие
-                if mp_warehouse_id and str(mp_stock.get("warehouse_id")) != str(mp_warehouse_id):
-                    continue
-                
-                # Теперь берем количество для правильного склада
-                stock_quantity = (
-                    mp_stock.get("present", 0) or  # present = доступно
-                    mp_stock.get("stock", 0) or     # stock = общий остаток
-                    mp_stock.get("stocks", {}).get("present", 0) if isinstance(mp_stock.get("stocks"), dict) else 0
-                )
-                
-                logger.debug(f"[IMPORT STOCKS] Processing: {offer_id}, warehouse={mp_stock.get('warehouse_id')}, quantity={stock_quantity}")
-            elif marketplace in ["wb", "wildberries"]:
-                offer_id = mp_stock.get("sku")
-                stock_quantity = mp_stock.get("amount", 0)
-            else:
-                continue
-            
-            if not offer_id:
-                skipped_count += 1
-                continue
+        # Теперь обрабатываем суммированные остатки
+        for offer_id, stock_quantity in stock_by_article.items():
             
             # Найти товар в каталоге
             product = await db.product_catalog.find_one({
