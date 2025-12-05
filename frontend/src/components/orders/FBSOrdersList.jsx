@@ -27,7 +27,7 @@ function FBSOrdersList() {
 
   useEffect(() => {
     applyFilters()
-  }, [orders, activeStatusFilter])
+  }, [orders, activeStatusFilter, searchQuery])
 
   const loadOrders = async () => {
     try {
