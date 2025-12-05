@@ -167,10 +167,99 @@ class OrderSyncScheduler:
                                      connector.map_yandex_status_to_internal(mp_status)
                     
                     if existing["status"] != internal_status:
-                        logger.info(f"[OrderSync FBS] Обновление статуса {external_id}: {existing['status']} → {internal_status}")
+                        old_status = existing["status"]
+                        logger.info(f"[OrderSync FBS] Обновление статуса {external_id}: {old_status} → {internal_status}")
                         
-                        # Обновить статус
-                        # TODO: Вызвать логику резерва/списания/возврата
+                        # Получить данные заказа для обработки inventory
+                        items = existing.get("items", [])
+                        warehouse_id = existing.get("warehouse_id")
+                        order_number = existing.get("order_number")
+                        
+                        # ЛОГИКА СПИСАНИЯ при отправке
+                        if internal_status == "delivering" and old_status in ["new", "awaiting_packaging", "awaiting_deliver", "awaiting_shipment"]:
+                            logger.info(f"[OrderSync FBS] 📤 Списание товаров для {order_number} (статус: delivering)")
+                            
+                            for item in items:
+                                if item.get("product_id"):
+                                    try:
+                                        prod_id = ObjectId(item["product_id"]) if isinstance(item["product_id"], str) else item["product_id"]
+                                        quantity = item.get("quantity", 1)
+                                        
+                                        # Списание: quantity ↓, reserved ↓
+                                        result = await db.inventory.update_one(
+                                            {"product_id": prod_id},
+                                            {
+                                                "$inc": {
+                                                    "quantity": -quantity,
+                                                    "reserved": -quantity
+                                                }
+                                            }
+                                        )
+                                        
+                                        if result.modified_count > 0:
+                                            logger.info(f"[OrderSync FBS] ✅ Списан товар {item.get('article')}: {quantity} шт")
+                                            
+                                            # Записать в историю
+                                            await db.inventory_history.insert_one({
+                                                "product_id": prod_id,
+                                                "seller_id": seller_id,
+                                                "operation_type": "sale",
+                                                "quantity_change": -quantity,
+                                                "reason": f"Списание для заказа {order_number} (delivering)",
+                                                "user_id": seller_id,
+                                                "created_at": datetime.utcnow()
+                                            })
+                                        else:
+                                            logger.warning(f"[OrderSync FBS] ⚠️ Не удалось списать {item.get('article')}")
+                                    except Exception as e:
+                                        logger.error(f"[OrderSync FBS] ❌ Ошибка списания {item.get('article')}: {e}")
+                        
+                        # ЛОГИКА ВОЗВРАТА при отмене
+                        elif internal_status == "cancelled" and old_status in ["new", "awaiting_packaging", "awaiting_deliver", "awaiting_shipment"]:
+                            logger.info(f"[OrderSync FBS] 🔙 Возврат товаров для {order_number} (статус: cancelled)")
+                            
+                            # Проверить настройки склада
+                            warehouse = await db.warehouses.find_one({"id": warehouse_id}) if warehouse_id else None
+                            
+                            if warehouse and warehouse.get("return_on_cancel", True):
+                                for item in items:
+                                    if item.get("product_id"):
+                                        try:
+                                            prod_id = ObjectId(item["product_id"]) if isinstance(item["product_id"], str) else item["product_id"]
+                                            quantity = item.get("quantity", 1)
+                                            
+                                            # Возврат: reserved ↓, available ↑
+                                            result = await db.inventory.update_one(
+                                                {"product_id": prod_id},
+                                                {
+                                                    "$inc": {
+                                                        "reserved": -quantity,
+                                                        "available": quantity
+                                                    }
+                                                }
+                                            )
+                                            
+                                            if result.modified_count > 0:
+                                                logger.info(f"[OrderSync FBS] ✅ Возвращен товар {item.get('article')}: {quantity} шт")
+                                                
+                                                # Записать в историю
+                                                await db.inventory_history.insert_one({
+                                                    "product_id": prod_id,
+                                                    "seller_id": seller_id,
+                                                    "operation_type": "return",
+                                                    "quantity_change": 0,  # quantity не меняется
+                                                    "reason": f"Возврат из заказа {order_number} (cancelled)",
+                                                    "user_id": seller_id,
+                                                    "created_at": datetime.utcnow()
+                                                })
+                                            else:
+                                                logger.warning(f"[OrderSync FBS] ⚠️ Не удалось вернуть {item.get('article')}")
+                                        except Exception as e:
+                                            logger.error(f"[OrderSync FBS] ❌ Ошибка возврата {item.get('article')}: {e}")
+                            else:
+                                logger.info(f"[OrderSync FBS] ⚠️ Возврат отключен для склада или склад не найден")
+                        
+                        # Обновить статус в БД
                         await db.orders_fbs.update_one(
                             {"_id": existing["_id"]},
                             {"$set": {
