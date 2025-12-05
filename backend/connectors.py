@@ -813,68 +813,6 @@ class OzonConnector(BaseConnector):
         
         return all_stocks
     
-    async def _get_stocks_fallback(self, warehouse_id: str = None) -> List[Dict[str, Any]]:
-        """
-        Запасной метод получения остатков - через список товаров
-        """
-        try:
-            # Получаем список всех товаров
-            products = await self.get_products()
-            
-            logger.info(f"[Ozon Fallback] Got {len(products)} products, fetching stocks for each...")
-            
-            stocks = []
-            
-            # Для каждого товара получаем остаток
-            # Используем batch запросы по 100 товаров
-            batch_size = 100
-            for i in range(0, len(products), batch_size):
-                batch = products[i:i + batch_size]
-                offer_ids = [p.get("sku") for p in batch if p.get("sku")]
-                
-                if not offer_ids:
-                    continue
-                
-                # Используем v3/product/info/stocks с конкретными offer_id
-                url = f"{self.base_url}/v3/product/info/stocks"
-                headers = self._get_headers()
-                
-                payload = {
-                    "filter": {
-                        "offer_id": offer_ids,
-                        "visibility": "ALL"
-                    },
-                    "limit": 100
-                }
-                
-                if warehouse_id:
-                    payload["filter"]["warehouse_id"] = [int(warehouse_id)]
-                
-                try:
-                    response = await self._make_request("POST", url, headers, json_data=payload)
-                    items = response.get("result", {}).get("items", [])
-                    
-                    for item in items:
-                        item_stocks = item.get("stocks", [])
-                        for stock in item_stocks:
-                            stocks.append({
-                                "offer_id": item.get("offer_id"),
-                                "product_id": item.get("product_id"),
-                                "present": stock.get("present", 0),
-                                "reserved": stock.get("reserved", 0),
-                                "warehouse_id": str(stock.get("warehouse_id", "")),
-                                "warehouse_name": stock.get("warehouse_name", "")
-                            })
-                except Exception as e:
-                    logger.error(f"[Ozon Fallback] Batch {i} failed: {e}")
-                    continue
-            
-            logger.info(f"[Ozon Fallback] ✅ Got {len(stocks)} stock records")
-            return stocks
-            
-        except Exception as e:
-            logger.error(f"[Ozon Fallback] Failed: {e}")
-            return []
 
     async def get_product_prices(self, offer_id: str) -> Dict[str, Any]:
         """
