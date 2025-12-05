@@ -28,6 +28,78 @@ function StockPageV3() {
   const [selectedMpWarehouse, setSelectedMpWarehouse] = useState(null)
   const [importing, setImporting] = useState(false)
 
+  // Фильтрация и сортировка остатков
+  const filteredAndSortedStocks = useMemo(() => {
+    let result = [...stocks]
+    
+    // Поиск по SKU и названию
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(item => 
+        item.sku.toLowerCase().includes(query) ||
+        (item.product_name && item.product_name.toLowerCase().includes(query))
+      )
+    }
+    
+    // Фильтр наличия
+    if (availabilityFilter === 'in_stock') {
+      result = result.filter(item => item.quantity > 0)
+    } else if (availabilityFilter === 'out_of_stock') {
+      result = result.filter(item => item.quantity === 0)
+    }
+    
+    // Критический остаток
+    if (showCriticalOnly) {
+      result = result.filter(item => item.quantity < item.alert_threshold)
+    }
+    
+    // Зарезервировано
+    if (showReservedOnly) {
+      result = result.filter(item => item.reserved > 0)
+    }
+    
+    // Сортировка
+    result.sort((a, b) => {
+      let aVal, bVal
+      
+      if (sortConfig.field === 'name') {
+        aVal = a.product_name || ''
+        bVal = b.product_name || ''
+      } else if (sortConfig.field === 'sku') {
+        aVal = a.sku || ''
+        bVal = b.sku || ''
+      } else if (sortConfig.field === 'quantity') {
+        aVal = a.quantity || 0
+        bVal = b.quantity || 0
+      }
+      
+      if (sortConfig.direction === 'asc') {
+        return aVal > bVal ? 1 : -1
+      } else {
+        return aVal < bVal ? 1 : -1
+      }
+    })
+    
+    return result
+  }, [stocks, searchQuery, availabilityFilter, sortConfig, showCriticalOnly, showReservedOnly])
+  
+  // Сброс всех фильтров
+  const resetFilters = () => {
+    setSearchQuery('')
+    setAvailabilityFilter('all')
+    setSortConfig({ field: 'sku', direction: 'asc' })
+    setShowCriticalOnly(false)
+    setShowReservedOnly(false)
+  }
+  
+  // Переключение направления сортировки
+  const toggleSort = (field) => {
+    setSortConfig(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc'
+    }))
+  }
+
   useEffect(() => {
     const init = async () => {
       await loadWarehouses()
