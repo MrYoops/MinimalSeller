@@ -249,6 +249,34 @@ function FBSOrdersList() {
         stats={stats}
       />
       
+      {/* Поиск по товару */}
+      <div className="card-neon p-4">
+        <div className="flex items-center space-x-3">
+          <FiPackage className="text-mm-cyan" />
+          <input
+            type="text"
+            placeholder="Поиск по артикулу, названию товара или номеру заказа..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="input-neon flex-1"
+            data-testid="search-input"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="text-mm-text-secondary hover:text-mm-cyan transition-colors"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        {searchQuery && (
+          <p className="text-xs text-mm-text-tertiary mt-2 font-mono">
+            Найдено заказов: {filteredOrders.length}
+          </p>
+        )}
+      </div>
+      
       {/* Кнопка импорта */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-mm-text-secondary font-mono">
