@@ -151,9 +151,13 @@ class OrderSyncScheduler:
                     # СОЗДАТЬ НОВЫЙ ЗАКАЗ
                     logger.info(f"[OrderSync FBS] Создание нового заказа {external_id} от {marketplace}")
                     
-                    # TODO: Парсинг данных заказа
-                    # Здесь нужно извлечь: customer, items, totals
-                    # Пока пропускаем для краткости
+                    # Парсинг данных заказа
+                    if marketplace == "ozon":
+                        await self._create_ozon_order(db, seller_id, mp_order_data)
+                    elif marketplace == "wb":
+                        await self._create_wb_order(db, seller_id, mp_order_data)
+                    elif marketplace == "yandex":
+                        await self._create_yandex_order(db, seller_id, mp_order_data)
                     
                 else:
                     # ОБНОВИТЬ СТАТУС
