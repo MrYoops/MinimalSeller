@@ -183,6 +183,62 @@ function StockPageV3() {
     setSyncing(false)
   }
 
+  // ============ ФУНКЦИИ ДЛЯ ИМПОРТА ОСТАТКОВ ============
+
+  const openImportModal = async () => {
+    try {
+      // Загрузить интеграции
+      const response = await api.get('/api/seller/api-keys')
+      setIntegrations(response.data)
+      setShowImportModal(true)
+    } catch (error) {
+      toast.error('Ошибка загрузки интеграций')
+      console.error(error)
+    }
+  }
+
+  const handleIntegrationSelect = async (integrationId) => {
+    setSelectedIntegration(integrationId)
+    setSelectedMpWarehouse(null)
+    setMpWarehouses([])
+    
+    if (!integrationId) return
+    
+    try {
+      // Загрузить склады МП
+      const response = await api.get(`/api/inventory/marketplace-warehouses/${integrationId}`)
+      setMpWarehouses(response.data.warehouses || [])
+    } catch (error) {
+      toast.error('Ошибка загрузки складов МП')
+      console.error(error)
+    }
+  }
+
+  const importStocksFromMarketplace = async () => {
+    if (!selectedIntegration || !selectedMpWarehouse) {
+      toast.error('Выберите интеграцию и склад')
+      return
+    }
+
+    setImporting(true)
+    try {
+      const response = await api.post('/api/inventory/import-stocks-from-marketplace', {
+        integration_id: selectedIntegration,
+        marketplace_warehouse_id: selectedMpWarehouse
+      })
+      
+      toast.success(response.data.message || 'Остатки импортированы')
+      
+      // Закрыть модалку и обновить данные
+      setShowImportModal(false)
+      await loadStocks()
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Ошибка импорта остатков')
+      console.error(error)
+    }
+    setImporting(false)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
