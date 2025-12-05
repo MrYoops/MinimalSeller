@@ -256,38 +256,34 @@ async def import_stocks_from_marketplace(
         if mp_stocks:
             logger.info(f"[IMPORT STOCKS] Sample stock record: {mp_stocks[0]}")
         
-        # ВАЖНО: Ozon возвращает остатки со ВСЕХ складов, даже если мы указали конкретный
-        # Нужно СУММИРОВАТЬ остатки по каждому товару
-        stock_by_article = {}
-        
-        for mp_stock in mp_stocks:
-            if marketplace == "ozon":
-                offer_id = mp_stock.get("offer_id")
-                present = mp_stock.get("present", 0)
-                
-                if not offer_id:
-                    continue
-                
-                # Суммируем остатки по артикулу
-                if offer_id not in stock_by_article:
-                    stock_by_article[offer_id] = 0
-                
-                stock_by_article[offer_id] += present
-                
-                logger.debug(f"[IMPORT STOCKS] {offer_id}: +{present} (warehouse {mp_stock.get('warehouse_id')})")
-            elif marketplace in ["wb", "wildberries"]:
-                offer_id = mp_stock.get("sku")
-                stock_quantity = mp_stock.get("amount", 0)
-                stock_by_article[offer_id] = stock_quantity
-        
-        logger.info(f"[IMPORT STOCKS] Aggregated stocks for {len(stock_by_article)} unique articles")
-        
         updated_count = 0
         created_count = 0
         skipped_count = 0
         
-        # Теперь обрабатываем суммированные остатки
-        for offer_id, stock_quantity in stock_by_article.items():
+        # Для Ozon: фильтруем по warehouse_id на стороне Python
+        # т.к. API возвращает данные со всех складов
+        if marketplace == "ozon" and mp_warehouse_id:
+            logger.info(f"[IMPORT STOCKS] Filtering stocks for warehouse {mp_warehouse_id}")
+            original_count = len(mp_stocks)
+            mp_stocks = [s for s in mp_stocks if str(s.get('warehouse_id')) == str(mp_warehouse_id)]
+            logger.info(f"[IMPORT STOCKS] Filtered: {original_count} → {len(mp_stocks)} records")
+        
+        for mp_stock in mp_stocks:
+            # Извлечь данные в зависимости от МП
+            if marketplace == "ozon":
+                offer_id = mp_stock.get("offer_id")
+                stock_quantity = mp_stock.get("present", 0)
+                
+                logger.debug(f"[IMPORT STOCKS] Processing: {offer_id}, warehouse={mp_stock.get('warehouse_id')}, quantity={stock_quantity}")
+            elif marketplace in ["wb", "wildberries"]:
+                offer_id = mp_stock.get("sku")
+                stock_quantity = mp_stock.get("amount", 0)
+            else:
+                continue
+            
+            if not offer_id:
+                skipped_count += 1
+                continue
             
             # Найти товар в каталоге
             product = await db.product_catalog.find_one({
