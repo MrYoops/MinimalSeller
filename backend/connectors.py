@@ -757,67 +757,61 @@ class OzonConnector(BaseConnector):
 
     async def get_stocks(self, warehouse_id: str = None) -> List[Dict[str, Any]]:
         """
-        Получить остатки с Ozon через аналитический API
+        Получить остатки с Ozon для FBS склада
         
         Args:
-            warehouse_id: ID склада FBS (опционально) - НЕ ИСПОЛЬЗУЕТСЯ в аналитике
+            warehouse_id: ID склада FBS (обязательно для FBS)
         
         Returns:
             [{offer_id: str, product_id: int, stock: int, warehouse_id: int}, ...]
         """
-        # Используем аналитический API v2 для получения остатков на складах
-        url = f"{self.base_url}/v2/analytics/stock_on_warehouses"
+        logger.info(f"[Ozon] Getting stocks for warehouse {warehouse_id}")
+        
+        # Сначала получаем список всех товаров
+        products = await self.get_products()
+        offer_ids = [p.get('sku') for p in products if p.get('sku')]
+        
+        logger.info(f"[Ozon] Found {len(offer_ids)} products with offer_id")
+        
+        if not offer_ids:
+            logger.warning(f"[Ozon] No products found")
+            return []
+        
+        # Используем правильный API для FBS остатков
+        url = f"{self.base_url}/v1/product/info/stocks-by-warehouse/fbs"
         headers = self._get_headers()
         
-        payload = {
-            "limit": 1000,
-            "offset": 0,
-            "warehouse_type": "ALL"  # ALL, FBO, FBS, CROSSBORDER
-        }
+        all_stocks = []
         
-        logger.info(f"[Ozon] Getting stocks via analytics API")
-        logger.info(f"[Ozon] Request URL: {url}")
+        # Делаем батч-запросы по 100 товаров
+        batch_size = 100
+        for i in range(0, len(offer_ids), batch_size):
+            batch = offer_ids[i:i+batch_size]
+            
+            payload = {
+                "offer_id": batch
+            }
+            
+            # Если указан warehouse_id, добавляем его
+            if warehouse_id:
+                payload["warehouse_id"] = [int(warehouse_id)]
+            
+            try:
+                response = await self._make_request("POST", url, headers, json_data=payload)
+                result = response.get('result', [])
+                all_stocks.extend(result)
+                logger.info(f"[Ozon] Batch {i//batch_size + 1}/{(len(offer_ids)-1)//batch_size + 1}: got {len(result)} stock records")
+            except MarketplaceError as e:
+                logger.error(f"[Ozon] Batch {i//batch_size + 1} failed: {e.message}")
+                continue
         
-        try:
-            response = await self._make_request("POST", url, headers, json_data=payload)
-            
-            logger.info(f"[Ozon] Raw response keys: {list(response.keys())}")
-            
-            # Аналитический API возвращает rows с данными
-            rows = response.get("result", {}).get("rows", [])
-            
-            logger.info(f"[Ozon] Got {len(rows)} rows from analytics API")
-            
-            # Преобразуем в нужный формат
-            # ВАЖНО: в аналитике используются item_code (артикул) вместо offer_id
-            # И warehouse_name вместо warehouse_id
-            stocks = []
-            for row in rows:
-                stocks.append({
-                    "offer_id": row.get("item_code"),  # ВАЖНО: используем item_code как offer_id
-                    "product_id": row.get("sku"),  # SKU товара на Ozon
-                    "present": row.get("free_to_sell_amount", 0),  # доступно к продаже
-                    "reserved": row.get("reserved_amount", 0),  # зарезервировано
-                    "warehouse_id": None,  # В аналитике нет warehouse_id
-                    "warehouse_name": row.get("warehouse_name", "")
-                })
-            
-            logger.info(f"[Ozon] ✅ Got {len(stocks)} stock records")
-            if stocks:
-                logger.info(f"[Ozon] Sample stock record: {stocks[0]}")
-            
-            # Если нужен конкретный склад, но в аналитике его нет - используем fallback
-            if warehouse_id and len(stocks) == 0:
-                logger.info(f"[Ozon] Analytics returned 0 for warehouse {warehouse_id}, trying fallback...")
-                return await self._get_stocks_fallback(warehouse_id)
-            
-            return stocks
-            
-        except MarketplaceError as e:
-            logger.error(f"[Ozon] Failed to get stocks via analytics: {e.message}")
-            # Если аналитический API не работает, пробуем запасной вариант
-            logger.info(f"[Ozon] Trying fallback method...")
-            return await self._get_stocks_fallback(warehouse_id)
+        logger.info(f"[Ozon] ✅ Total: {len(all_stocks)} stock records")
+        
+        # Подсчет товаров с остатками > 0
+        with_stock = [s for s in all_stocks if s.get('present', 0) > 0]
+        logger.info(f"[Ozon] Products with stock > 0: {len(with_stock)}")
+        
+        return all_stocks
     
     async def _get_stocks_fallback(self, warehouse_id: str = None) -> List[Dict[str, Any]]:
         """
