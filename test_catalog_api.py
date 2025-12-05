@@ -8,7 +8,7 @@ import os
 from datetime import datetime
 
 # Получить Backend URL из .env
-BACKEND_URL = os.getenv("REACT_APP_BACKEND_URL", "https://ozon-stock-sync.preview.emergentagent.com/api")
+BACKEND_URL = os.getenv("REACT_APP_BACKEND_URL", "https://ozonsync.preview.emergentagent.com/api")
 
 # Тестовые данные
 TEST_USER = {
