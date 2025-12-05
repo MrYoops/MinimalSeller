@@ -264,18 +264,20 @@ async def import_stocks_from_marketplace(
             # Извлечь данные в зависимости от МП
             if marketplace == "ozon":
                 offer_id = mp_stock.get("offer_id")
-                # Пробуем разные поля для количества
+                
+                # ВАЖНО: Сначала проверяем склад, ПОТОМ берем количество
+                # Если warehouse_id указан, проверяем соответствие
+                if mp_warehouse_id and str(mp_stock.get("warehouse_id")) != str(mp_warehouse_id):
+                    continue
+                
+                # Теперь берем количество для правильного склада
                 stock_quantity = (
                     mp_stock.get("present", 0) or  # present = доступно
                     mp_stock.get("stock", 0) or     # stock = общий остаток
                     mp_stock.get("stocks", {}).get("present", 0) if isinstance(mp_stock.get("stocks"), dict) else 0
                 )
                 
-                # Если warehouse_id указан, проверяем соответствие
-                if mp_warehouse_id and str(mp_stock.get("warehouse_id")) != str(mp_warehouse_id):
-                    continue
-                
-                logger.debug(f"[IMPORT STOCKS] Processing: {offer_id}, quantity={stock_quantity}")
+                logger.debug(f"[IMPORT STOCKS] Processing: {offer_id}, warehouse={mp_stock.get('warehouse_id')}, quantity={stock_quantity}")
             elif marketplace in ["wb", "wildberries"]:
                 offer_id = mp_stock.get("sku")
                 stock_quantity = mp_stock.get("amount", 0)
