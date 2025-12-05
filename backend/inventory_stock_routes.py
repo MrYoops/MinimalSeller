@@ -385,6 +385,7 @@ async def sync_all_stocks(
 ):
     """
     Ручная синхронизация всех остатков на выбранный склад
+    ОПТИМИЗИРОВАНО: отправляет батчами для избежания rate limit
     
     Body: {
       warehouse_id: str
@@ -423,38 +424,95 @@ async def sync_all_stocks(
         "seller_id": str(current_user["_id"])
     }).to_list(length=10000)
     
+    logger.info(f"[MANUAL SYNC] Total inventory records to process: {len(inventories)}")
+    
+    # Группируем товары по маркетплейсам для батч-отправки
+    from connectors import get_connector, MarketplaceError
+    
     synced_count = 0
     failed_count = 0
     skipped_count = 0
     
-    logger.info(f"[MANUAL SYNC] Total inventory records to process: {len(inventories)}")
-    
-    for inv in inventories:
-        product = await db.product_catalog.find_one({"_id": inv["product_id"]})
+    # Для каждого МП синхронизируем батчами
+    for link in links:
+        marketplace = link.get("marketplace_name")
+        mp_warehouse_id = link.get("marketplace_warehouse_id")
         
-        if not product:
-            skipped_count += 1
-            logger.warning(f"[MANUAL SYNC] ⚠️ Product not found for inventory {inv.get('_id')}, skipping")
+        logger.info(f"[MANUAL SYNC] Processing marketplace: {marketplace}, warehouse: {mp_warehouse_id}")
+        
+        # Получить API ключ
+        profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+        if not profile:
             continue
         
-        article = product.get("article")
-        available = inv.get("available", 0)
+        api_key_data = next(
+            (k for k in profile.get("api_keys", []) if k.get("marketplace") == marketplace),
+            None
+        )
         
-        logger.info(f"[MANUAL SYNC] Processing: {article} (available: {available})")
+        if not api_key_data:
+            logger.warning(f"[MANUAL SYNC] No API key for {marketplace}")
+            continue
         
-        try:
-            await sync_product_to_marketplace(
-                db,
-                current_user["_id"],
-                warehouse_id,
-                article,
-                available
-            )
-            synced_count += 1
-            logger.info(f"[MANUAL SYNC] ✅ {article}: {available}")
-        except Exception as e:
-            failed_count += 1
-            logger.error(f"[MANUAL SYNC] ❌ {article} failed: {e}")
+        # Создать коннектор
+        connector = get_connector(
+            marketplace,
+            api_key_data.get("client_id", ""),
+            api_key_data["api_key"]
+        )
+        
+        # Собираем товары для этого МП
+        batch_items = []
+        
+        for inv in inventories:
+            product = await db.product_catalog.find_one({"_id": inv["product_id"]})
+            
+            if not product:
+                skipped_count += 1
+                continue
+            
+            article = product.get("article")
+            available = inv.get("available", 0)
+            
+            # Проверить наличие marketplace_data
+            marketplace_data = product.get("marketplace_data", {}).get(marketplace, {})
+            
+            if not marketplace_data:
+                skipped_count += 1
+                logger.debug(f"[MANUAL SYNC] {article}: no {marketplace} data, skipping")
+                continue
+            
+            # Получить MP-специфичный SKU
+            if marketplace == "ozon":
+                mp_sku = marketplace_data.get("id") or article
+                batch_items.append({"offer_id": mp_sku, "stock": available})
+            elif marketplace in ["wb", "wildberries"]:
+                mp_sku = marketplace_data.get("barcode") or marketplace_data.get("id")
+                if mp_sku:
+                    batch_items.append({"sku": mp_sku, "amount": available})
+                else:
+                    skipped_count += 1
+        
+        # Отправляем БАТЧАМИ
+        if batch_items:
+            batch_size = 100
+            for i in range(0, len(batch_items), batch_size):
+                batch = batch_items[i:i+batch_size]
+                
+                try:
+                    logger.info(f"[MANUAL SYNC] Sending batch {i//batch_size + 1} to {marketplace}: {len(batch)} items")
+                    
+                    await connector.update_stock(mp_warehouse_id, batch)
+                    synced_count += len(batch)
+                    
+                    logger.info(f"[MANUAL SYNC] ✅ Batch {i//batch_size + 1} synced successfully")
+                    
+                    # Небольшая задержка между батчами для избежания rate limit
+                    await asyncio.sleep(0.5)
+                    
+                except MarketplaceError as e:
+                    failed_count += len(batch)
+                    logger.error(f"[MANUAL SYNC] ❌ Batch {i//batch_size + 1} failed: {e.message}")
     
     logger.info(f"[MANUAL SYNC] SUMMARY: synced={synced_count}, failed={failed_count}, skipped={skipped_count}")
     
