@@ -268,10 +268,14 @@ async def import_stocks_from_marketplace(
                 stock_quantity = (
                     mp_stock.get("present", 0) or  # present = доступно
                     mp_stock.get("stock", 0) or     # stock = общий остаток
-                    mp_stock.get("stocks", {}).get("present", 0)
+                    mp_stock.get("stocks", {}).get("present", 0) if isinstance(mp_stock.get("stocks"), dict) else 0
                 )
                 
-                logger.debug(f"[IMPORT STOCKS] Processing: {offer_id}, quantity={stock_quantity}, full_data={mp_stock}")
+                # Если warehouse_id указан, проверяем соответствие
+                if mp_warehouse_id and str(mp_stock.get("warehouse_id")) != str(mp_warehouse_id):
+                    continue
+                
+                logger.debug(f"[IMPORT STOCKS] Processing: {offer_id}, quantity={stock_quantity}")
             elif marketplace in ["wb", "wildberries"]:
                 offer_id = mp_stock.get("sku")
                 stock_quantity = mp_stock.get("amount", 0)
