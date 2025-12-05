@@ -765,7 +765,8 @@ class OzonConnector(BaseConnector):
         Returns:
             [{offer_id: str, product_id: int, stock: int, warehouse_id: int}, ...]
         """
-        url = f"{self.base_url}/v3/product/info/stocks"
+        # Используем v2 API для получения остатков (v3/product/info/stocks не работает)
+        url = f"{self.base_url}/v2/product/info/stocks"
         headers = self._get_headers()
         
         payload = {
@@ -775,14 +776,19 @@ class OzonConnector(BaseConnector):
         }
         
         if warehouse_id:
-            payload["filter"]["warehouse_id"] = int(warehouse_id)
+            payload["filter"]["warehouse_id"] = [int(warehouse_id)]
         
         logger.info(f"[Ozon] Getting stocks from warehouse {warehouse_id or 'all'}")
+        logger.info(f"[Ozon] Request URL: {url}")
+        logger.info(f"[Ozon] Request payload: {payload}")
         
         try:
             response = await self._make_request("POST", url, headers, json_data=payload)
-            stocks = response.get("result", {}).get("stocks", [])
+            
+            # v2 API может возвращать другую структуру
+            stocks = response.get("result", {}).get("stocks", []) or response.get("stocks", [])
             logger.info(f"[Ozon] ✅ Got {len(stocks)} stock records")
+            logger.info(f"[Ozon] Sample stock record: {stocks[0] if stocks else 'none'}")
             return stocks
         except MarketplaceError as e:
             logger.error(f"[Ozon] Failed to get stocks: {e.message}")
