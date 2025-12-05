@@ -140,6 +140,173 @@ async def update_stock(
     }
 
 
+@router.post("/import-stocks-from-marketplace")
+async def import_stocks_from_marketplace(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    ИМПОРТ остатков ИЗ маркетплейса В базу данных
+    
+    Body: {
+      integration_id: str,
+      marketplace_warehouse_id: str (ID склада на МП)
+    }
+    """
+    db = await get_database()
+    
+    integration_id = data.get("integration_id")
+    mp_warehouse_id = data.get("marketplace_warehouse_id")
+    
+    if not integration_id:
+        raise HTTPException(status_code=400, detail="integration_id required")
+    
+    if not mp_warehouse_id:
+        raise HTTPException(status_code=400, detail="marketplace_warehouse_id required")
+    
+    # Получить интеграцию
+    profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    api_keys = profile.get("api_keys", [])
+    integration = next((k for k in api_keys if k.get("id") == integration_id), None)
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    
+    marketplace = integration.get("marketplace")
+    
+    logger.info(f"[IMPORT STOCKS] Starting import from {marketplace} warehouse {mp_warehouse_id}")
+    
+    # Создать коннектор
+    from connectors import get_connector, MarketplaceError
+    
+    try:
+        connector = get_connector(
+            marketplace,
+            integration.get("client_id", ""),
+            integration["api_key"]
+        )
+        
+        # Получить остатки с МП
+        if marketplace == "ozon":
+            mp_stocks = await connector.get_stocks(mp_warehouse_id)
+        elif marketplace in ["wb", "wildberries"]:
+            mp_stocks = await connector.get_stocks(mp_warehouse_id)
+        else:
+            raise HTTPException(status_code=400, detail=f"Marketplace {marketplace} not supported")
+        
+        logger.info(f"[IMPORT STOCKS] Got {len(mp_stocks)} stock records from {marketplace}")
+        
+        updated_count = 0
+        created_count = 0
+        skipped_count = 0
+        
+        for mp_stock in mp_stocks:
+            # Извлечь данные в зависимости от МП
+            if marketplace == "ozon":
+                offer_id = mp_stock.get("offer_id")
+                stock_quantity = mp_stock.get("present", 0)  # present = доступно
+            elif marketplace in ["wb", "wildberries"]:
+                offer_id = mp_stock.get("sku")
+                stock_quantity = mp_stock.get("amount", 0)
+            else:
+                continue
+            
+            if not offer_id:
+                skipped_count += 1
+                continue
+            
+            # Найти товар в каталоге
+            product = await db.product_catalog.find_one({
+                "article": offer_id,
+                "seller_id": str(current_user["_id"])
+            })
+            
+            if not product:
+                logger.warning(f"[IMPORT STOCKS] Product {offer_id} not found in catalog, skipping")
+                skipped_count += 1
+                continue
+            
+            # Найти или создать inventory запись
+            inventory = await db.inventory.find_one({
+                "product_id": product["_id"],
+                "seller_id": str(current_user["_id"])
+            })
+            
+            if inventory:
+                # Обновить существующую запись
+                old_quantity = inventory.get("quantity", 0)
+                reserved = inventory.get("reserved", 0)
+                new_available = stock_quantity - reserved
+                
+                await db.inventory.update_one(
+                    {"_id": inventory["_id"]},
+                    {"$set": {
+                        "quantity": stock_quantity,
+                        "available": new_available
+                    }}
+                )
+                
+                # Записать в историю
+                await db.inventory_history.insert_one({
+                    "product_id": product["_id"],
+                    "seller_id": str(current_user["_id"]),
+                    "operation_type": "import_from_marketplace",
+                    "quantity_change": stock_quantity - old_quantity,
+                    "reason": f"Импорт остатков с {marketplace} (склад {mp_warehouse_id})",
+                    "user_id": str(current_user["_id"]),
+                    "created_at": datetime.utcnow()
+                })
+                
+                updated_count += 1
+                logger.info(f"[IMPORT STOCKS] ✅ Updated {offer_id}: {old_quantity} → {stock_quantity}")
+            else:
+                # Создать новую запись
+                new_inventory = {
+                    "product_id": product["_id"],
+                    "seller_id": str(current_user["_id"]),
+                    "quantity": stock_quantity,
+                    "reserved": 0,
+                    "available": stock_quantity,
+                    "alert_threshold": 10
+                }
+                
+                await db.inventory.insert_one(new_inventory)
+                
+                # Записать в историю
+                await db.inventory_history.insert_one({
+                    "product_id": product["_id"],
+                    "seller_id": str(current_user["_id"]),
+                    "operation_type": "import_from_marketplace",
+                    "quantity_change": stock_quantity,
+                    "reason": f"Импорт остатков с {marketplace} (склад {mp_warehouse_id})",
+                    "user_id": str(current_user["_id"]),
+                    "created_at": datetime.utcnow()
+                })
+                
+                created_count += 1
+                logger.info(f"[IMPORT STOCKS] ✅ Created {offer_id}: {stock_quantity}")
+        
+        logger.info(f"[IMPORT STOCKS] SUMMARY: created={created_count}, updated={updated_count}, skipped={skipped_count}")
+        
+        return {
+            "message": f"Импортировано остатков: {created_count + updated_count} товаров",
+            "created": created_count,
+            "updated": updated_count,
+            "skipped": skipped_count,
+            "marketplace": marketplace,
+            "warehouse_id": mp_warehouse_id
+        }
+    
+    except MarketplaceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"[IMPORT STOCKS] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/sync-all-stocks")
 async def sync_all_stocks(
     data: Dict[str, Any],
