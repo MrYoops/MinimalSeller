@@ -3,6 +3,7 @@ import logging
 from datetime import datetime, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from bson import ObjectId
 
 from database import get_database
 from connectors import get_connector, MarketplaceError
