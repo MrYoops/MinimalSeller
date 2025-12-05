@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 from datetime import datetime
 from bson import ObjectId
 import logging
+import asyncio
 
 from database import get_database
 from auth_utils import get_current_user
