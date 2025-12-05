@@ -299,7 +299,9 @@ async def import_stocks_from_marketplace(
                 skipped_count += 1
                 continue
             
-            # Найти или создать inventory запись
+            # Найти или создать inventory запись ДЛЯ КОНКРЕТНОГО СКЛАДА
+            # ВАЖНО: Мы ищем по product_id И seller_id (БЕЗ warehouse_id)
+            # Потому что inventory - это ОБЩИЙ остаток, не по складам
             inventory = await db.inventory.find_one({
                 "product_id": product["_id"],
                 "seller_id": str(current_user["_id"])
@@ -315,7 +317,8 @@ async def import_stocks_from_marketplace(
                     {"_id": inventory["_id"]},
                     {"$set": {
                         "quantity": stock_quantity,
-                        "available": new_available
+                        "available": new_available,
+                        "sku": offer_id  # Обновляем SKU на всякий случай
                     }}
                 )
                 
@@ -325,7 +328,7 @@ async def import_stocks_from_marketplace(
                     "seller_id": str(current_user["_id"]),
                     "operation_type": "import_from_marketplace",
                     "quantity_change": stock_quantity - old_quantity,
-                    "reason": f"Импорт остатков с {marketplace} (склад {mp_warehouse_id})",
+                    "reason": f"Импорт остатков с {marketplace} (склад МП {mp_warehouse_id})",
                     "user_id": str(current_user["_id"]),
                     "created_at": datetime.utcnow()
                 })
@@ -337,6 +340,7 @@ async def import_stocks_from_marketplace(
                 new_inventory = {
                     "product_id": product["_id"],
                     "seller_id": str(current_user["_id"]),
+                    "sku": offer_id,
                     "quantity": stock_quantity,
                     "reserved": 0,
                     "available": stock_quantity,
