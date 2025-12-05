@@ -380,10 +380,10 @@ Wildberries (в планах):
 - Role: seller
 
 **URL:**
-https://ozonsync.preview.emergentagent.com/orders/fbs
+https://warehouse-flow-32.preview.emergentagent.com/orders/fbs
 
 **API Endpoint:**
-GET https://ozonsync.preview.emergentagent.com/api/orders/fbs
+GET https://warehouse-flow-32.preview.emergentagent.com/api/orders/fbs
 
 **Ozon Integration:**
 - Client ID: `2998978`

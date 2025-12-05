@@ -1,127 +1,150 @@
 <analysis>**original_problem_statement:**
-The user initially reported that stock balances were not being sent correctly to Ozon. The scope of the work expanded to address several issues, including a broken automatic order sync from Ozon, and culminated in feature requests for the Orders page. The core remaining problem is that stock updates made in the UI are not being saved to the database.
+The user initially requested to add a search bar and filters to the stock page. The conversation then evolved to debugging why stock levels were not updating correctly, why new orders were not reserving stock, and a request for a detailed explanation of the entire order processing and stock synchronization lifecycle.
 
-The user's most recent requests were:
-1.  Implement a search/filter functionality on the Orders page to find orders by product article or name.
-2.  Change the Orders table to display the actual product SKUs within an order, instead of just a count of items.
+The user's direct requests were:
+1.  On the Склад остатки (Stock Balances) page, add a search bar for article and name.
+2.  Add a filter for in stock or not in stock.
+3.  Suggest any other useful improvements for that page.
+4.  Fix why order  did not have its items reserved.
+5.  Implement automatic stock deduction when an order is processed.
+6.  Explain how the order and stock system works.
+7.  Confirm that stock is automatically sent to Ozon after an internal stock level change.
 
 **User's preferred language**: Russian. You MUST respond in Russian.
 
 **what currently exists?**
 - **Backend:**
-    - The stock synchronization logic () correctly sends batched updates to the correct, active Ozon warehouse IDs, and includes a check to prevent sending negative stock.
-    - The automatic order synchronization () is now fully functional. It was fixed to correctly parse and save new orders from Ozon into the database every 5 minutes.
-    - The API endpoint for fetching FBS orders ( in ) has been updated to accept a  query parameter to filter results.
+    - The stock update API () is confirmed to be working correctly and saving data to the  database.
+    - The  has been significantly enhanced. It now correctly reserves stock for new orders (status new, awaiting_packaging), and contains the logic to deduct stock for shipped orders and return stock for cancelled orders. The scheduler is confirmed to start automatically with the backend server.
+    - A temporary endpoint  was added to  to retroactively fix the reservation for a specific order.
 - **Frontend:**
-    - The Orders page () has been updated with a new search input field.
-    - The logic in  has been modified to use the new search parameter when fetching data.
-    - The order table has been changed to display a list of product SKUs for each order, as requested.
+    - The  component has been completely overhauled. It now features a comprehensive filter and search bar, allowing users to search by name/SKU, filter by availability (В наличии, Нет в наличии), sort results, and toggle views for Критический остаток (Critical Stock) and Только зарезервированные (Reserved Only).
+    - The filtering logic is implemented client-side using React's  hook.
 
 **Last working item**:
--   **Last item agent was working:** Implementing the user's request for a search filter and improved product display on the FBS Orders page.
--   **Status:** USER VERIFICATION PENDING
--   **Agent Testing Done:** Y (Agent confirmed the frontend code compiles and provided a screenshot of the new UI with search results to the user).
--   **Which testing method agent to use?** Frontend testing agent. The agent should write a test to verify the new search functionality and the updated table view on the orders page.
--   **User Testing Done:** N
+- **Last item agent was working:** The agent was explaining to the user why the automatic stock synchronization to Ozon did not occur after a manual stock reservation. The root cause was identified: the user's warehouse in the system has no configured links to any Ozon marketplace warehouses. The agent performed a one-time manual sync to update Ozon and asked the user if they want to proceed with configuring the permanent automatic link.
+- **Status:** USER VERIFICATION PENDING
+- **Agent Testing Done:** Y (The agent confirmed the manual sync worked by asking the user, who replied ну вроде остаток передался - well, it seems the stock was transferred).
+- **Which testing method agent to use?** NA. The next step depends on the user's decision. If the user agrees to create the link, the agent may need to guide them or implement a UI for it.
+- **User Testing Done:** Y
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): UI for updating stock quantity is not working.**
+-   **Issue 1 (P0): Automatic stock synchronization to Ozon is not configured.**
 -   **Issue 2 (P2): Non-functional checkboxes in warehouse settings UI.**
 
 **Issues Detail:**
--   **Issue 1: UI for updating stock quantity is not working.**
-    -   **Attempted fixes:** The agent confirmed via  that the backend API endpoint () for updating stock works correctly. However, the user repeatedly reports that when they change a quantity in the UI and click save, the change is not reflected in the database, causing syncs to send the old, incorrect value.
+-   **Issue 1: Automatic stock synchronization to Ozon is not configured.**
+    -   **Attempted fixes:** The agent successfully performed a one-time manual synchronization by calling the  endpoint. This is not a permanent solution.
     -   **Next debug checklist:**
-        1.  Thoroughly review the  function and related state management in .
-        2.  Add extensive  statements within the  function to inspect the , , and  being sent in the  request payload.
-        3.  The problem is almost certainly on the client-side. The next agent must focus on debugging the React component's logic.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical, recurring bug that is the primary source of the user's frustration. Fixing it will make the core stock management feature usable.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend.
+        1.  Wait for the user's confirmation to proceed with creating a permanent warehouse link.
+        2.  If the user agrees, the agent needs to implement a way to link the internal warehouse (рр) to the corresponding Ozon warehouse. This could be done via a UI enhancement in  or as a direct database operation if the user provides the Ozon warehouse ID.
+    -   **Why fix this issue and what will be achieved with the fix?** This is critical for the system's core function. Fixing it will ensure that any change in  stock is automatically pushed to Ozon, preventing overselling and keeping stock levels accurate across platforms.
+    -   **Status:** BLOCKED (Awaiting user confirmation)
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Both. The backend sync logic and the frontend UI for creating the link (if implemented).
 
 -   **Issue 2: Non-functional checkboxes in warehouse settings UI.**
-    -   **Attempted fixes:** The agent analyzed the code, identified that two checkboxes (СКЛАД ДЛЯ УЧЕТА ОСТАТКОВ FBO and НЕ ЗАГРУЖАТЬ ЗАКАЗЫ) are not implemented in the backend, and proposed removing them from the UI.
+    -   **Attempted fixes:** This issue was identified in a previous session but not addressed in this one. The plan was to remove the unimplemented checkboxes.
     -   **Next debug checklist:**
-        1.  Confirm with the user if they want the non-functional checkboxes removed to avoid confusion.
+        1.  Confirm with the user if they want the non-functional checkboxes (СКЛАД ДЛЯ УЧЕТА ОСТАТКОВ FBO and НЕ ЗАГРУЖАТЬ ЗАКАЗЫ) removed from the UI to avoid confusion.
         2.  If yes, edit  and remove the corresponding UI elements.
-    -   **Why fix this issue and what will be achieved with the fix?** This will improve UX by removing confusing UI elements that have no effect.
+    -   **Why fix this issue and what will be achieved with the fix?** This will improve UX by removing confusing UI elements that have no backend functionality.
     -   **Status:** NOT STARTED
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** Frontend.
+    -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   **Task 1: Add filters and improve UI on the Orders page.**
-    -   **Where to resume:** Awaiting user feedback on the initial implementation. The next agent should be prepared to make adjustments based on the user's review.
-    -   **What will be achieved with this?** The user will be able to easily find orders by product article, name, or order number.
-    -   **Status:** USER VERIFICATION PENDING
-    -   **Should Test frontend/backend/both after fix?** Frontend.
+- None. All active development tasks for this session were completed.
 
 **Upcoming and Future Tasks**
-*None specified by the user.*
+- **Task 1 (P2): Suggest further improvements for the Stock page.** The user asked и еще что можешь предложить (and what else can you suggest). The agent could propose features like batch editing, export to CSV, or viewing movement history per item.
 
 **Completed work in this session**
--   **Fixed Automatic Order Sync:** The previously non-functional automatic order synchronization from Ozon is now working. The agent implemented the missing logic in  to correctly parse and save orders to the database.
--   **Fixed Stock Sync Destination:** Resolved a critical bug where stock was being sent to a disabled Ozon warehouse. The agent identified the correct, active warehouse ID and updated the database link, ensuring stock is now sent to two active warehouses.
--   **Implemented Negative Stock Check:** Added a check in  to ensure quantities are  before sending to Ozon, preventing API errors.
--   **Feature: Orders Page Search & UI:** Implemented a search bar and updated the table to show SKUs on the orders page, as per the user's request ().
--   **Investigated Warehouse Settings:** Analyzed and provided a detailed explanation to the user about which checkboxes in the warehouse settings are functional and which are not.
+- **Resolved Critical Bug:** Diagnosed and conclusively proved that the stock update UI in  works correctly. The agent identified that the initial bug report was based on checking an incorrect database.
+- **Feature: Enhanced Stock Page UI/UX:** Implemented a comprehensive set of filters on the stock page (), including search by name/SKU, filtering by stock status, sorting, and toggles for critical/reserved stock. This work was verified by the testing agent and screenshots.
+- **Fixed Order Reservation Logic:** Updated  to correctly reserve stock for orders with statuses new and awaiting_shipment.
+- **Implemented Automatic Stock Deduction:** Added logic to  to automatically manage stock levels (deduct on fulfillment, return on cancellation) as order statuses change.
+- **Fixed Existing Order:** Retroactively reserved stock for order  by creating and using a temporary manual reservation API endpoint.
+- **Provided Detailed Explanations:** Gave the user a thorough walkthrough of the internal reservation system (, , ) and the order processing lifecycle.
 
 **Earlier issues found/mentioned but not fixed**
-- The critical issue of the stock update UI not working persists and is the highest priority for the next session.
+-   **Issue 1: Non-functional checkboxes in warehouse settings UI.** This was carried over from a previous session and not prioritized. It is now listed in the All Pending/In progress Issue list.
+
+**Known issue recurrence from previous fork**
+- **Issue recurrence in previous fork:** UI for updating stock quantity is not working.
+- **Recurrence count:** 1
+- **Status:** RESOLVED. The agent thoroughly investigated this and confirmed the functionality is working as expected. The issue was a misunderstanding of the database being used for verification.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Ozon API Integration:** Interacting with various Ozon Seller API endpoints for stock () and orders (). Debugging Ozon-specific errors like .
--   **Scheduled Tasks (APScheduler):** The backend uses a scheduler for automatic background tasks. The agent debugged and implemented the missing logic for the order synchronization job.
--   **React Frontend Development:** Modifying React components () to add new features (search), manage component state (, ), and handle API interactions.
--   **Direct Database Operations:** Using Python scripts to query and update the MongoDB database for debugging, data correction (fixing warehouse IDs), and password resets.
+-   **Backend:** FastAPI, APScheduler for background tasks, Motor (async MongoDB driver), debugging via direct DB queries and .
+-   **Frontend:** React, hooks (, , ), client-side filtering, and interaction with a REST API.
+-   **Core Logic:** Understanding the difference between total stock (), committed stock (), and sellable stock (), and how this internal ledger maps to the single stock figure sent to external marketplaces like Ozon.
 
 **key DB schema**
--   **warehouses:** 
+-   **Database:** 
+-   **inventory:** 
 -   **orders:** 
--   **inventory:**  (Stock is global, not per-warehouse).
+-   **warehouses:**  (The  array is currently empty for the user's warehouse).
+
+**changes in tech stack**
+- None.
 
 **All files of reference**
--   : Location of the highest priority bug (stock update UI).
--   : Recently modified file for the new search feature.
--   : Recently fixed file for automatic order fetching.
--   : Contains the non-functional checkboxes that may need to be removed.
+-   : Contains the new filter UI and is the main page for stock management.
+-   : Contains the core logic for automatic order processing and stock reservation.
+-   : Contains the temporary manual reservation endpoint.
+-   : This is where the non-functional checkboxes are, and where a UI for linking warehouses would likely be added.
+
+**Areas that need refactoring**:
+- The temporary endpoint  in  was created for a one-time fix and should be removed to clean up the codebase.
+
+**key api endpoints**
+-   : Fetches the list of all stock items.
+-   : Updates the quantity of a single stock item.
+body: 
+-   : Manually triggers a full stock synchronization to linked marketplaces.
+-   : (Temporary) Manually reserves items for an existing order.
 
 **Critical Info for New Agent**
--   **Highest Priority:** The most critical unresolved issue is the user's inability to save stock quantity changes through the UI. This is almost certainly a frontend bug in . You must investigate and fix this first.
--   **User Frustration:** The user has been very frustrated. Be direct, acknowledge their problems clearly, and confirm your understanding before implementing fixes. Do not be defensive.
--   **Credentials:** The user's password was temporarily changed for testing. The correct credentials are now  / .
+-   You must communicate with the user in **Russian**.
+-   The highest priority is to resolve the lack of automatic stock synchronization. This is a configuration issue, not a bug. Wait for the user's confirmation before proceeding to add a warehouse link.
+-   The user prefers a methodical, slow and steady pace. Explain your actions clearly.
+-   The critical bug regarding stock updates not being saved has been **resolved**. Do not reinvestigate this. The functionality is confirmed to be working.
+-   The database name is .
+
+**documents created in this job**
+- None. The agent updated the existing .
 
 **Last 10 User Messages and any pending user messages**
-1.  **User:** Why isn't my Ozon order from today showing up? (Status: FIXED - agent fixed the broken auto-sync).
-2.  **User:** Why do so many orders have the status imported? (Status: EXPLAINED - old orders had a default status; new ones get correct statuses. User accepted this).
-3.  **User:** I need filters on the orders page to search by product/article, and I want to see the SKUs in the table. (Status: IN PROGRESS - agent implemented a first version and is awaiting feedback).
-4.  **User (Image):** Provided a screenshot of their active Ozon warehouse. (Status: RESOLVED - this helped the agent identify the incorrect warehouse ID).
-5.  **User:** I should be able to manage warehouse links in the settings UI, not ask you. (Status: ADDRESSED - agent confirmed this is how it should work).
-6.  **User:** Explain the three checkboxes in the warehouse settings. Do they actually work? (Status: EXPLAINED - agent provided a detailed breakdown).
-7.  **User:** Repeats question about missing orders. (Status: ADDRESSED).
-8.  **User:** Repeats question about imported status. (Status: ADDRESSED).
-9.  **User:** Repeats feature request for order filters/UI. (Status: ADDRESSED).
-10. **(No new messages)** The user has not yet responded to the agent's last message showing the implementation of the search/UI feature.
+1.  **User:** Please explain what happens when a new order arrives. (Status: ADDRESSED - Agent provided a detailed explanation).
+2.  **User:** OK, so if an order comes in now, will the stock be deducted? (Status: ADDRESSED - Agent investigated and found it would not, leading to the next fixes).
+3.  **User:** I see order  but the items are not in reserve. Why? (Status: FIXED - Agent diagnosed the issue and manually reserved the items).
+4.  **User:** OK, go with the first option (fix the reservation logic). (Status: DONE - Agent implemented the fix).
+5.  **User:** I don't see the reserve for order . (Status: FIXED - Agent explained the fix is for *new* orders and then manually fixed the existing one).
+6.  **User:** So the database changed. Should the stock automatically be sent to Ozon now? Should it be 3 on each warehouse? (Status: ADDRESSED - Agent investigated and found the warehouse link was missing).
+7.  **User:** Wait, do you put the item in reserve inside Ozon? Or is it your system? (Status: ADDRESSED - Agent provided a detailed explanation of the internal vs external stock system).
+8.  **User:** Well, it seems the stock was transferred. (Status: ACKNOWLEDGED - User confirms the manual sync worked).
+9.  **(No new messages)** The agent's last message asked the user if they want to create a permanent warehouse link for automatic synchronization. Awaiting response.
 
 **Project Health Check:**
--   **Broken:** The UI feature for updating individual stock quantities in  is non-functional from the user's perspective and is a critical bug.
+-   **Partially Configured:** The automatic stock synchronization feature is implemented but not active because the user's warehouse is not linked to an Ozon marketplace warehouse. This is a configuration gap, not a broken feature.
 
 **3rd Party Integrations**:
--   Ozon Seller API
+-   Ozon Seller API - requires User API Key.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
+-   **Testing agent used after significant changes:** YES. Used to test the new frontend filters on , reporting 96% success.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None
--   **Known regressions:** None
+-   **Test files created:** None.
+-   **Known regressions:** None.
 
 **Credentials to test flow:**
 -   **Email:** 
 -   **Password:** 
 
 **What agent forgot to execute**
--   The agent successfully diagnosed that the backend API for updating stock works via , but did not fully resolve the user's problem by debugging the frontend component () to find out why the UI action was failing to save the data. The investigation stopped short of fixing the root cause of the user's primary complaint.</analysis>
+- The agent did not address the non-functional checkboxes in the warehouse settings UI (), an issue carried over from the previous handover summary. The focus was entirely on the more critical stock and order processing workflow.</analysis>
