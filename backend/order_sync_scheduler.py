@@ -250,6 +250,120 @@ class OrderSyncScheduler:
             logger.error(f"[OrderSync FBO] Ошибка API {marketplace}: {e.message}")
         except Exception as e:
             logger.error(f"[OrderSync FBO] Ошибка: {e}")
+    
+    async def _create_ozon_order(self, db, seller_id: str, mp_order_data: dict):
+        """Создать заказ Ozon в БД"""
+        try:
+            posting_number = mp_order_data.get("posting_number")
+            mp_status = mp_order_data.get("status")
+            products = mp_order_data.get("products", [])
+            
+            # Парсинг товаров
+            items = []
+            total_sum = 0
+            
+            for prod in products:
+                offer_id = prod.get("offer_id")
+                quantity = prod.get("quantity", 1)
+                price = float(prod.get("price", 0))
+                
+                # Найти товар в каталоге
+                product = await db.product_catalog.find_one({
+                    "article": offer_id,
+                    "seller_id": seller_id
+                })
+                
+                items.append({
+                    "product_id": str(product["_id"]) if product else "",
+                    "article": offer_id,
+                    "name": prod.get("name", product.get("name", "") if product else ""),
+                    "price": price,
+                    "quantity": quantity,
+                    "total": price * quantity
+                })
+                total_sum += price * quantity
+            
+            # Парсинг покупателя
+            customer_data = {
+                "full_name": (mp_order_data.get("customer") or {}).get("name", ""),
+                "phone": (mp_order_data.get("customer") or {}).get("phone", ""),
+                "address": ""
+            }
+            
+            # Получить склад из delivery_method
+            delivery = mp_order_data.get("delivery_method", {})
+            warehouse_id_mp = delivery.get("warehouse_id")
+            
+            # Найти локальный склад по warehouse_id
+            local_warehouse = None
+            if warehouse_id_mp:
+                link = await db.warehouse_links.find_one({
+                    "marketplace_name": "ozon",
+                    "marketplace_warehouse_id": str(warehouse_id_mp)
+                })
+                if link:
+                    local_warehouse = await db.warehouses.find_one({"id": link.get("warehouse_id")})
+            
+            # Если не нашли, используем склад с use_for_orders=True
+            if not local_warehouse:
+                local_warehouse = await db.warehouses.find_one({
+                    "seller_id": seller_id,
+                    "use_for_orders": True
+                })
+            
+            warehouse_id = local_warehouse.get("id") if local_warehouse else None
+            
+            # Маппинг статуса
+            from connectors import OzonConnector
+            temp_connector = OzonConnector("", "")
+            internal_status = temp_connector.map_ozon_status_to_internal(mp_status)
+            
+            # Создать заказ
+            new_order = {
+                "order_number": f"FBS-OZON-{posting_number[-8:]}",
+                "external_order_id": posting_number,
+                "marketplace": "ozon",
+                "seller_id": seller_id,
+                "warehouse_id": warehouse_id,
+                "status": internal_status,
+                "items": items,
+                "customer": customer_data,
+                "totals": {
+                    "subtotal": total_sum,
+                    "shipping": 0,
+                    "commission": 0,
+                    "total": total_sum
+                },
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+                "imported_at": datetime.utcnow()
+            }
+            
+            await db.orders_fbs.insert_one(new_order)
+            logger.info(f"[OrderSync FBS] ✅ Заказ {posting_number} создан в БД")
+            
+            # Резервировать товары если нужно
+            if internal_status in ["awaiting_packaging", "awaiting_deliver"]:
+                for item in items:
+                    if item["product_id"]:
+                        await db.inventory.update_one(
+                            {"product_id": item["product_id"]},
+                            {
+                                "$inc": {"reserved": item["quantity"], "available": -item["quantity"]}
+                            }
+                        )
+                logger.info(f"[OrderSync FBS] ✅ Товары зарезервированы для {posting_number}")
+        
+        except Exception as e:
+            logger.error(f"[OrderSync FBS] Ошибка создания Ozon заказа: {e}")
+    
+    async def _create_wb_order(self, db, seller_id: str, mp_order_data: dict):
+        """Создать заказ WB в БД"""
+        logger.warning("[OrderSync FBS] Создание WB заказов пока не реализовано")
+    
+    async def _create_yandex_order(self, db, seller_id: str, mp_order_data: dict):
+        """Создать заказ Yandex в БД"""
+        logger.warning("[OrderSync FBS] Создание Yandex заказов пока не реализовано")
 
 
 # Глобальный экземпляр
