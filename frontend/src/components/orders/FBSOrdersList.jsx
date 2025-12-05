@@ -63,11 +63,31 @@ function FBSOrdersList() {
   }
 
   const applyFilters = () => {
-    if (activeStatusFilter === 'all') {
-      setFilteredOrders(orders)
-    } else {
-      setFilteredOrders(orders.filter(o => o.status === activeStatusFilter))
+    let filtered = orders
+    
+    // Фильтр по статусу
+    if (activeStatusFilter !== 'all') {
+      filtered = filtered.filter(o => o.status === activeStatusFilter)
     }
+    
+    // Поиск по товару (артикул или название)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter(order => {
+        // Поиск в артикулах и названиях товаров
+        const hasMatchingItem = order.items?.some(item => 
+          item.article?.toLowerCase().includes(query) ||
+          item.name?.toLowerCase().includes(query)
+        )
+        
+        // Или поиск по номеру заказа
+        const matchesOrderNumber = order.order_number?.toLowerCase().includes(query)
+        
+        return hasMatchingItem || matchesOrderNumber
+      })
+    }
+    
+    setFilteredOrders(filtered)
   }
 
   const handleOpenDetail = (order) => {
