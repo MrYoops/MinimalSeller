@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiDownload, FiRefreshCw, FiSearch, FiUpload, FiCheck, FiX, FiEdit2 } from 'react-icons/fi'
+import { FiDownload, FiRefreshCw, FiSearch, FiUpload, FiCheck, FiX, FiEdit2, FiFilter, FiArrowUp, FiArrowDown } from 'react-icons/fi'
 import { toast } from 'sonner'
 
 function StockPageV3() {
@@ -12,6 +12,13 @@ function StockPageV3() {
   const [syncing, setSyncing] = useState(false)
   const [editingRow, setEditingRow] = useState(null)
   const [editValue, setEditValue] = useState('')
+  
+  // Состояния для фильтров и поиска
+  const [searchQuery, setSearchQuery] = useState('')
+  const [availabilityFilter, setAvailabilityFilter] = useState('all') // 'all' | 'in_stock' | 'out_of_stock'
+  const [sortConfig, setSortConfig] = useState({ field: 'sku', direction: 'asc' })
+  const [showCriticalOnly, setShowCriticalOnly] = useState(false)
+  const [showReservedOnly, setShowReservedOnly] = useState(false)
   
   // Состояния для импорта остатков
   const [showImportModal, setShowImportModal] = useState(false)
