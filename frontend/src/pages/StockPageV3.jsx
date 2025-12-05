@@ -248,6 +248,14 @@ function StockPageV3() {
         </div>
         <div className="flex items-center space-x-3">
           <button
+            onClick={openImportModal}
+            className="btn-secondary flex items-center space-x-2 text-sm"
+            data-testid="import-stocks-btn"
+          >
+            <FiDownload />
+            <span>ИМПОРТ С МП</span>
+          </button>
+          <button
             onClick={handleSyncCatalog}
             disabled={loading}
             className="btn-secondary flex items-center space-x-2 disabled:opacity-50"
