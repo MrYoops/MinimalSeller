@@ -12,6 +12,14 @@ function StockPageV3() {
   const [syncing, setSyncing] = useState(false)
   const [editingRow, setEditingRow] = useState(null)
   const [editValue, setEditValue] = useState('')
+  
+  // Состояния для импорта остатков
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [integrations, setIntegrations] = useState([])
+  const [selectedIntegration, setSelectedIntegration] = useState(null)
+  const [mpWarehouses, setMpWarehouses] = useState([])
+  const [selectedMpWarehouse, setSelectedMpWarehouse] = useState(null)
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => {
     const init = async () => {
