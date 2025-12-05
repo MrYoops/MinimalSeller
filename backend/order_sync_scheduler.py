@@ -344,23 +344,34 @@ class OrderSyncScheduler:
             logger.info(f"[OrderSync FBS] ✅ Заказ {posting_number} создан в БД")
             
             # Резервировать товары если нужно
-            if internal_status in ["awaiting_packaging", "awaiting_deliver"]:
+            # Резервируем для статусов: new, awaiting_packaging, awaiting_deliver, awaiting_shipment
+            if internal_status in ["new", "awaiting_packaging", "awaiting_deliver", "awaiting_shipment"]:
+                reserved_count = 0
                 for item in items:
                     if item["product_id"]:
                         try:
                             # Конвертируем в ObjectId если это строка
                             prod_id = ObjectId(item["product_id"]) if isinstance(item["product_id"], str) else item["product_id"]
                             
-                            await db.inventory.update_one(
+                            result = await db.inventory.update_one(
                                 {"product_id": prod_id},
                                 {
                                     "$inc": {"reserved": item["quantity"], "available": -item["quantity"]}
                                 }
                             )
+                            
+                            if result.modified_count > 0:
+                                reserved_count += 1
+                                logger.info(f"[OrderSync FBS] ✅ Зарезервирован товар {item['article']}: {item['quantity']} шт")
+                            else:
+                                logger.warning(f"[OrderSync FBS] ⚠️ Не удалось зарезервировать {item['article']} - inventory не найден")
                         except Exception as e:
-                            logger.error(f"[OrderSync FBS] Ошибка резерва товара {item['article']}: {e}")
+                            logger.error(f"[OrderSync FBS] ❌ Ошибка резерва товара {item['article']}: {e}")
                 
-                logger.info(f"[OrderSync FBS] ✅ Товары зарезервированы для {posting_number}")
+                if reserved_count > 0:
+                    logger.info(f"[OrderSync FBS] ✅ Зарезервировано {reserved_count}/{len(items)} товаров для {posting_number}")
+                else:
+                    logger.warning(f"[OrderSync FBS] ⚠️ НЕ удалось зарезервировать товары для {posting_number}")
         
         except Exception as e:
             logger.error(f"[OrderSync FBS] Ошибка создания Ozon заказа: {e}")
