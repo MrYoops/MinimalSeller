@@ -613,7 +613,8 @@ function StockPageV3() {
                     )}
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
