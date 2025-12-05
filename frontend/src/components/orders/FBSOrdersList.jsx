@@ -19,6 +19,7 @@ function FBSOrdersList() {
   const [selectedOrderIds, setSelectedOrderIds] = useState([])
   const [stats, setStats] = useState({})
   const [refreshingStatuses, setRefreshingStatuses] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     loadOrders()
