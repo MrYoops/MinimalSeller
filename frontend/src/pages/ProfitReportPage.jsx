@@ -1,22 +1,35 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { FiDownload, FiRefreshCw, FiDollarSign, FiTrendingUp, FiTrendingDown } from 'react-icons/fi'
+
+// Утилита для получения даты в формате YYYY-MM-DD
+const getDateString = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Получить первый день текущего месяца
+const getFirstDayOfMonth = () => {
+  const today = new Date()
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+  return getDateString(firstDay)
+}
+
+// Получить сегодняшнюю дату
+const getToday = () => {
+  return getDateString(new Date())
+}
 
 function ProfitReportPage() {
   const { api } = useAuth()
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [report, setReport] = useState(null)
-  const [dateFrom, setDateFrom] = useState(() => {
-    // Default: начало текущего месяца
-    const today = new Date()
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
-    return firstDay.toISOString().split('T')[0]
-  })
-  const [dateTo, setDateTo] = useState(() => {
-    // Default: сегодня
-    return new Date().toISOString().split('T')[0]
-  })
+  const [error, setError] = useState(null)
+  const [dateFrom, setDateFrom] = useState(getFirstDayOfMonth())
+  const [dateTo, setDateTo] = useState(getToday())
 
   const syncData = async () => {
     setSyncing(true)
