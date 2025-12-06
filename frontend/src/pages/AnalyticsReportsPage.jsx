@@ -344,6 +344,28 @@ function ProfitView({ data, fmt, pct }) {
             </>
           )}
           
+          {/* СЕБЕСТОИМОСТЬ */}
+          {data.cogs && data.cogs.total > 0 && (
+            <>
+              <div className="flex justify-between py-2 border-b border-mm-border bg-mm-gray bg-opacity-20">
+                <span className="text-mm-text-secondary">- Себестоимость товаров (COGS)</span>
+                <span className="text-mm-red">-{fmt(data.cogs.total)}</span>
+              </div>
+              {data.statistics?.cogs_coverage && (
+                <div className="flex justify-between py-2 border-b border-mm-border pl-6 text-xs">
+                  <span className="text-mm-text-tertiary">
+                    └ Покрытие: {data.statistics.cogs_coverage.items_with_price} из {data.statistics.cogs_coverage.items_with_price + data.statistics.cogs_coverage.items_missing_price} товаров ({data.statistics.cogs_coverage.coverage_pct}%)
+                  </span>
+                  <span className="text-mm-text-tertiary">{pct(data.cogs.percentage)}</span>
+                </div>
+              )}
+              <div className="flex justify-between py-2 border-b border-mm-border font-semibold text-mm-cyan">
+                <span>= ВАЛОВАЯ ПРИБЫЛЬ</span>
+                <span>{fmt(data.profit?.gross_profit)}</span>
+              </div>
+            </>
+          )}
+          
           {/* РАСХОДЫ */}
           <div className="flex justify-between py-2 border-b border-mm-border">
             <span className="text-mm-text-secondary">- Базовая комиссия Ozon</span>
