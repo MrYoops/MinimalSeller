@@ -639,6 +639,73 @@ export default function CatalogProductsPage() {
           </div>
         </div>
       )}
+
+      {/* Tags Management Modal */}
+      {showTagsModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowTagsModal(false)}>
+          <div className="bg-mm-dark border-2 border-purple-500 rounded-lg p-6 w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-mono text-purple-300">// УПРАВЛЕНИЕ ТЕГАМИ</h2>
+              <button
+                onClick={() => setShowTagsModal(false)}
+                className="text-mm-text-secondary hover:text-mm-text"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+
+            {/* Create new tag */}
+            <div className="mb-6 p-4 bg-mm-gray rounded border border-mm-border">
+              <label className="block text-sm text-mm-text-secondary mb-2">Создать новый тег</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  placeholder="Название тега..."
+                  className="flex-1 px-3 py-2 bg-mm-dark border border-mm-border text-mm-text rounded focus:border-mm-cyan focus:outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCreateTag();
+                  }}
+                />
+                <button
+                  onClick={handleCreateTag}
+                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
+                >
+                  Создать
+                </button>
+              </div>
+            </div>
+
+            {/* Existing tags list */}
+            <div>
+              <h3 className="text-mm-text mb-2 font-mono">Существующие теги:</h3>
+              {allTags.length === 0 ? (
+                <p className="text-mm-text-secondary text-sm">Теги отсутствуют. Создайте первый тег выше.</p>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {allTags.map(tag => (
+                    <div
+                      key={tag}
+                      className="flex items-center justify-between p-3 bg-mm-gray rounded border border-mm-border hover:border-purple-500 transition"
+                    >
+                      <span className={`px-3 py-1 rounded border ${generateTagColor(tag)}`}>
+                        {tag}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteTag(tag)}
+                        className="px-3 py-1 bg-red-600/20 text-red-400 border border-red-600/30 rounded hover:bg-red-600/30 transition"
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
         </>
       )}
     </div>
