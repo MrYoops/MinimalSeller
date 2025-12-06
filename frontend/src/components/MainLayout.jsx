@@ -169,13 +169,13 @@ const MainLayout = ({ children }) => {
             </button>
             
             <button
-              onClick={() => navigate('/profit-report')}
+              onClick={() => navigate('/analytics-reports')}
               className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap flex items-center gap-1 h-12 ${
-                location.pathname === '/profit-report' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
+                location.pathname === '/analytics-reports' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
               }`}
             >
               <FiTrendingUp className="inline" />
-              ОТЧЕТ П&L
+              ОТЧЁТЫ
             </button>
             
             <button
