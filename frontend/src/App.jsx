@@ -35,6 +35,7 @@ import PayoutsPage from './pages/PayoutsPage'
 import ProfitReportPage from './pages/ProfitReportPage'
 import TransactionsPage from './pages/TransactionsPage'
 import AnalyticsReportsPage from './pages/AnalyticsReportsPage'
+import PurchasePricesPage from './pages/PurchasePricesPage'
 // Layout
 import MainLayout from './components/MainLayout'
 import { AuthProvider, useAuth } from './context/AuthContext'
