@@ -154,6 +154,9 @@ function AppRoutes() {
       <Route path="/profit-report" element={
         <ProtectedRoute><WithLayout><ProfitReportPage /></WithLayout></ProtectedRoute>
       } />
+      <Route path="/transactions" element={
+        <ProtectedRoute><WithLayout><TransactionsPage /></WithLayout></ProtectedRoute>
+      } />
       
       {/* Legacy routes */}
       <Route path="/products/:id/edit" element={
