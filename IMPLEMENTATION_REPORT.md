@@ -380,10 +380,10 @@ Wildberries (в планах):
 - Role: seller
 
 **URL:**
-https://ecommerce-analytics-2.preview.emergentagent.com/orders/fbs
+https://marketanalytics-5.preview.emergentagent.com/orders/fbs
 
 **API Endpoint:**
-GET https://ecommerce-analytics-2.preview.emergentagent.com/api/orders/fbs
+GET https://marketanalytics-5.preview.emergentagent.com/api/orders/fbs
 
 **Ozon Integration:**
 - Client ID: `2998978`

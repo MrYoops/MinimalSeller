@@ -89,7 +89,7 @@
 2. **No Valid Keys**: GET /marketplaces/{marketplace}/products returns 400 when no valid key exists - THIS IS EXPECTED
 
 #### 🔍 Technical Details
-- **Backend URL**: https://ecommerce-analytics-2.preview.emergentagent.com/api
+- **Backend URL**: https://marketanalytics-5.preview.emergentagent.com/api
 - **MongoDB**: Connected and working (localhost:27017)
 - **Database**: minimalmod
 - **Authentication**: JWT with HS256 algorithm
@@ -260,8 +260,8 @@ All tabs tested and working:
 2. **React Router Warnings**: Future flag warnings for React Router v7 - not affecting functionality
 
 ##### 🔍 Technical Details
-- **Frontend URL**: https://ecommerce-analytics-2.preview.emergentagent.com
-- **Backend URL**: https://ecommerce-analytics-2.preview.emergentagent.com/api
+- **Frontend URL**: https://marketanalytics-5.preview.emergentagent.com
+- **Backend URL**: https://marketanalytics-5.preview.emergentagent.com/api
 - **Framework**: React 18.2.0 with Vite
 - **Routing**: React Router v6
 - **Styling**: Tailwind CSS with custom MinimalMod theme
@@ -1885,7 +1885,7 @@ The new "Товары" (Products/Catalog) module has been fully tested with all 
 ## Technical Details
 
 ### Backend Implementation
-- **Base URL**: https://ecommerce-analytics-2.preview.emergentagent.com/api
+- **Base URL**: https://marketanalytics-5.preview.emergentagent.com/api
 - **Authentication**: JWT Bearer token
 - **Database**: MongoDB (minimalmod database)
 - **ID Format**: UUID v4 for all entities
@@ -2242,7 +2242,7 @@ The new "Товары" (Products/Catalog) module UI has been fully tested with c
 ## Technical Details
 
 ### Frontend Implementation
-- **Base URL**: https://ecommerce-analytics-2.preview.emergentagent.com
+- **Base URL**: https://marketanalytics-5.preview.emergentagent.com
 - **Framework**: React 18.2.0 with Vite
 - **Routing**: React Router v6
 - **Styling**: Tailwind CSS with MinimalMod theme

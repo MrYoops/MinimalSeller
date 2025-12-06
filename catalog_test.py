@@ -10,7 +10,7 @@ import sys
 from typing import Dict, Any, Optional
 
 # Backend URL
-BACKEND_URL = "https://ecommerce-analytics-2.preview.emergentagent.com/api"
+BACKEND_URL = "https://marketanalytics-5.preview.emergentagent.com/api"
 
 # Test credentials
 TEST_EMAIL = "seller@minimalmod.com"

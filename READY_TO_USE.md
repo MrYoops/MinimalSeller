@@ -9,7 +9,7 @@
 
 ### Шаг 1: Откройте страницу
 Перейдите: **ОТЧЁТЫ** в главном меню
-Или: https://ecommerce-analytics-2.preview.emergentagent.com/analytics-reports
+Или: https://marketanalytics-5.preview.emergentagent.com/analytics-reports
 
 ### Шаг 2: Загрузите отчет
 1. Нажмите кнопку **"ЗАГРУЗИТЬ ПОЗАКАЗНЫЙ ОТЧЕТ"**
@@ -224,7 +224,7 @@ total_to_accrue =
 
 ## 🚀 ГОТОВО К ИСПОЛЬЗОВАНИЮ!
 
-**Ссылка:** https://ecommerce-analytics-2.preview.emergentagent.com/analytics-reports
+**Ссылка:** https://marketanalytics-5.preview.emergentagent.com/analytics-reports
 
 **Логин:** seller@test.com  
 **Пароль:** password123
