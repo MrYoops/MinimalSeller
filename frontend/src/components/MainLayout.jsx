@@ -179,6 +179,16 @@ const MainLayout = ({ children }) => {
             </button>
             
             <button
+              onClick={() => navigate('/transactions')}
+              className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap flex items-center gap-1 h-12 ${
+                location.pathname === '/transactions' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
+              }`}
+            >
+              <FiActivity className="inline" />
+              ТРАНЗАКЦИИ
+            </button>
+            
+            <button
               onClick={() => navigate('/balance')}
               className={`px-4 font-mono uppercase text-sm transition-colors whitespace-nowrap flex items-center gap-1 h-12 ${
                 location.pathname === '/balance' ? 'text-mm-cyan border-b-2 border-mm-cyan' : 'text-mm-text-secondary hover:text-mm-cyan'
