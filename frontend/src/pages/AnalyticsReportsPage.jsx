@@ -188,6 +188,55 @@ function AnalyticsReportsPage() {
   }
 
   
+  // Функции для налоговых настроек
+  const loadTaxSettings = async () => {
+    try {
+      const r = await api.get('/api/ozon-reports/tax-settings')
+      setTaxSettings(r.data)
+    } catch (error) {
+      console.error('Ошибка загрузки налоговых настроек', error)
+    }
+  }
+  
+  const saveTaxSettings = async (system) => {
+    try {
+      await api.post('/api/ozon-reports/tax-settings', {
+        tax_system: system
+      })
+      toast.success('Настройки сохранены')
+      await loadTaxSettings()
+      await loadData()
+      setShowTaxSettings(false)
+    } catch (error) {
+      toast.error('Ошибка сохранения')
+    }
+  }
+  
+  // Функции для истории отчетов
+  const loadReportsHistory = async () => {
+    try {
+      const r = await api.get('/api/ozon-reports/reports-history')
+      setReportsHistory(r.data.reports || [])
+    } catch (error) {
+      console.error('Ошибка загрузки истории', error)
+    }
+  }
+  
+  const deleteReport = async (id) => {
+    if (!confirm('Удалить отчет и все связанные транзакции?')) return
+    
+    try {
+      const r = await api.delete(`/api/ozon-reports/report/${id}`)
+      toast.success(`Удалено транзакций: ${r.data.deleted_transactions}`)
+      await loadReportsHistory()
+      await loadData()
+    } catch (error) {
+      toast.error('Ошибка удаления')
+    }
+  }
+
+
+  
   const exportExcel = async () => {
     try {
       const params = { period_start: dateFrom, period_end: dateTo }
