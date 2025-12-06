@@ -203,6 +203,7 @@ function AnalyticsReportsPage() {
   useEffect(() => {
     if (profitData || salesData || transactionsData) {
       loadData()
+      loadExpenses()
     }
   }, [activeReport])
   
