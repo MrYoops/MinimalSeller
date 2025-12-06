@@ -1,8 +1,3 @@
-"""
-Routes для загрузки и обработки отчетов Ozon
-Полная реализация с фильтрацией и Excel экспортом
-"""
-
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 from typing import Optional
@@ -13,7 +8,11 @@ from io import BytesIO
 
 from database import get_database
 from auth_utils import get_current_user
-from ozon_all_parsers import parse_ozon_order_realization_report
+from ozon_all_parsers import (
+    parse_ozon_order_realization_report,
+    parse_loyalty_report,
+    parse_acquiring_report
+)
 
 router = APIRouter(prefix="/api/ozon-reports", tags=["ozon-reports"])
 logger = logging.getLogger(__name__)
@@ -24,7 +23,6 @@ async def upload_order_realization_report(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user)
 ):
-    """Загрузить позаказный отчет о реализации"""
     seller_id = str(current_user["_id"])
     
     if not file.filename.endswith(('.xlsx', '.xls')):
@@ -35,6 +33,7 @@ async def upload_order_realization_report(
     try:
         result = parse_ozon_order_realization_report(content, seller_id)
     except Exception as e:
+        logger.error(f"Parsing error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Ошибка парсинга: {str(e)}")
     
     db = await get_database()
@@ -68,6 +67,53 @@ async def upload_order_realization_report(
     }
 
 
+@router.post("/upload-loyalty-report")
+async def upload_loyalty_report(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    seller_id = str(current_user["_id"])
+    content = await file.read()
+    
+    try:
+        result = parse_loyalty_report(content, seller_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Ошибка: {str(e)}")
+    
+    db = await get_database()
+    
+    for program in result["programs"]:
+        await db.ozon_loyalty_programs.update_one(
+            {"seller_id": seller_id, "program_name": program["program_name"]},
+            {"$set": program},
+            upsert=True
+        )
+    
+    return {"status": "success", "total_expense": result["total_loyalty_expense"]}
+
+
+@router.post("/upload-acquiring-report")
+async def upload_acquiring_report(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    seller_id = str(current_user["_id"])
+    content = await file.read()
+    
+    try:
+        result = parse_acquiring_report(content, seller_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Ошибка: {str(e)}")
+    
+    db = await get_database()
+    
+    for txn in result["transactions"]:
+        txn["seller_id"] = seller_id
+        await db.ozon_acquiring.insert_one(txn)
+    
+    return {"status": "success", "total_acquiring": result["total_acquiring"]}
+
+
 @router.get("/calculate-profit")
 async def calculate_profit_from_reports(
     period_start: str,
@@ -76,7 +122,6 @@ async def calculate_profit_from_reports(
     product_filter: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
-    """Рассчитать прибыль с фильтрами"""
     seller_id = str(current_user["_id"])
     
     try:
@@ -92,11 +137,9 @@ async def calculate_profit_from_reports(
         "operation_date": {"$gte": date_from, "$lte": date_to}
     }
     
-    # Фильтрация по тегам
     if tag_filter:
         match_filter["article"] = {"$regex": tag_filter, "$options": "i"}
     
-    # Фильтрация по товарам
     if product_filter:
         match_filter["product_name"] = {"$regex": product_filter, "$options": "i"}
     
@@ -116,8 +159,16 @@ async def calculate_profit_from_reports(
     total_discounts = sum(t["discount_points"] for t in transactions)
     total_commission = sum(t["ozon_base_commission"] for t in transactions)
     
+    # Получаем дополнительные расходы
+    loyalty_programs = await db.ozon_loyalty_programs.find({"seller_id": seller_id}).to_list(100)
+    total_loyalty_expense = sum(p.get("total", 0) for p in loyalty_programs)
+    
+    acquiring_records = await db.ozon_acquiring.find({"seller_id": seller_id}).to_list(1000)
+    total_acquiring = sum(a.get("rate", 0) for a in acquiring_records)
+    
+    # Расчеты
     gross_revenue = total_realized + total_loyalty + total_discounts
-    total_expenses = total_commission
+    total_expenses = total_commission + total_loyalty_expense + total_acquiring
     net_profit = gross_revenue - total_expenses
     net_margin = (net_profit / gross_revenue * 100) if gross_revenue > 0 else 0
     
@@ -132,6 +183,8 @@ async def calculate_profit_from_reports(
         },
         "expenses": {
             "ozon_base_commission": round(total_commission, 2),
+            "loyalty_programs": round(total_loyalty_expense, 2),
+            "acquiring": round(total_acquiring, 2),
             "total": round(total_expenses, 2)
         },
         "profit": {
@@ -148,9 +201,7 @@ async def get_sales_report(
     tag_filter: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
-    """Отчет по продажам"""
     seller_id = str(current_user["_id"])
-    
     date_from = datetime.fromisoformat(f"{period_start}T00:00:00")
     date_to = datetime.fromisoformat(f"{period_end}T23:59:59")
     
@@ -165,7 +216,6 @@ async def get_sales_report(
     
     transactions = await db.ozon_transactions.find(match_filter).to_list(10000)
     
-    # Группировка по товарам
     by_product = {}
     for t in transactions:
         sku = t["sku"]
@@ -202,9 +252,7 @@ async def get_transactions_list(
     offset: int = Query(0),
     current_user: dict = Depends(get_current_user)
 ):
-    """Список транзакций"""
     seller_id = str(current_user["_id"])
-    
     date_from = datetime.fromisoformat(f"{period_start}T00:00:00")
     date_to = datetime.fromisoformat(f"{period_end}T23:59:59")
     
@@ -240,9 +288,7 @@ async def export_to_excel(
     tag_filter: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
-    """Экспорт в Excel"""
     seller_id = str(current_user["_id"])
-    
     date_from = datetime.fromisoformat(f"{period_start}T00:00:00")
     date_to = datetime.fromisoformat(f"{period_end}T23:59:59")
     
@@ -257,70 +303,58 @@ async def export_to_excel(
     
     transactions = await db.ozon_transactions.find(match_filter).to_list(10000)
     
-    # Создаем Excel
     output = BytesIO()
     
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         # Лист 1: Сводка
-        summary_data = {
-            "Показатель": [
-                "Период",
-                "Транзакций",
-                "",
-                "ВЫРУЧКА",
-                "Реализовано",
-                "+ Выплаты по лояльности",
-                "+ Баллы за скидки",
-                "= Валовая выручка",
-                "",
-                "РАСХОДЫ",
-                "Комиссия Ozon",
-                "",
-                "ПРИБЫЛЬ",
-                "Чистая прибыль",
-                "Маржа %"
-            ],
-            "Значение": []
-        }
-        
         total_realized = sum(t["realized_amount"] for t in transactions)
         total_loyalty = sum(t["loyalty_payments"] for t in transactions)
         total_discounts = sum(t["discount_points"] for t in transactions)
         total_commission = sum(t["ozon_base_commission"] for t in transactions)
+        
+        # Дополнительные расходы
+        loyalty_programs = await db.ozon_loyalty_programs.find({"seller_id": seller_id}).to_list(100)
+        total_loyalty_expense = sum(p.get("total", 0) for p in loyalty_programs)
+        
+        acquiring_records = await db.ozon_acquiring.find({"seller_id": seller_id}).to_list(1000)
+        total_acquiring = sum(a.get("rate", 0) for a in acquiring_records)
+        
         gross_revenue = total_realized + total_loyalty + total_discounts
-        net_profit = gross_revenue - total_commission
+        total_expenses = total_commission + total_loyalty_expense + total_acquiring
+        net_profit = gross_revenue - total_expenses
         margin = (net_profit / gross_revenue * 100) if gross_revenue > 0 else 0
         
-        summary_data["Значение"] = [
-            f"{period_start} - {period_end}",
-            len(transactions),
-            "",
-            "",
-            total_realized,
-            total_loyalty,
-            total_discounts,
-            gross_revenue,
-            "",
-            "",
-            total_commission,
-            "",
-            "",
-            net_profit,
-            margin
-        ]
+        summary_data = {
+            "Показатель": [
+                "Период", "Транзакций", "",
+                "ВЫРУЧКА", "Реализовано", "+ Выплаты по лояльности", "+ Баллы за скидки",
+                "= Валовая выручка", "",
+                "РАСХОДЫ", "Комиссия Ozon базовая", "Выплаты партнерам (лояльность)", "Эквайринг",
+                "= Итого расходов", "",
+                "ПРИБЫЛЬ", "Чистая прибыль", "Маржа %"
+            ],
+            "Значение": [
+                f"{period_start} - {period_end}", len(transactions), "",
+                "", total_realized, total_loyalty, total_discounts,
+                gross_revenue, "",
+                "", total_commission, total_loyalty_expense, total_acquiring,
+                total_expenses, "",
+                "", net_profit, margin
+            ]
+        }
         
         df_summary = pd.DataFrame(summary_data)
         df_summary.to_excel(writer, sheet_name='Сводка', index=False)
         
         # Лист 2: Детализация
-        details_data = []
+        details = []
         for t in transactions:
-            details_data.append({
+            details.append({
                 "Дата": t["operation_date"].isoformat() if isinstance(t["operation_date"], datetime) else str(t["operation_date"]),
                 "Отправление": t["posting_number"],
                 "Артикул": t["article"],
                 "SKU": t["sku"],
-                "Товар": t["product_name"][:50],
+                "Товар": t["product_name"][:80],
                 "Кол-во": t["quantity"],
                 "Цена": t["price"],
                 "Реализовано": t["realized_amount"],
@@ -330,7 +364,7 @@ async def export_to_excel(
                 "Итого": t["total_to_accrue"]
             })
         
-        df_details = pd.DataFrame(details_data)
+        df_details = pd.DataFrame(details)
         df_details.to_excel(writer, sheet_name='Детализация', index=False)
     
     output.seek(0)
