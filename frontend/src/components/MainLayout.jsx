@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiPieChart, FiDollarSign, FiChevronDown, FiGrid, FiLink, FiUpload, FiTag, FiBox, FiDownload, FiActivity, FiLayers, FiUser } from 'react-icons/fi';
+import { FiLogOut, FiKey, FiPackage, FiShoppingCart, FiPieChart, FiDollarSign, FiChevronDown, FiGrid, FiLink, FiUpload, FiTag, FiBox, FiDownload, FiActivity, FiLayers, FiUser, FiTrendingUp } from 'react-icons/fi';
 import { BsBoxSeam } from 'react-icons/bs';
 import SettingsDropdown from './SettingsDropdown';
 
