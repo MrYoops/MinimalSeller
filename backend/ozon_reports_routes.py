@@ -11,7 +11,9 @@ from auth_utils import get_current_user
 from ozon_all_parsers import (
     parse_ozon_order_realization_report,
     parse_loyalty_report,
-    parse_acquiring_report
+    parse_acquiring_report,
+    parse_rfbs_logistics_report,
+    parse_fbo_fbs_services_report
 )
 
 router = APIRouter(prefix="/api/ozon-reports", tags=["ozon-reports"])
