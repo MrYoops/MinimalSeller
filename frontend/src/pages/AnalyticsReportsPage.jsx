@@ -258,6 +258,17 @@ function AnalyticsReportsPage() {
       console.error('Ошибка загрузки товаров', error)
     }
   }
+
+  
+  const loadTagsList = async () => {
+    try {
+      const r = await api.get('/api/ozon-reports/tags-list')
+      setTagsList(r.data.tags || [])
+    } catch (error) {
+      console.error('Ошибка загрузки тегов', error)
+    }
+  }
+
   
   const exportExcel = async () => {
     try {
