@@ -234,6 +234,34 @@ function ProfitView({ data, fmt, pct }) {
             <span className="text-mm-text-secondary">- Базовая комиссия Ozon</span>
             <span className="text-mm-red">-{fmt(data.expenses?.ozon_base_commission)}</span>
           </div>
+          {data.expenses?.loyalty_programs > 0 && (
+            <div className="flex justify-between py-2 border-b border-mm-border">
+              <span className="text-mm-text-secondary">- Выплаты партнерам (баллы)</span>
+              <span className="text-mm-red">-{fmt(data.expenses?.loyalty_programs)}</span>
+            </div>
+          )}
+          {data.expenses?.acquiring > 0 && (
+            <div className="flex justify-between py-2 border-b border-mm-border">
+              <span className="text-mm-text-secondary">- Эквайринг</span>
+              <span className="text-mm-red">-{fmt(data.expenses?.acquiring)}</span>
+            </div>
+          )}
+          {data.expenses?.rfbs_logistics > 0 && (
+            <div className="flex justify-between py-2 border-b border-mm-border">
+              <span className="text-mm-text-secondary">- Логистика rFBS</span>
+              <span className="text-mm-red">-{fmt(data.expenses?.rfbs_logistics)}</span>
+            </div>
+          )}
+          {data.expenses?.fbo_fbs_services > 0 && (
+            <div className="flex justify-between py-2 border-b border-mm-border">
+              <span className="text-mm-text-secondary">- Услуги FBO/FBS</span>
+              <span className="text-mm-red">-{fmt(data.expenses?.fbo_fbs_services)}</span>
+            </div>
+          )}
+          <div className="flex justify-between py-2 border-b border-mm-border font-bold">
+            <span className="text-mm-red">= ИТОГО РАСХОДОВ</span>
+            <span className="text-mm-red">-{fmt(data.expenses?.total)}</span>
+          </div>
           <div className="flex justify-between py-2 border-t-2 border-mm-cyan font-bold text-lg">
             <span className="text-mm-green">= ЧИСТАЯ ПРИБЫЛЬ</span>
             <span className="text-mm-green">{fmt(data.profit?.net_profit)}</span>
