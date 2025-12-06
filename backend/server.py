@@ -3333,6 +3333,7 @@ async def get_catalog_products(
             marketplace=prod.get("marketplace"),
             variants_count=variants_count,
             photos_count=photos_count,
+            tags=prod.get("tags", []),  # Добавлено поле tags
             created_at=prod.get("created_at", datetime.utcnow()),
             updated_at=prod.get("updated_at", datetime.utcnow()),
             
