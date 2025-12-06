@@ -209,10 +209,10 @@ function ProfitReportPage() {
                 <FiDollarSign className="text-mm-cyan" size={24} />
               </div>
               <div className="text-3xl font-mono text-mm-cyan mb-2">
-                {formatCurrency(report.revenue.net_sales)}
+                {formatCurrency(report?.revenue?.net_sales)}
               </div>
               <div className="text-xs text-mm-text-tertiary font-mono">
-                Валовая: {formatCurrency(report.revenue.gross_sales)}
+                Валовая: {formatCurrency(report?.revenue?.gross_sales)}
               </div>
             </div>
 
@@ -223,7 +223,7 @@ function ProfitReportPage() {
                 <FiTrendingDown className="text-mm-red" size={24} />
               </div>
               <div className="text-3xl font-mono text-mm-red mb-2">
-                {formatCurrency(report.expenses.total_expenses)}
+                {formatCurrency(report?.expenses?.total_expenses)}
               </div>
               <div className="text-xs text-mm-text-tertiary font-mono">
                 Всего издержек
@@ -234,13 +234,13 @@ function ProfitReportPage() {
             <div className="card-neon p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="text-sm text-mm-text-secondary font-mono">ЧИСТАЯ ПРИБЫЛЬ</div>
-                <FiTrendingUp className={report.profit.net_profit >= 0 ? 'text-mm-green' : 'text-mm-red'} size={24} />
+                <FiTrendingUp className={(report?.profit?.net_profit ?? 0) >= 0 ? 'text-mm-green' : 'text-mm-red'} size={24} />
               </div>
-              <div className={`text-3xl font-mono mb-2 ${report.profit.net_profit >= 0 ? 'text-mm-green' : 'text-mm-red'}`}>
-                {formatCurrency(report.profit.net_profit)}
+              <div className={`text-3xl font-mono mb-2 ${(report?.profit?.net_profit ?? 0) >= 0 ? 'text-mm-green' : 'text-mm-red'}`}>
+                {formatCurrency(report?.profit?.net_profit)}
               </div>
               <div className="text-xs text-mm-text-tertiary font-mono">
-                Маржа: {formatPercent(report.profit.net_margin_pct)}
+                Маржа: {formatPercent(report?.profit?.net_margin_pct)}
               </div>
             </div>
           </div>
