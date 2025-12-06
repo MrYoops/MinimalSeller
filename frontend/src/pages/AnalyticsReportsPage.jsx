@@ -243,7 +243,7 @@ function AnalyticsReportsPage() {
     } catch (error) {
       toast.error('Ошибка удаления')
     }
-
+  }
   
   // Функции для фильтра по товару
   const loadProductsList = async () => {
