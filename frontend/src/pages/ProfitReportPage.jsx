@@ -33,6 +33,7 @@ function ProfitReportPage() {
 
   const syncData = async () => {
     setSyncing(true)
+    setError(null)
     try {
       const response = await api.post('/api/profit-analytics/sync-ozon-data', null, {
         params: { date_from: dateFrom, date_to: dateTo }
@@ -44,7 +45,8 @@ function ProfitReportPage() {
       await loadReport()
     } catch (error) {
       console.error('Sync failed:', error)
-      alert('❌ Ошибка синхронизации: ' + (error.response?.data?.detail || error.message))
+      const errorMessage = error.response?.data?.detail || error.message || 'Неизвестная ошибка'
+      setError(`Ошибка синхронизации: ${errorMessage}`)
     }
     setSyncing(false)
   }
@@ -73,7 +75,6 @@ function ProfitReportPage() {
       setReport(null)
     }
     setLoading(false)
-  }
   }
 
   const exportToExcel = async () => {
@@ -115,12 +116,6 @@ function ProfitReportPage() {
       percent = 0
     }
     return `${percent.toFixed(2)}%`
-  }
-  
-  // Безопасный доступ к вложенным полям
-  const safeGet = (obj, path, defaultValue = 0) => {
-    const value = path.split('.').reduce((current, key) => current?.[key], obj)
-    return value !== undefined && value !== null ? value : defaultValue
   }
 
   return (
@@ -193,6 +188,13 @@ function ProfitReportPage() {
         )}
       </div>
 
+      {/* Сообщение об ошибке */}
+      {error && (
+        <div className="card-neon p-6 border-mm-red border-2">
+          <p className="text-mm-red">{error}</p>
+        </div>
+      )}
+
       {/* Отчет */}
       {loading ? (
         <div className="text-center py-12">
@@ -250,8 +252,8 @@ function ProfitReportPage() {
             <div className="p-6 border-b border-mm-border">
               <h3 className="text-lg font-mono text-mm-cyan uppercase">ОТЧЕТ О ПРИБЫЛЯХ И УБЫТКАХ (P&L)</h3>
               <p className="comment mt-1">// Период: {dateFrom} - {dateTo}</p>
-              {report.statistics && (
-                <p className="comment">// Транзакций: {report.statistics.total_transactions}</p>
+              {report?.statistics && (
+                <p className="comment">// Транзакций: {report.statistics.total_transactions || 0}</p>
               )}
             </div>
 
@@ -265,15 +267,15 @@ function ProfitReportPage() {
                 <div className="pl-6 space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-mm-text-secondary">Валовая выручка</span>
-                    <span>{formatCurrency(report.revenue.gross_sales)}</span>
+                    <span>{formatCurrency(report?.revenue?.gross_sales)}</span>
                   </div>
                   <div className="flex justify-between text-mm-red">
                     <span className="text-mm-text-secondary">Возвраты</span>
-                    <span>{formatCurrency(report.revenue.returns)}</span>
+                    <span>{formatCurrency(report?.revenue?.returns)}</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-mm-border font-bold text-mm-cyan">
                     <span>Чистая выручка</span>
-                    <span>{formatCurrency(report.revenue.net_sales)}</span>
+                    <span>{formatCurrency(report?.revenue?.net_sales)}</span>
                   </div>
                 </div>
               </div>
@@ -291,15 +293,15 @@ function ProfitReportPage() {
                   <div className="pl-4 space-y-1">
                     <div className="flex justify-between">
                       <span className="text-mm-text-tertiary">├─ Базовая комиссия</span>
-                      <span>{formatCurrency(safeGet(report, 'expenses.commissions.marketplace_base'))}</span>
+                      <span>{formatCurrency(report?.expenses?.commissions?.marketplace_base)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-mm-text-tertiary">└─ Комиссия от бонусов (9%)</span>
-                      <span>{formatCurrency(safeGet(report, 'expenses.commissions.bonus_commission'))}</span>
+                      <span>{formatCurrency(report?.expenses?.commissions?.bonus_commission)}</span>
                     </div>
                     <div className="flex justify-between font-bold pt-1">
                       <span>ИТОГО комиссии</span>
-                      <span>{formatCurrency(safeGet(report, 'expenses.commissions.total'))}</span>
+                      <span>{formatCurrency(report?.expenses?.commissions?.total)}</span>
                     </div>
                   </div>
                 </div>
@@ -310,19 +312,19 @@ function ProfitReportPage() {
                   <div className="pl-4 space-y-1">
                     <div className="flex justify-between">
                       <span className="text-mm-text-tertiary">├─ Доставка до покупателя</span>
-                      <span>{formatCurrency(report.expenses.logistics.delivery_to_customer)}</span>
+                      <span>{formatCurrency(report?.expenses?.logistics?.delivery_to_customer)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-mm-text-tertiary">├─ Последняя миля</span>
-                      <span>{formatCurrency(report.expenses.logistics.last_mile)}</span>
+                      <span>{formatCurrency(report?.expenses?.logistics?.last_mile)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-mm-text-tertiary">└─ Возвратная логистика</span>
-                      <span>{formatCurrency(report.expenses.logistics.returns)}</span>
+                      <span>{formatCurrency(report?.expenses?.logistics?.returns)}</span>
                     </div>
                     <div className="flex justify-between font-bold pt-1">
                       <span>ИТОГО логистика</span>
-                      <span>{formatCurrency(report.expenses.logistics.total)}</span>
+                      <span>{formatCurrency(report?.expenses?.logistics?.total)}</span>
                     </div>
                   </div>
                 </div>
@@ -333,23 +335,23 @@ function ProfitReportPage() {
                   <div className="pl-4 space-y-1">
                     <div className="flex justify-between">
                       <span className="text-mm-text-tertiary">├─ Хранение</span>
-                      <span>{formatCurrency(report.expenses.services.storage)}</span>
+                      <span>{formatCurrency(report?.expenses?.services?.storage)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-mm-text-tertiary">├─ Эквайринг</span>
-                      <span>{formatCurrency(report.expenses.services.acquiring)}</span>
+                      <span>{formatCurrency(report?.expenses?.services?.acquiring)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-mm-text-tertiary">├─ Выдача на ПВЗ</span>
-                      <span>{formatCurrency(report.expenses.services.pvz_fees)}</span>
+                      <span>{formatCurrency(report?.expenses?.services?.pvz_fees)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-mm-text-tertiary">└─ Упаковка</span>
-                      <span>{formatCurrency(report.expenses.services.packaging)}</span>
+                      <span>{formatCurrency(report?.expenses?.services?.packaging)}</span>
                     </div>
                     <div className="flex justify-between font-bold pt-1">
                       <span>ИТОГО услуги</span>
-                      <span>{formatCurrency(report.expenses.services.total)}</span>
+                      <span>{formatCurrency(report?.expenses?.services?.total)}</span>
                     </div>
                   </div>
                 </div>
@@ -360,7 +362,7 @@ function ProfitReportPage() {
                   <div className="pl-4 space-y-1">
                     <div className="flex justify-between font-bold">
                       <span>ИТОГО штрафы</span>
-                      <span>{formatCurrency(report.expenses.penalties.total)}</span>
+                      <span>{formatCurrency(report?.expenses?.penalties?.total)}</span>
                     </div>
                   </div>
                 </div>
@@ -371,7 +373,7 @@ function ProfitReportPage() {
                   <div className="pl-4 space-y-1">
                     <div className="flex justify-between font-bold">
                       <span>ИТОГО прочие</span>
-                      <span>{formatCurrency(report.expenses.other_expenses.total)}</span>
+                      <span>{formatCurrency(report?.expenses?.other_expenses?.total)}</span>
                     </div>
                   </div>
                 </div>
@@ -380,7 +382,7 @@ function ProfitReportPage() {
                 <div className="pl-6 pt-4 border-t border-mm-border">
                   <div className="flex justify-between font-bold text-lg text-mm-red">
                     <span>ИТОГО РАСХОДОВ</span>
-                    <span>{formatCurrency(report.expenses.total_expenses)}</span>
+                    <span>{formatCurrency(report?.expenses?.total_expenses)}</span>
                   </div>
                 </div>
               </div>
@@ -389,30 +391,30 @@ function ProfitReportPage() {
               <div className="pt-4 border-t-2 border-mm-cyan">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-1 h-6 bg-mm-green"></div>
-                  <h4 className={report.profit.net_profit >= 0 ? 'text-mm-green' : 'text-mm-red'} className="uppercase">
+                  <h4 className={(report?.profit?.net_profit ?? 0) >= 0 ? 'text-mm-green uppercase' : 'text-mm-red uppercase'}>
                     ЧИСТАЯ ПРИБЫЛЬ
                   </h4>
                 </div>
                 <div className="pl-6">
-                  <div className={`flex justify-between text-2xl font-bold ${report.profit.net_profit >= 0 ? 'text-mm-green' : 'text-mm-red'}`}>
+                  <div className={`flex justify-between text-2xl font-bold ${(report?.profit?.net_profit ?? 0) >= 0 ? 'text-mm-green' : 'text-mm-red'}`}>
                     <span>ЧИСТАЯ ПРИБЫЛЬ</span>
-                    <span>{formatCurrency(report.profit.net_profit)}</span>
+                    <span>{formatCurrency(report?.profit?.net_profit)}</span>
                   </div>
                   <div className="flex justify-between text-sm text-mm-text-secondary mt-2">
                     <span>Чистая маржа</span>
-                    <span>{formatPercent(report.profit.net_margin_pct)}</span>
+                    <span>{formatPercent(report?.profit?.net_margin_pct)}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      ) : (
+      ) : !loading && !error ? (
         <div className="card-neon text-center py-12">
           <p className="text-mm-text-secondary mb-2">Выберите период и нажмите "ПОКАЗАТЬ ОТЧЕТ"</p>
           <p className="comment">// Перед просмотром отчета необходимо синхронизировать данные</p>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
