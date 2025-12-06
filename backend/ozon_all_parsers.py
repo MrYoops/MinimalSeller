@@ -60,13 +60,44 @@ def parse_ozon_order_realization_report(file_content: Union[bytes, str], seller_
             "created_at": datetime.utcnow()
         })
     
+    # Подсчет продаж
+    total_revenue = sum(t["realized_amount"] for t in transactions)
+    total_loyalty = sum(t["loyalty_payments"] for t in transactions)
+    total_discounts = sum(t["discount_points"] for t in transactions)
+    total_commission = sum(t["ozon_base_commission"] for t in transactions)
+    total_to_accrue = sum(t["total_to_accrue"] for t in transactions)
+    
+    # Подсчет возвратов
+    total_returned_amount = sum(t["returned_amount"] for t in transactions)
+    total_returned_loyalty = sum(t["returned_loyalty_payments"] for t in transactions)
+    total_returned_discounts = sum(t["returned_discount_points"] for t in transactions)
+    total_returned_commission = sum(t["returned_commission"] for t in transactions)
+    total_returned = sum(t["total_returned"] for t in transactions)
+    total_returned_qty = sum(t["returned_quantity"] for t in transactions)
+    
+    # Чистая выручка (с учетом возвратов)
+    net_revenue = total_to_accrue - total_returned
+    
     totals = {
         "total_transactions": len(transactions),
-        "total_revenue": sum(t["realized_amount"] for t in transactions),
-        "total_loyalty": sum(t["loyalty_payments"] for t in transactions),
-        "total_discounts": sum(t["discount_points"] for t in transactions),
-        "total_commission": sum(t["ozon_base_commission"] for t in transactions),
-        "total_to_accrue": sum(t["total_to_accrue"] for t in transactions)
+        
+        # ПРОДАЖИ
+        "total_revenue": total_revenue,
+        "total_loyalty": total_loyalty,
+        "total_discounts": total_discounts,
+        "total_commission": total_commission,
+        "total_to_accrue": total_to_accrue,
+        
+        # ВОЗВРАТЫ
+        "total_returned_amount": total_returned_amount,
+        "total_returned_loyalty": total_returned_loyalty,
+        "total_returned_discounts": total_returned_discounts,
+        "total_returned_commission": total_returned_commission,
+        "total_returned": total_returned,
+        "total_returned_quantity": total_returned_qty,
+        
+        # ИТОГО
+        "net_revenue": net_revenue
     }
     
     return {"transactions": transactions, "summary": totals}
