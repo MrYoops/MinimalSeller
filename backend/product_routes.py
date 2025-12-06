@@ -489,3 +489,127 @@ async def auto_match_products(
         "matched": 0,
         "message": "Auto-matching not yet implemented"
     }
+
+# ============================================================================
+# TAGS MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@router.get("/tags")
+async def get_all_tags():
+    """
+    Получить список всех уникальных тегов из товаров
+    """
+    db = await get_database()
+    products_collection = db.product_catalog
+    
+    # Получаем все уникальные теги
+    pipeline = [
+        {"$unwind": "$tags"},
+        {"$group": {"_id": "$tags"}},
+        {"$sort": {"_id": 1}}
+    ]
+    
+    result = await products_collection.aggregate(pipeline).to_list(None)
+    tags = [doc["_id"] for doc in result if doc["_id"]]
+    
+    return {"tags": tags}
+
+
+@router.post("/tags")
+async def create_tag(tag_name: str):
+    """
+    Создать новый тег (фактически просто валидация имени)
+    """
+    if not tag_name or len(tag_name.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Имя тега не может быть пустым")
+    
+    tag_name = tag_name.strip()
+    
+    # Проверяем, что тег еще не существует
+    db = await get_database()
+    products_collection = db.product_catalog
+    
+    existing = await products_collection.find_one({"tags": tag_name})
+    if existing:
+        raise HTTPException(status_code=400, detail="Тег уже существует")
+    
+    return {"tag": tag_name, "message": "Тег создан. Присвойте его товарам для использования."}
+
+
+@router.delete("/tags/{tag_name}")
+async def delete_tag(tag_name: str):
+    """
+    Удалить тег из всех товаров
+    """
+    db = await get_database()
+    products_collection = db.product_catalog
+    
+    # Удаляем тег из всех товаров
+    result = await products_collection.update_many(
+        {"tags": tag_name},
+        {"$pull": {"tags": tag_name}}
+    )
+    
+    return {
+        "deleted": True,
+        "modified_count": result.modified_count,
+        "message": f"Тег '{tag_name}' удален из {result.modified_count} товаров"
+    }
+
+
+@router.post("/bulk-assign-tags")
+async def bulk_assign_tags(product_ids: List[str], tag: str):
+    """
+    Массово присвоить тег товарам
+    """
+    if not tag or len(tag.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Имя тега не может быть пустым")
+    
+    if not product_ids or len(product_ids) == 0:
+        raise HTTPException(status_code=400, detail="Не выбраны товары")
+    
+    tag = tag.strip()
+    
+    db = await get_database()
+    products_collection = db.product_catalog
+    
+    # Добавляем тег к выбранным товарам (используем $addToSet чтобы избежать дубликатов)
+    result = await products_collection.update_many(
+        {"_id": {"$in": product_ids}},
+        {"$addToSet": {"tags": tag}}
+    )
+    
+    return {
+        "success": True,
+        "modified_count": result.modified_count,
+        "message": f"Тег '{tag}' присвоен {result.modified_count} товарам"
+    }
+
+
+@router.post("/bulk-remove-tags")
+async def bulk_remove_tags(product_ids: List[str], tag: str):
+    """
+    Массово удалить тег у товаров
+    """
+    if not tag or len(tag.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Имя тега не может быть пустым")
+    
+    if not product_ids or len(product_ids) == 0:
+        raise HTTPException(status_code=400, detail="Не выбраны товары")
+    
+    tag = tag.strip()
+    
+    db = await get_database()
+    products_collection = db.product_catalog
+    
+    # Удаляем тег у выбранных товаров
+    result = await products_collection.update_many(
+        {"_id": {"$in": product_ids}},
+        {"$pull": {"tags": tag}}
+    )
+    
+    return {
+        "success": True,
+        "modified_count": result.modified_count,
+        "message": f"Тег '{tag}' удален у {result.modified_count} товаров"
+    }
