@@ -891,18 +891,6 @@ async def get_trends_data(
         "total_days": len(trends)
     }
 
-    return {"products": result, "total": len(result)}
-
-        e["expense_date"] = e["expense_date"].isoformat()
-        e["created_at"] = e["created_at"].isoformat()
-    
-    total = sum(e["amount"] for e in expenses)
-    
-    return {
-        "expenses": expenses,
-        "total": round(total, 2),
-        "count": len(expenses)
-    }
 
 
 @router.delete("/expense/{expense_id}")
