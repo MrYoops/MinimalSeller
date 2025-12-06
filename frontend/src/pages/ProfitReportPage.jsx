@@ -280,6 +280,28 @@ function ProfitReportPage() {
                 </div>
               </div>
 
+              {/* СЕБЕСТОИМОСТЬ */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-6 bg-mm-text-secondary"></div>
+                  <h4 className="text-mm-text-secondary uppercase">СЕБЕСТОИМОСТЬ ТОВАРОВ (COGS)</h4>
+                </div>
+                <div className="pl-6 space-y-2 text-sm">
+                  <div className="flex justify-between font-bold">
+                    <span className="text-mm-text-secondary">Закупочная цена проданных товаров</span>
+                    <span className="text-mm-text-secondary">{formatCurrency(report?.cogs?.total)}</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-mm-border font-bold text-lg">
+                    <span className="text-mm-green">💰 ВАЛОВАЯ ПРИБЫЛЬ</span>
+                    <span className="text-mm-green">{formatCurrency(report?.profit?.gross_profit)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-mm-text-tertiary">Валовая маржа</span>
+                    <span className="text-mm-text-tertiary">{formatPercent(report?.profit?.gross_margin_pct)}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* РАСХОДЫ */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
