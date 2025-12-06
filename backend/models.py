@@ -482,6 +482,7 @@ class ProductCatalogResponse(BaseModel):
     marketplace: Optional[str] = None
     variants_count: int = 0  # Количество вариаций (цветов/размеров)
     photos_count: int = 0
+    tags: List[str] = []  # Теги товара
     created_at: datetime
     updated_at: datetime
     
