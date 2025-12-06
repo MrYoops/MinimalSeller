@@ -112,6 +112,118 @@ export default function CatalogProductsPage() {
     }
   }
 
+  const loadTags = async () => {
+    try {
+      const response = await api.get('/api/products/tags')
+      setAllTags(response.data.tags || [])
+    } catch (error) {
+      console.error('Error fetching tags:', error)
+    }
+  }
+
+  const handleCreateTag = async () => {
+    if (!newTagName.trim()) {
+      alert('Введите название тега')
+      return
+    }
+
+    try {
+      await api.post(`/api/products/tags?tag_name=${encodeURIComponent(newTagName.trim())}`)
+      setAllTags([...allTags, newTagName.trim()])
+      setNewTagName('')
+      alert(`Тег "${newTagName.trim()}" создан`)
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Ошибка создания тега')
+    }
+  }
+
+  const handleDeleteTag = async (tagName) => {
+    if (!confirm(`Удалить тег "${tagName}" из всех товаров?`)) return
+
+    try {
+      await api.delete(`/api/products/tags/${encodeURIComponent(tagName)}`)
+      setAllTags(allTags.filter(t => t !== tagName))
+      await loadProducts()
+      alert(`Тег "${tagName}" удален`)
+    } catch (error) {
+      alert('Ошибка удаления тега')
+    }
+  }
+
+  const handleBulkAssignTag = async () => {
+    if (!selectedActionTag) {
+      alert('Выберите тег')
+      return
+    }
+
+    try {
+      await api.post('/api/products/bulk-assign-tags', {
+        product_ids: selectedProducts,
+        tag: selectedActionTag
+      })
+      
+      await loadProducts()
+      await loadTags()
+      setSelectedProducts([])
+      setSelectedActionTag('')
+      alert(`Тег "${selectedActionTag}" присвоен выбранным товарам`)
+    } catch (error) {
+      alert('Ошибка присвоения тега')
+    }
+  }
+
+  const handleBulkRemoveTag = async () => {
+    if (!selectedActionTag) {
+      alert('Выберите тег для удаления')
+      return
+    }
+
+    try {
+      await api.post('/api/products/bulk-remove-tags', {
+        product_ids: selectedProducts,
+        tag: selectedActionTag
+      })
+      
+      await loadProducts()
+      await loadTags()
+      setSelectedProducts([])
+      setSelectedActionTag('')
+      alert(`Тег "${selectedActionTag}" удален у выбранных товаров`)
+    } catch (error) {
+      alert('Ошибка удаления тега')
+    }
+  }
+
+  const handleRemoveTagFromProduct = async (productId, tagName) => {
+    try {
+      await api.post('/api/products/bulk-remove-tags', {
+        product_ids: [productId],
+        tag: tagName
+      })
+      
+      await loadProducts()
+      await loadTags()
+    } catch (error) {
+      alert('Ошибка удаления тега')
+    }
+  }
+
+  const toggleProductSelection = (productId) => {
+    if (selectedProducts.includes(productId)) {
+      setSelectedProducts(selectedProducts.filter(id => id !== productId))
+    } else {
+      setSelectedProducts([...selectedProducts, productId])
+    }
+  }
+
+  const toggleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedProducts(productsWithPhotos.map(p => p.id))
+    } else {
+      setSelectedProducts([])
+    }
+  }
+
   const getStatusBadge = (status) => {
     const badges = {
       active: <span className="px-2 py-1 text-xs rounded bg-green-500/20 text-green-400">Активен</span>,
