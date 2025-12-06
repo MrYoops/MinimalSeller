@@ -59,7 +59,9 @@ function AnalyticsReportsPage() {
   // Для фильтра по товару
   const [productFilter, setProductFilter] = useState('')
   const [productsList, setProductsList] = useState([])
-  const [showProductsDropdown, setShowProductsDropdown] = useState(false)
+  
+  // Для фильтра по тегу
+  const [tagsList, setTagsList] = useState([])
   
   const handleUpload = async (e) => {
     const file = e.target.files[0]
