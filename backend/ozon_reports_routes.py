@@ -204,13 +204,25 @@ async def calculate_profit_from_reports(
             "profit": {"net_profit": 0, "net_margin_pct": 0}
         }
     
-    # ДОХОДЫ
+    # ДОХОДЫ - Продажи
     total_realized = sum(t["realized_amount"] for t in transactions)
     total_loyalty = sum(t["loyalty_payments"] for t in transactions)
     total_discounts = sum(t["discount_points"] for t in transactions)
-    gross_revenue = total_realized + total_loyalty + total_discounts
+    total_accrued = sum(t.get("total_to_accrue", 0) for t in transactions)
     
-    # РАСХОДЫ - базовые
+    # ВОЗВРАТЫ
+    total_returned_amount = sum(t.get("returned_amount", 0) for t in transactions)
+    total_returned_loyalty = sum(t.get("returned_loyalty_payments", 0) for t in transactions)
+    total_returned_discounts = sum(t.get("returned_discount_points", 0) for t in transactions)
+    total_returned_commission = sum(t.get("returned_commission", 0) for t in transactions)
+    total_returned = sum(t.get("total_returned", 0) for t in transactions)
+    total_returned_qty = sum(t.get("returned_quantity", 0) for t in transactions)
+    
+    # ИТОГОВАЯ ВЫРУЧКА (валовая - возвраты)
+    gross_revenue = total_realized + total_loyalty + total_discounts
+    net_revenue = total_accrued - total_returned
+    
+    # РАСХОДЫ - базовые (комиссия уже вычтена в total_accrued, но вернулась с возвратами)
     total_commission = sum(t["ozon_base_commission"] for t in transactions)
     
     # РАСХОДЫ - дополнительные
