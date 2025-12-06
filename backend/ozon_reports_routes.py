@@ -87,6 +87,11 @@ async def upload_loyalty_report(
     for program in result["programs"]:
         await db.ozon_loyalty_programs.update_one(
             {"seller_id": seller_id, "program_name": program["program_name"]},
+            {"$set": program},
+            upsert=True
+        )
+    
+    return {"status": "success", "total_expense": result["total_loyalty_expense"]}
 
 
 @router.post("/upload-rfbs-logistics")
