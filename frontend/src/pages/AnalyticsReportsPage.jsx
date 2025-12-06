@@ -254,10 +254,6 @@ function AnalyticsReportsPage() {
       console.error('Ошибка загрузки товаров', error)
     }
   }
-
-  }
-
-
   
   const exportExcel = async () => {
     try {
@@ -282,6 +278,7 @@ function AnalyticsReportsPage() {
     }
   }
   
+  // Load initial data
   useEffect(() => {
     loadTaxSettings()
     loadReportsHistory()
@@ -289,7 +286,7 @@ function AnalyticsReportsPage() {
   }, [])
   
   useEffect(() => {
-    if (profitData || salesData || transactionsData) {
+    if (profitData || salesData || transactionsData || trendsData) {
       loadData()
       loadExpenses()
     }
