@@ -469,3 +469,145 @@ async def export_to_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+# ============================================================================
+# УПРАВЛЕНИЕ ЗАКУПОЧНЫМИ ЦЕНАМИ (COGS)
+# ============================================================================
+
+@router.get("/products-with-prices")
+async def get_products_with_purchase_prices(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить список товаров с закупочными ценами для управления COGS"""
+    seller_id = str(current_user["_id"])
+    db = await get_database()
+    
+    # Получаем товары из каталога
+    products = await db.product_catalog.find(
+        {"seller_id": seller_id},
+        {"article": 1, "name": 1, "price": 1, "purchase_price": 1, "marketplace": 1}
+    ).to_list(1000)
+    
+    result = []
+    for p in products:
+        result.append({
+            "_id": str(p.get("_id", "")),
+            "article": p.get("article", ""),
+            "name": p.get("name", "")[:100],  # Ограничиваем длину
+            "price": p.get("price", 0),
+            "purchase_price": p.get("purchase_price", 0),
+            "marketplace": p.get("marketplace", ""),
+            "margin_pct": ((p.get("price", 0) - p.get("purchase_price", 0)) / p.get("price", 1) * 100) 
+                          if p.get("price", 0) > 0 and p.get("purchase_price") else 0
+        })
+    
+    return {
+        "products": result,
+        "total": len(result),
+        "with_price": sum(1 for p in result if p["purchase_price"] > 0)
+    }
+
+
+@router.post("/update-purchase-prices")
+async def update_purchase_prices(
+    updates: dict,  # {"article1": 100.50, "article2": 200.00}
+    current_user: dict = Depends(get_current_user)
+):
+    """Массовое обновление закупочных цен"""
+    seller_id = str(current_user["_id"])
+    db = await get_database()
+    
+    updated_count = 0
+    errors = []
+    
+    for article, price in updates.items():
+        try:
+            price_float = float(price)
+            if price_float < 0:
+                errors.append(f"{article}: цена не может быть отрицательной")
+                continue
+            
+            result = await db.product_catalog.update_one(
+                {"seller_id": seller_id, "article": article},
+                {"$set": {"purchase_price": price_float, "updated_at": datetime.utcnow()}}
+            )
+            
+            if result.matched_count > 0:
+                updated_count += 1
+            else:
+                errors.append(f"{article}: товар не найден")
+        except Exception as e:
+            errors.append(f"{article}: {str(e)}")
+    
+    return {
+        "status": "success",
+        "updated": updated_count,
+        "errors": errors if errors else None
+    }
+
+
+@router.post("/import-purchase-prices")
+async def import_purchase_prices_from_csv(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Импорт закупочных цен из CSV/Excel файла"""
+    seller_id = str(current_user["_id"])
+    
+    if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Поддерживаются только CSV и Excel файлы")
+    
+    content = await file.read()
+    
+    try:
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(BytesIO(content))
+        else:
+            df = pd.read_excel(BytesIO(content))
+        
+        # Проверяем наличие нужных колонок
+        required_cols = ['article', 'purchase_price']
+        if not all(col in df.columns for col in required_cols):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Файл должен содержать колонки: {', '.join(required_cols)}"
+            )
+        
+        # Преобразуем в словарь
+        updates = {}
+        for _, row in df.iterrows():
+            article = str(row['article']).strip()
+            price = float(row['purchase_price'])
+            if article and price >= 0:
+                updates[article] = price
+        
+        # Используем существующий endpoint для обновления
+        db = await get_database()
+        updated_count = 0
+        errors = []
+        
+        for article, price in updates.items():
+            try:
+                result = await db.product_catalog.update_one(
+                    {"seller_id": seller_id, "article": article},
+                    {"$set": {"purchase_price": price, "updated_at": datetime.utcnow()}}
+                )
+                if result.matched_count > 0:
+                    updated_count += 1
+                else:
+                    errors.append(f"{article}: товар не найден")
+            except Exception as e:
+                errors.append(f"{article}: {str(e)}")
+        
+        return {
+            "status": "success",
+            "imported": len(updates),
+            "updated": updated_count,
+            "errors": errors[:10] if errors else None  # Показываем только первые 10 ошибок
+        }
+        
+    except Exception as e:
+        logger.error(f"Import error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Ошибка импорта: {str(e)}")
+
