@@ -14,9 +14,16 @@ import pandas as pd
 from fastapi.responses import StreamingResponse
 
 from database import get_database
-from dependencies import get_current_user
+import dependencies
 
 router = APIRouter(prefix="/api/profit-analytics", tags=["profit-analytics"])
+
+# Helper function to get current user
+async def get_current_user_dep():
+    """Dependency to get current user"""
+    if dependencies.get_current_user is None:
+        raise HTTPException(status_code=500, detail="Authentication not configured")
+    return dependencies.get_current_user
 
 
 # ============================================================================
