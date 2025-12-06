@@ -126,6 +126,7 @@ function AnalyticsReportsPage() {
     try {
       const params = { period_start: dateFrom, period_end: dateTo }
       if (tagFilter) params.tag_filter = tagFilter
+      if (productFilter) params.product_filter = productFilter
       
       if (activeReport === 'profit') {
         const r = await api.get('/api/ozon-reports/calculate-profit', { params })
