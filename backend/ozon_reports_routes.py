@@ -494,11 +494,34 @@ async def export_to_excel(
     output = BytesIO()
     
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # РАСЧЕТ ДОХОДОВ
         total_realized = sum(t["realized_amount"] for t in transactions)
         total_loyalty = sum(t["loyalty_payments"] for t in transactions)
         total_discounts = sum(t["discount_points"] for t in transactions)
         total_commission = sum(t["ozon_base_commission"] for t in transactions)
+        total_accrued = sum(t.get("total_to_accrue", 0) for t in transactions)
         
+        # ВОЗВРАТЫ
+        total_returned = sum(t.get("total_returned", 0) for t in transactions)
+        total_returned_qty = sum(t.get("returned_quantity", 0) for t in transactions)
+        
+        # СЕБЕСТОИМОСТЬ (COGS)
+        total_cogs = 0
+        for t in transactions:
+            article = t.get("article", "")
+            quantity = t.get("quantity", 0)
+            returned_qty = t.get("returned_quantity", 0)
+            net_qty = quantity - returned_qty
+            
+            if net_qty > 0 and article:
+                product = await db.product_catalog.find_one({
+                    "seller_id": seller_id,
+                    "article": article
+                })
+                if product and product.get("purchase_price"):
+                    total_cogs += product["purchase_price"] * net_qty
+        
+        # РАСХОДЫ
         loyalty_programs = await db.ozon_loyalty_programs.find({"seller_id": seller_id}).to_list(100)
         total_loyalty_expense = sum(p.get("total", 0) for p in loyalty_programs)
         
@@ -511,25 +534,95 @@ async def export_to_excel(
         fbo_fbs_record = await db.ozon_fbo_fbs_services.find_one({"seller_id": seller_id})
         total_fbo_fbs = fbo_fbs_record.get("total", 0) if fbo_fbs_record else 0
         
+        # Ручные расходы
+        manual_expenses = await db.ozon_manual_expenses.find({
+            "seller_id": seller_id,
+            "expense_date": {"$gte": date_from, "$lte": date_to}
+        }).to_list(1000)
+        total_manual = sum(e.get("amount", 0) for e in manual_expenses)
+        
+        # НАЛОГИ
+        tax_settings = await db.tax_settings.find_one({"seller_id": seller_id})
+        tax_amount = 0
+        tax_label = "Не установлен"
+        if tax_settings and tax_settings.get("tax_system"):
+            tax_system = tax_settings["tax_system"]
+            tax_rate = tax_settings.get("rate", 0)
+            gross_revenue = total_realized + total_loyalty + total_discounts
+            
+            if tax_system == "usn_income":
+                tax_amount = gross_revenue * (tax_rate / 100)
+                tax_label = f"УСН Доходы {tax_rate}%"
+            elif tax_system == "usn_income_expense":
+                net_revenue = total_accrued - total_returned
+                total_expenses_calc = total_commission + total_loyalty_expense + total_acquiring + total_rfbs + total_fbo_fbs + total_manual
+                tax_base = max(0, net_revenue - total_cogs - total_expenses_calc)
+                tax_amount = tax_base * (tax_rate / 100)
+                tax_label = f"УСН Доходы-Расходы {tax_rate}%"
+            else:
+                tax_label = f"{tax_system.upper()} {tax_rate}%"
+        
+        # ИТОГОВЫЕ РАСЧЕТЫ
         gross_revenue = total_realized + total_loyalty + total_discounts
-        total_expenses = total_commission + total_loyalty_expense + total_acquiring + total_rfbs + total_fbo_fbs
-        net_profit = gross_revenue - total_expenses
-        margin = (net_profit / gross_revenue * 100) if gross_revenue > 0 else 0
+        net_revenue = total_accrued - total_returned
+        gross_profit = net_revenue - total_cogs
+        total_expenses = total_commission + total_loyalty_expense + total_acquiring + total_rfbs + total_fbo_fbs + total_manual
+        operating_profit = gross_profit - total_expenses
+        net_profit = operating_profit - tax_amount
+        margin = (net_profit / net_revenue * 100) if net_revenue > 0 else 0
         
         summary_data = {
             "Показатель": [
                 "Период", "Транзакций", "",
-                "ВЫРУЧКА", "Реализовано", "+ Выплаты лояльность", "+ Баллы скидки", "= Валовая выручка", "",
-                "РАСХОДЫ", "Комиссия Ozon", "Выплаты партнерам", "Эквайринг", "Логистика rFBS", "Услуги FBO/FBS",
+                "=== ДОХОДЫ ===", 
+                "Реализовано", 
+                "+ Выплаты лояльность", 
+                "+ Баллы скидки", 
+                "= Валовая выручка",
+                "- Возвраты",
+                "= Чистая выручка", "",
+                "=== СЕБЕСТОИМОСТЬ ===",
+                "- COGS",
+                "= Валовая прибыль", "",
+                "=== РАСХОДЫ ===",
+                "- Комиссия Ozon", 
+                "- Выплаты партнерам", 
+                "- Эквайринг", 
+                "- Логистика rFBS", 
+                "- Услуги FBO/FBS",
+                "- Ручные расходы",
                 "= Итого расходов", "",
-                "ПРИБЫЛЬ", "Чистая прибыль", "Маржа %"
+                "=== ПРИБЫЛЬ ===",
+                "= Операционная прибыль",
+                f"- Налог ({tax_label})",
+                "= Чистая прибыль", 
+                "Маржа %"
             ],
             "Значение": [
                 f"{period_start} - {period_end}", len(transactions), "",
-                "", total_realized, total_loyalty, total_discounts, gross_revenue, "",
-                "", total_commission, total_loyalty_expense, total_acquiring, total_rfbs, total_fbo_fbs,
-                total_expenses, "",
-                "", net_profit, margin
+                "",
+                total_realized, 
+                total_loyalty, 
+                total_discounts, 
+                gross_revenue,
+                -total_returned,
+                net_revenue, "",
+                "",
+                -total_cogs,
+                gross_profit, "",
+                "",
+                -total_commission, 
+                -total_loyalty_expense, 
+                -total_acquiring, 
+                -total_rfbs, 
+                -total_fbo_fbs,
+                -total_manual,
+                -total_expenses, "",
+                "",
+                operating_profit,
+                -tax_amount,
+                net_profit, 
+                margin
             ]
         }
         
