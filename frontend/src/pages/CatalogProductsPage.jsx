@@ -46,6 +46,7 @@ export default function CatalogProductsPage() {
   useEffect(() => {
     loadCategories()
     loadProducts()
+    loadTags()
   }, [searchTerm, selectedCategory, selectedBrand, selectedStatus, page, sortBy, ascending])
 
   const loadCategories = async () => {
