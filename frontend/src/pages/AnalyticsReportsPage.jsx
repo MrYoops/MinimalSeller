@@ -66,15 +66,15 @@ function AnalyticsReportsPage() {
       
       switch(reportType) {
         case 'loyalty':
-          endpoint = '/api/ozon-reports/upload-loyalty'
+          endpoint = '/api/ozon-reports/upload-loyalty-report'
           successMessage = 'Отчет по лояльности загружен'
           break
         case 'acquiring':
-          endpoint = '/api/ozon-reports/upload-acquiring'
+          endpoint = '/api/ozon-reports/upload-acquiring-report'
           successMessage = 'Отчет по эквайрингу загружен'
           break
         case 'rfbs':
-          endpoint = '/api/ozon-reports/upload-rfbs'
+          endpoint = '/api/ozon-reports/upload-rfbs-logistics'
           successMessage = 'Отчет по логистике rFBS загружен'
           break
         default:
