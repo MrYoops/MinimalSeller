@@ -820,6 +820,24 @@ async def import_purchase_prices_from_csv(
 # РУЧНОЕ УПРАВЛЕНИЕ РАСХОДАМИ
 # ============================================================================
 
+
+@router.get("/tags-list")
+async def get_tags_list(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить список уникальных тегов/артикулов из транзакций"""
+    seller_id = str(current_user["_id"])
+    db = await get_database()
+    
+    # Получаем уникальные артикулы
+    articles = await db.ozon_transactions.distinct("article", {"seller_id": seller_id})
+    
+    return {
+        "tags": sorted([a for a in articles if a]),
+        "total": len(articles)
+    }
+
+
 @router.post("/add-expense")
 async def add_manual_expense(
     expense_data: dict,
