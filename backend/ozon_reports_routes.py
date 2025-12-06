@@ -643,11 +643,27 @@ async def export_to_excel(
                 "Лояльность": t["loyalty_payments"],
                 "Баллы": t["discount_points"],
                 "Комиссия": t["ozon_base_commission"],
-                "Итого": t["total_to_accrue"]
+                "Итого начислено": t["total_to_accrue"],
+                "Возвращено кол-во": t.get("returned_quantity", 0),
+                "Возвращено сумма": t.get("total_returned", 0)
             })
         
         df_details = pd.DataFrame(details)
         df_details.to_excel(writer, sheet_name='Детализация', index=False)
+        
+        # Лист с ручными расходами
+        if manual_expenses:
+            expenses_list = []
+            for e in manual_expenses:
+                expenses_list.append({
+                    "Дата": e["expense_date"].isoformat() if isinstance(e["expense_date"], datetime) else str(e["expense_date"]),
+                    "Тип": e.get("expense_type", ""),
+                    "Сумма": e.get("amount", 0),
+                    "№ документа": e.get("document_number", ""),
+                    "Описание": e.get("description", "")
+                })
+            df_expenses = pd.DataFrame(expenses_list)
+            df_expenses.to_excel(writer, sheet_name='Ручные расходы', index=False)
     
     output.seek(0)
     filename = f"ozon_report_{period_start}_{period_end}.xlsx"
