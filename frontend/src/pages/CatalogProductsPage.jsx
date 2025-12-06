@@ -1,7 +1,24 @@
 import React, { useState, useEffect } from 'react'
-import { FiPlus, FiSearch, FiFilter, FiDownload, FiUpload, FiEdit, FiTrash2, FiPackage, FiLink, FiDollarSign } from 'react-icons/fi'
+import { FiPlus, FiSearch, FiFilter, FiDownload, FiUpload, FiEdit, FiTrash2, FiPackage, FiLink, FiDollarSign, FiTag, FiX } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
 import SyncLogsTab from './SyncLogsTab'
+
+// Генератор случайного цвета для тега
+const generateTagColor = (tag) => {
+  const colors = [
+    'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    'bg-green-500/20 text-green-300 border-green-500/30',
+    'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+    'bg-pink-500/20 text-pink-300 border-pink-500/30',
+    'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+    'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    'bg-red-500/20 text-red-300 border-red-500/30',
+  ];
+  
+  const hash = tag.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return colors[hash % colors.length];
+};
 
 export default function CatalogProductsPage() {
   const { api } = useAuth()
@@ -18,6 +35,13 @@ export default function CatalogProductsPage() {
   const [page, setPage] = useState(1)
   const [sortBy, setSortBy] = useState('created_at')
   const [ascending, setAscending] = useState(false)
+  
+  // Tags management
+  const [allTags, setAllTags] = useState([])
+  const [selectedProducts, setSelectedProducts] = useState([])
+  const [showTagsModal, setShowTagsModal] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
+  const [selectedActionTag, setSelectedActionTag] = useState('')
 
   useEffect(() => {
     loadCategories()
