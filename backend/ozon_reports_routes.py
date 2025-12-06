@@ -238,11 +238,44 @@ async def calculate_profit_from_reports(
     fbo_fbs_record = await db.ozon_fbo_fbs_services.find_one({"seller_id": seller_id})
     total_fbo_fbs = fbo_fbs_record.get("total", 0) if fbo_fbs_record else 0
     
-    # ИТОГО
+    # СЕБЕСТОИМОСТЬ (COGS)
+    total_cogs = 0
+    cogs_items_count = 0
+    cogs_missing_count = 0
+    
+    for t in transactions:
+        article = t.get("article", "")
+        quantity = t.get("quantity", 0)
+        returned_qty = t.get("returned_quantity", 0)
+        net_qty = quantity - returned_qty  # Чистое количество проданных товаров
+        
+        if net_qty > 0 and article:
+            product = await db.product_catalog.find_one({
+                "seller_id": seller_id,
+                "article": article
+            })
+            
+            if product and product.get("purchase_price"):
+                cogs = product["purchase_price"] * net_qty
+                total_cogs += cogs
+                cogs_items_count += 1
+            else:
+                cogs_missing_count += 1
+    
+    # ИТОГОВЫЕ РАСХОДЫ
     total_expenses = total_commission + total_loyalty_expense + total_acquiring + total_rfbs + total_fbo_fbs
     
-    # ПРИБЫЛЬ (используем чистую выручку после возвратов)
-    net_profit = net_revenue - total_expenses
+    # ПРИБЫЛЬ
+    # Валовая прибыль = Чистая выручка - Себестоимость
+    gross_profit = net_revenue - total_cogs
+    gross_margin = (gross_profit / net_revenue * 100) if net_revenue > 0 else 0
+    
+    # Операционная прибыль = Валовая прибыль - Расходы
+    operating_profit = gross_profit - total_expenses
+    operating_margin = (operating_profit / net_revenue * 100) if net_revenue > 0 else 0
+    
+    # Чистая прибыль (пока без налогов)
+    net_profit = operating_profit
     net_margin = (net_profit / net_revenue * 100) if net_revenue > 0 else 0
     
     return {
