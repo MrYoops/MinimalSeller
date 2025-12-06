@@ -501,6 +501,30 @@ export default function CatalogProductsPage() {
                       </div>
                     )}
                   </td>
+                  {/* Колонка тегов */}
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1 max-w-xs">
+                      {product.tags && product.tags.length > 0 ? (
+                        product.tags.map(tag => (
+                          <span
+                            key={tag}
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs border ${generateTagColor(tag)}`}
+                          >
+                            {tag}
+                            <button
+                              onClick={() => handleRemoveTagFromProduct(product.id, tag)}
+                              className="hover:opacity-70"
+                              title="Удалить тег"
+                            >
+                              <FiX size={12} />
+                            </button>
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-mm-text-secondary text-xs">—</span>
+                      )}
+                    </div>
+                  </td>
                   {/* Колонка маркетплейсов */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
