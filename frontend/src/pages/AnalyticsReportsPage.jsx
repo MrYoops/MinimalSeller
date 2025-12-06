@@ -1,9 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiUpload, FiFileText, FiTrendingUp, FiList, FiFilter } from 'react-icons/fi'
+import { FiUpload, FiFileText, FiTrendingUp, FiList, FiDownload, FiChevronDown, FiChevronUp } from 'react-icons/fi'
 import { toast } from 'sonner'
 
-// Утилиты для дат
 const getDateString = (date) => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -17,28 +16,23 @@ const getFirstDayOfMonth = () => {
   return getDateString(firstDay)
 }
 
-const getToday = () => {
-  return getDateString(new Date())
-}
+const getToday = () => getDateString(new Date())
 
 function AnalyticsReportsPage() {
   const { api } = useAuth()
-  
-  // Состояние
-  const [activeReport, setActiveReport] = useState('profit')  // 'profit', 'sales', 'transactions'
+  const [activeReport, setActiveReport] = useState('profit')
   const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [reportData, setReportData] = useState(null)
-  
-  // Фильтры
+  const [profitData, setProfitData] = useState(null)
+  const [salesData, setSalesData] = useState(null)
+  const [transactionsData, setTransactionsData] = useState(null)
   const [dateFrom, setDateFrom] = useState(getFirstDayOfMonth())
   const [dateTo, setDateTo] = useState(getToday())
-  const [selectedTag, setSelectedTag] = useState('')
-  const [selectedProduct, setSelectedProduct] = useState('')
+  const [tagFilter, setTagFilter] = useState('')
+  const [expandedRow, setExpandedRow] = useState(null)
   
-  // Загрузка позаказного отчета
-  const handleUploadOrderReport = async (event) => {
-    const file = event.target.files[0]
+  const handleUpload = async (e) => {
+    const file = e.target.files[0]
     if (!file) return
     
     setUploading(true)
@@ -49,268 +43,200 @@ function AnalyticsReportsPage() {
       const response = await api.post('/api/ozon-reports/upload-order-realization', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-      
-      toast.success(`Отчет загружен! Транзакций: ${response.data.statistics.transactions_parsed}`)
-      
-      // Автоматически загружаем данные
-      loadReportData()
+      toast.success(`Загружено ${response.data.statistics.transactions_parsed} транзакций`)
+      loadData()
     } catch (error) {
-      console.error('Upload failed:', error)
-      toast.error('Ошибка загрузки: ' + (error.response?.data?.detail || error.message))
+      toast.error('Ошибка: ' + (error.response?.data?.detail || error.message))
     }
-    
     setUploading(false)
-    event.target.value = ''  // Сброс input
+    e.target.value = ''
   }
   
-  // Загрузка данных отчета
-  const loadReportData = async () => {
+  const loadData = async () => {
     setLoading(true)
     try {
-      const response = await api.get('/api/ozon-reports/calculate-profit', {
-        params: {
-          period_start: dateFrom,
-          period_end: dateTo
-        }
-      })
+      const params = { period_start: dateFrom, period_end: dateTo }
+      if (tagFilter) params.tag_filter = tagFilter
       
-      setReportData(response.data)
+      if (activeReport === 'profit') {
+        const r = await api.get('/api/ozon-reports/calculate-profit', { params })
+        setProfitData(r.data)
+      } else if (activeReport === 'sales') {
+        const r = await api.get('/api/ozon-reports/sales-report', { params })
+        setSalesData(r.data)
+      } else {
+        const r = await api.get('/api/ozon-reports/transactions-list', { params: {...params, limit: 100, offset: 0} })
+        setTransactionsData(r.data)
+      }
     } catch (error) {
-      console.error('Load failed:', error)
-      toast.error('Ошибка загрузки данных')
+      toast.error('Ошибка загрузки')
     }
     setLoading(false)
   }
   
-  const formatCurrency = (amount) => {
-    if (!amount && amount !== 0) amount = 0
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency: 'RUB',
-      minimumFractionDigits: 2
-    }).format(amount)
+  const exportExcel = async () => {
+    try {
+      const params = { period_start: dateFrom, period_end: dateTo }
+      if (tagFilter) params.tag_filter = tagFilter
+      
+      const response = await api.get('/api/ozon-reports/export-excel', {
+        params,
+        responseType: 'blob'
+      })
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `ozon_report_${dateFrom}_${dateTo}.xlsx`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      toast.success('Экспорт завершен!')
+    } catch (error) {
+      toast.error('Ошибка экспорта')
+    }
   }
   
-  const formatPercent = (value) => {
-    if (!value && value !== 0) value = 0
-    return `${value.toFixed(2)}%`
+  useEffect(() => {
+    if (profitData || salesData || transactionsData) {
+      loadData()
+    }
+  }, [activeReport])
+  
+  const fmt = (n) => {
+    if (!n && n !== 0) n = 0
+    return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(n)
   }
+  
+  const pct = (n) => `${(n || 0).toFixed(2)}%`
   
   return (
     <div className="space-y-6 pb-8">
-      {/* Заголовок */}
       <div>
         <h2 className="text-2xl mb-2 text-mm-cyan uppercase">АНАЛИТИКА И ОТЧЁТЫ</h2>
-        <p className="comment">// Анализ прибыли на основе документов Ozon</p>
+        <p className="comment">// Анализ на основе документов Ozon</p>
       </div>
 
-      {/* Dropdown меню отчетов */}
       <div className="card-neon p-6">
         <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setActiveReport('profit')}
-            className={`px-6 py-3 rounded font-mono text-sm transition-all ${
-              activeReport === 'profit'
-                ? 'bg-mm-cyan text-mm-black'
-                : 'bg-mm-gray text-mm-text-secondary hover:bg-mm-border'
-            }`}
-          >
-            <FiTrendingUp className="inline mr-2" />
-            ЧИСТАЯ ПРИБЫЛЬ
+          <button onClick={() => setActiveReport('profit')} className={`px-6 py-3 rounded font-mono text-sm ${
+              activeReport === 'profit' ? 'bg-mm-cyan text-mm-black' : 'bg-mm-gray text-mm-text-secondary hover:bg-mm-border'
+            }`}>
+            <FiTrendingUp className="inline mr-2" />ЧИСТАЯ ПРИБЫЛЬ
           </button>
-          
-          <button
-            onClick={() => setActiveReport('sales')}
-            className={`px-6 py-3 rounded font-mono text-sm transition-all ${
-              activeReport === 'sales'
-                ? 'bg-mm-cyan text-mm-black'
-                : 'bg-mm-gray text-mm-text-secondary hover:bg-mm-border'
-            }`}
-          >
-            <FiFileText className="inline mr-2" />
-            ОБЩИЕ ПРОДАЖИ
+          <button onClick={() => setActiveReport('sales')} className={`px-6 py-3 rounded font-mono text-sm ${
+              activeReport === 'sales' ? 'bg-mm-cyan text-mm-black' : 'bg-mm-gray text-mm-text-secondary hover:bg-mm-border'
+            }`}>
+            <FiFileText className="inline mr-2" />ОБЩИЕ ПРОДАЖИ
           </button>
-          
-          <button
-            onClick={() => setActiveReport('transactions')}
-            className={`px-6 py-3 rounded font-mono text-sm transition-all ${
-              activeReport === 'transactions'
-                ? 'bg-mm-cyan text-mm-black'
-                : 'bg-mm-gray text-mm-text-secondary hover:bg-mm-border'
-            }`}
-          >
-            <FiList className="inline mr-2" />
-            ТРАНЗАКЦИИ
+          <button onClick={() => setActiveReport('transactions')} className={`px-6 py-3 rounded font-mono text-sm ${
+              activeReport === 'transactions' ? 'bg-mm-cyan text-mm-black' : 'bg-mm-gray text-mm-text-secondary hover:bg-mm-border'
+            }`}>
+            <FiList className="inline mr-2" />ТРАНЗАКЦИИ
           </button>
         </div>
 
-        {/* Панель фильтров */}
         <div className="border-t border-mm-border pt-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm text-mm-text-secondary mb-2 font-mono">
-                ПЕРИОД С:
-              </label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-4 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm text-mm-text focus:border-mm-cyan focus:outline-none transition-colors"
-              />
+              <label className="block text-sm text-mm-text-secondary mb-2 font-mono">ПЕРИОД С:</label>
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full px-4 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm text-mm-text focus:border-mm-cyan focus:outline-none" />
             </div>
-            
             <div>
-              <label className="block text-sm text-mm-text-secondary mb-2 font-mono">
-                ПО:
-              </label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-4 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm text-mm-text focus:border-mm-cyan focus:outline-none transition-colors"
-              />
+              <label className="block text-sm text-mm-text-secondary mb-2 font-mono">ПО:</label>
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                className="w-full px-4 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm text-mm-text focus:border-mm-cyan focus:outline-none" />
             </div>
-            
             <div>
-              <label className="block text-sm text-mm-text-secondary mb-2 font-mono">
-                ТЕГ ТОВАРА:
-              </label>
-              <input
-                type="text"
-                value={selectedTag}
-                onChange={(e) => setSelectedTag(e.target.value)}
-                placeholder="Например: MINIMALMOD"
-                className="w-full px-4 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm text-mm-text focus:border-mm-cyan focus:outline-none transition-colors placeholder:text-mm-text-tertiary"
-              />
+              <label className="block text-sm text-mm-text-secondary mb-2 font-mono">ТЕГ ТОВАРА:</label>
+              <input type="text" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} placeholder="MINIMALMOD, crucial..."
+                className="w-full px-4 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm text-mm-text focus:border-mm-cyan focus:outline-none placeholder:text-mm-text-tertiary" />
             </div>
-            
-            <div className="flex items-end">
-              <button
-                onClick={loadReportData}
-                disabled={loading}
-                className="btn-primary w-full"
-              >
+            <div className="flex items-end gap-2">
+              <button onClick={loadData} disabled={loading} className="btn-primary flex-1">
                 {loading ? 'ЗАГРУЗКА...' : 'ПОКАЗАТЬ'}
+              </button>
+              <button onClick={exportExcel} className="btn-secondary px-4">
+                <FiDownload />
               </button>
             </div>
           </div>
           
-          {/* Кнопка загрузки отчета */}
           <div className="mt-4 pt-4 border-t border-mm-border">
             <label className="btn-secondary inline-flex items-center gap-2 cursor-pointer">
               <FiUpload />
-              {uploading ? 'ЗАГРУЗКА ФАЙЛА...' : 'ЗАГРУЗИТЬ ПОЗАКАЗНЫЙ ОТЧЕТ'}
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleUploadOrderReport}
-                disabled={uploading}
-                className="hidden"
-              />
+              {uploading ? 'ЗАГРУЗКА...' : 'ЗАГРУЗИТЬ ПОЗАКАЗНЫЙ ОТЧЕТ'}
+              <input type="file" accept=".xlsx,.xls" onChange={handleUpload} disabled={uploading} className="hidden" />
             </label>
-            <p className="text-xs text-mm-text-tertiary mt-2 font-mono">
-              // Загрузите файл "Позаказный отчет о реализации" из личного кабинета Ozon
-            </p>
           </div>
         </div>
       </div>
 
-      {/* Отображение отчета в зависимости от выбранного типа */}
       {loading ? (
-        <div className="text-center py-12">
-          <p className="text-mm-cyan animate-pulse">// ЗАГРУЗКА...</p>
-        </div>
-      ) : !reportData ? (
-        <div className="card-neon text-center py-12">
-          <p className="text-mm-text-secondary mb-2">Загрузите позаказный отчет и выберите период</p>
-          <p className="comment">// Нажмите кнопку выше для загрузки файла из Ozon</p>
-        </div>
-      ) : activeReport === 'profit' ? (
-        <ProfitReportView data={reportData} formatCurrency={formatCurrency} formatPercent={formatPercent} />
-      ) : activeReport === 'sales' ? (
-        <SalesReportView data={reportData} formatCurrency={formatCurrency} />
+        <div className="text-center py-12"><p className="text-mm-cyan animate-pulse">// ЗАГРУЗКА...</p></div>
+      ) : activeReport === 'profit' && profitData ? (
+        <ProfitView data={profitData} fmt={fmt} pct={pct} />
+      ) : activeReport === 'sales' && salesData ? (
+        <SalesView data={salesData} fmt={fmt} />
+      ) : activeReport === 'transactions' && transactionsData ? (
+        <TransactionsView data={transactionsData} fmt={fmt} expandedRow={expandedRow} setExpandedRow={setExpandedRow} />
       ) : (
-        <TransactionsReportView data={reportData} formatCurrency={formatCurrency} />
+        <div className="card-neon text-center py-12">
+          <p className="text-mm-text-secondary">Загрузите отчет и нажмите "ПОКАЗАТЬ"</p>
+        </div>
       )}
     </div>
   )
 }
 
-// Компонент отчета "Чистая прибыль"
-function ProfitReportView({ data, formatCurrency, formatPercent }) {
+function ProfitView({ data, fmt, pct }) {
   return (
     <div className="space-y-6">
-      {/* Карточки метрик */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card-neon p-6">
           <div className="text-sm text-mm-text-secondary font-mono mb-2">ВЫРУЧКА</div>
-          <div className="text-3xl font-mono text-mm-cyan mb-2">
-            {formatCurrency(data.revenue?.gross_revenue)}
-          </div>
-          <div className="text-xs text-mm-text-tertiary font-mono">
-            Реализовано: {formatCurrency(data.revenue?.realized)}
-          </div>
+          <div className="text-3xl font-mono text-mm-cyan mb-2">{fmt(data.revenue?.gross_revenue)}</div>
+          <div className="text-xs text-mm-text-tertiary font-mono">Реализовано: {fmt(data.revenue?.realized)}</div>
         </div>
-        
         <div className="card-neon p-6">
           <div className="text-sm text-mm-text-secondary font-mono mb-2">РАСХОДЫ</div>
-          <div className="text-3xl font-mono text-mm-red mb-2">
-            {formatCurrency(data.expenses?.total)}
-          </div>
-          <div className="text-xs text-mm-text-tertiary font-mono">
-            Комиссия Ozon
-          </div>
+          <div className="text-3xl font-mono text-mm-red mb-2">{fmt(data.expenses?.total)}</div>
+          <div className="text-xs text-mm-text-tertiary font-mono">Комиссия Ozon</div>
         </div>
-        
         <div className="card-neon p-6">
           <div className="text-sm text-mm-text-secondary font-mono mb-2">ЧИСТАЯ ПРИБЫЛЬ</div>
-          <div className="text-3xl font-mono text-mm-green mb-2">
-            {formatCurrency(data.profit?.net_profit)}
-          </div>
-          <div className="text-xs text-mm-text-tertiary font-mono">
-            Маржа: {formatPercent(data.profit?.net_margin_pct)}
-          </div>
+          <div className="text-3xl font-mono text-mm-green mb-2">{fmt(data.profit?.net_profit)}</div>
+          <div className="text-xs text-mm-text-tertiary font-mono">Маржа: {pct(data.profit?.net_margin_pct)}</div>
         </div>
       </div>
       
-      {/* Детальный отчет */}
       <div className="card-neon p-6">
         <h3 className="text-lg font-mono text-mm-cyan uppercase mb-4">ДЕТАЛИЗАЦИЯ</h3>
-        
-        <div className="space-y-4 font-mono text-sm">
+        <div className="space-y-3 font-mono text-sm">
           <div className="flex justify-between py-2 border-b border-mm-border">
             <span className="text-mm-text-secondary">Реализовано</span>
-            <span>{formatCurrency(data.revenue?.realized)}</span>
+            <span>{fmt(data.revenue?.realized)}</span>
           </div>
-          
           <div className="flex justify-between py-2 border-b border-mm-border">
             <span className="text-mm-text-secondary">+ Выплаты по лояльности</span>
-            <span className="text-mm-cyan">+{formatCurrency(data.revenue?.loyalty_payments)}</span>
+            <span className="text-mm-cyan">+{fmt(data.revenue?.loyalty_payments)}</span>
           </div>
-          
           <div className="flex justify-between py-2 border-b border-mm-border">
             <span className="text-mm-text-secondary">+ Баллы за скидки</span>
-            <span className="text-mm-cyan">+{formatCurrency(data.revenue?.discount_points)}</span>
+            <span className="text-mm-cyan">+{fmt(data.revenue?.discount_points)}</span>
           </div>
-          
-          <div className="flex justify-between py-2 border-b border-mm-border font-bold">
-            <span className="text-mm-cyan">= ВАЛОВАЯ ВЫРУЧКА</span>
-            <span className="text-mm-cyan">{formatCurrency(data.revenue?.gross_revenue)}</span>
+          <div className="flex justify-between py-2 border-b border-mm-border font-bold text-mm-cyan">
+            <span>= ВАЛОВАЯ ВЫРУЧКА</span>
+            <span>{fmt(data.revenue?.gross_revenue)}</span>
           </div>
-          
           <div className="flex justify-between py-2 border-b border-mm-border">
             <span className="text-mm-text-secondary">- Базовая комиссия Ozon</span>
-            <span className="text-mm-red">-{formatCurrency(data.expenses?.ozon_base_commission)}</span>
+            <span className="text-mm-red">-{fmt(data.expenses?.ozon_base_commission)}</span>
           </div>
-          
           <div className="flex justify-between py-2 border-t-2 border-mm-cyan font-bold text-lg">
             <span className="text-mm-green">= ЧИСТАЯ ПРИБЫЛЬ</span>
-            <span className="text-mm-green">{formatCurrency(data.profit?.net_profit)}</span>
-          </div>
-          
-          <div className="flex justify-between py-2">
-            <span className="text-mm-text-secondary">Маржа</span>
-            <span>{formatPercent(data.profit?.net_margin_pct)}</span>
+            <span className="text-mm-green">{fmt(data.profit?.net_profit)}</span>
           </div>
         </div>
       </div>
@@ -318,31 +244,127 @@ function ProfitReportView({ data, formatCurrency, formatPercent }) {
   )
 }
 
-// Компонент отчета "Общие продажи"
-function SalesReportView({ data, formatCurrency }) {
+function SalesView({ data, fmt }) {
   return (
-    <div className="card-neon p-6">
-      <h3 className="text-lg font-mono text-mm-cyan uppercase mb-4">ОБЩИЕ ПРОДАЖИ</h3>
-      <p className="text-mm-text-secondary">Статистика продаж за период</p>
-      <div className="mt-4 text-2xl font-mono text-mm-cyan">
-        {formatCurrency(data.revenue?.realized)}
+    <div className="space-y-6">
+      <div className="card-neon p-6">
+        <h3 className="text-lg font-mono text-mm-cyan uppercase mb-4">ПРОДАЖИ ПО ТОВАРАМ</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-mm-border">
+                <th className="text-left py-3 px-4 text-mm-text-secondary uppercase text-sm font-mono">Артикул</th>
+                <th className="text-left py-3 px-4 text-mm-text-secondary uppercase text-sm font-mono">Товар</th>
+                <th className="text-right py-3 px-4 text-mm-text-secondary uppercase text-sm font-mono">Кол-во</th>
+                <th className="text-right py-3 px-4 text-mm-text-secondary uppercase text-sm font-mono">Выручка</th>
+                <th className="text-right py-3 px-4 text-mm-text-secondary uppercase text-sm font-mono">Комиссия</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data.products || []).map((p, i) => (
+                <tr key={i} className="border-b border-mm-border hover:bg-mm-gray">
+                  <td className="py-3 px-4 font-mono text-sm text-mm-cyan">{p.article}</td>
+                  <td className="py-3 px-4 text-sm">{(p.product_name || '').substring(0, 50)}...</td>
+                  <td className="py-3 px-4 text-right font-mono text-sm">{p.quantity}</td>
+                  <td className="py-3 px-4 text-right font-mono text-sm">{fmt(p.revenue)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-sm text-mm-red">{fmt(p.commission)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-4 pt-4 border-t border-mm-border font-mono">
+          <div className="flex justify-between">
+            <span className="text-mm-text-secondary">Всего товаров:</span>
+            <span>{data.total_products || 0}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-mm-text-secondary">Всего продано:</span>
+            <span>{data.total_quantity || 0} шт</span>
+          </div>
+          <div className="flex justify-between font-bold text-mm-cyan">
+            <span>Общая выручка:</span>
+            <span>{fmt(data.total_revenue)}</span>
+          </div>
+        </div>
       </div>
-      <p className="text-sm text-mm-text-tertiary mt-2">
-        Транзакций: {data.statistics?.total_transactions || 0}
-      </p>
     </div>
   )
 }
 
-// Компонент отчета "Транзакции"
-function TransactionsReportView({ data, formatCurrency }) {
+function TransactionsView({ data, fmt, expandedRow, setExpandedRow }) {
   return (
-    <div className="card-neon p-6">
-      <h3 className="text-lg font-mono text-mm-cyan uppercase mb-4">СПИСОК ТРАНЗАКЦИЙ</h3>
-      <p className="text-mm-text-secondary">Детализация операций</p>
-      <p className="text-sm text-mm-text-tertiary mt-2">
-        Всего операций: {data.statistics?.total_transactions || 0}
-      </p>
+    <div className="card-neon">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-mm-border">
+              <th className="text-left py-3 px-4 text-mm-text-secondary uppercase text-sm font-mono">Дата</th>
+              <th className="text-left py-3 px-4 text-mm-text-secondary uppercase text-sm font-mono">Отправление</th>
+              <th className="text-left py-3 px-4 text-mm-text-secondary uppercase text-sm font-mono">Артикул</th>
+              <th className="text-right py-3 px-4 text-mm-text-secondary uppercase text-sm font-mono">Выручка</th>
+              <th className="text-right py-3 px-4 text-mm-text-secondary uppercase text-sm font-mono">Комиссия</th>
+              <th className="text-right py-3 px-4 text-mm-text-secondary uppercase text-sm font-mono">Прибыль</th>
+              <th className="text-center py-3 px-4 text-mm-text-secondary uppercase text-sm font-mono"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data.transactions || []).map((t) => {
+              const profit = t.total_to_accrue || 0
+              const expanded = expandedRow === t._id
+              return (
+                <React.Fragment key={t._id}>
+                  <tr className="border-b border-mm-border hover:bg-mm-gray">
+                    <td className="py-3 px-4 font-mono text-sm text-mm-text-secondary">
+                      {new Date(t.operation_date).toLocaleDateString('ru-RU')}
+                    </td>
+                    <td className="py-3 px-4 font-mono text-sm text-mm-cyan">{t.posting_number}</td>
+                    <td className="py-3 px-4 font-mono text-sm">{t.article}</td>
+                    <td className="py-3 px-4 text-right font-mono text-sm">{fmt(t.realized_amount)}</td>
+                    <td className="py-3 px-4 text-right font-mono text-sm text-mm-red">{fmt(t.ozon_base_commission)}</td>
+                    <td className="py-3 px-4 text-right font-mono text-sm font-bold text-mm-green">{fmt(profit)}</td>
+                    <td className="py-3 px-4 text-center">
+                      <button onClick={() => setExpandedRow(expanded ? null : t._id)} className="text-mm-cyan hover:text-mm-text">
+                        {expanded ? <FiChevronUp size={20} /> : <FiChevronDown size={20} />}
+                      </button>
+                    </td>
+                  </tr>
+                  {expanded && (
+                    <tr className="bg-mm-gray border-b border-mm-border">
+                      <td colSpan="7" className="p-6">
+                        <div className="grid grid-cols-2 gap-6 font-mono text-sm">
+                          <div>
+                            <h4 className="text-mm-cyan uppercase mb-3">ТОВАР</h4>
+                            <div className="space-y-2">
+                              <div><span className="text-mm-text-secondary">SKU:</span> {t.sku}</div>
+                              <div><span className="text-mm-text-secondary">Название:</span> {t.product_name}</div>
+                              <div><span className="text-mm-text-secondary">Количество:</span> {t.quantity}</div>
+                              <div><span className="text-mm-text-secondary">Цена:</span> {fmt(t.price)}</div>
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="text-mm-cyan uppercase mb-3">ФИНАНСЫ</h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between"><span>Реализовано:</span><span>{fmt(t.realized_amount)}</span></div>
+                              <div className="flex justify-between text-mm-cyan"><span>+ Лояльность:</span><span>+{fmt(t.loyalty_payments)}</span></div>
+                              <div className="flex justify-between text-mm-cyan"><span>+ Баллы:</span><span>+{fmt(t.discount_points)}</span></div>
+                              <div className="flex justify-between text-mm-red"><span>- Комиссия:</span><span>-{fmt(t.ozon_base_commission)}</span></div>
+                              <div className="flex justify-between pt-2 border-t border-mm-border font-bold text-mm-green"><span>ИТОГО:</span><span>{fmt(profit)}</span></div>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="p-4 text-sm text-mm-text-secondary font-mono">
+        Всего: {data.total_count || 0} транзакций
+      </div>
     </div>
   )
 }
