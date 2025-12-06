@@ -150,6 +150,9 @@ function AppRoutes() {
       <Route path="/balance" element={
         <ProtectedRoute><WithLayout><PayoutsPage /></WithLayout></ProtectedRoute>
       } />
+      <Route path="/profit-report" element={
+        <ProtectedRoute><WithLayout><ProfitReportPage /></WithLayout></ProtectedRoute>
+      } />
       
       {/* Legacy routes */}
       <Route path="/products/:id/edit" element={
