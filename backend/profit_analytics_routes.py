@@ -496,6 +496,10 @@ async def get_profit_report(
             "returns": 0.0,  # TODO: добавить возвраты
             "net_sales": round(gross_sales, 2)
         },
+        "cogs": {
+            "total": round(total_cogs, 2),
+            "percentage": round((total_cogs / gross_sales * 100) if gross_sales > 0 else 0.0, 2)
+        },
         "expenses": {
             "commissions": {
                 "marketplace_base": round(data.get("commission_base", 0.0), 2),
