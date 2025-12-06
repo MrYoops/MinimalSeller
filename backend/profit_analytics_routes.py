@@ -1,8 +1,3 @@
-"""
-Маршруты для аналитики чистой прибыли
-Получение данных из Ozon API и расчет прибыли с детализацией всех расходов
-"""
-
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
@@ -19,34 +14,12 @@ from auth_utils import get_current_user
 router = APIRouter(prefix="/api/profit-analytics", tags=["profit-analytics"])
 
 
-# ============================================================================
-# МОДЕЛИ ДАННЫХ
-# ============================================================================
-
 class OzonFinancialTransaction:
     """Финансовая транзакция из Ozon с полной детализацией"""
     
     @staticmethod
     def from_ozon_api(seller_id: str, ozon_data: dict) -> dict:
-        """
-        Преобразовать данные из Ozon API в нашу модель
-        
-        ozon_data structure:
-        {
-          "operation_id": 12345678,
-          "operation_type": "OperationAgentDeliveredToCustomer",
-          "operation_date": "2024-11-15T10:30:00Z",
-          "posting_number": "12345678-0001-1",
-          "amount": 5000.00,
-          "type": "orders",
-          "items": [...],
-          "services": [
-            {"name": "MarketplaceServiceItemFulfillment", "price": 150.00},
-            {"name": "MarketplaceServiceItemDeliveryToCustomer", "price": 100.00},
-            ...
-          ]
-        }
-        """
+        """Преобразовать данные из Ozon API в нашу модель"""
         
         # Парсим услуги и расходы
         services = ozon_data.get("services", [])
@@ -64,41 +37,24 @@ class OzonFinancialTransaction:
         # Маппинг типов услуг Ozon на наши категории
         for service in services:
             service_name = service.get("name", "")
-            price = abs(service.get("price", 0.0))  # abs потому что Ozon может отдавать отрицательные суммы
+            price = abs(service.get("price", 0.0))
             
-            # Комиссия маркетплейса
             if "Commission" in service_name or "MarketplaceServiceItemFulfillment" in service_name:
                 commission_base += price
-            
-            # Логистика - доставка до покупателя
             elif "DeliveryToCustomer" in service_name or "Delivery" in service_name:
                 logistics_delivery += price
-            
-            # Логистика - последняя миля
             elif "LastMile" in service_name or "DropoffPVZ" in service_name:
                 logistics_last_mile += price
-            
-            # Хранение
             elif "Storage" in service_name or "Storing" in service_name:
                 service_storage += price
-            
-            # Эквайринг
             elif "Acquiring" in service_name or "Payment" in service_name:
                 service_acquiring += price
-            
-            # Выдача на ПВЗ
             elif "PVZ" in service_name or "PickupPoint" in service_name:
                 service_pvz += price
-            
-            # Упаковка
             elif "Package" in service_name or "Packaging" in service_name:
                 service_packaging += price
-            
-            # Штрафы
             elif "Penalty" in service_name or "Fine" in service_name:
                 penalties += price
-            
-            # Прочие расходы
             else:
                 other_charges += price
         
@@ -109,37 +65,29 @@ class OzonFinancialTransaction:
                 "sku": item.get("sku", ""),
                 "name": item.get("name", ""),
                 "quantity": item.get("quantity", 1),
-                "price": item.get("price", 0.0),  # Цена продажи за единицу
+                "price": item.get("price", 0.0),
             })
         
         # Формируем нашу структуру
         transaction = {
             "seller_id": seller_id,
             "marketplace": "ozon",
-            
-            # Идентификаторы
             "transaction_id": str(ozon_data.get("operation_id", "")),
             "order_id": ozon_data.get("posting_number", ""),
             "posting_number": ozon_data.get("posting_number", ""),
-            
-            # Основные данные
             "operation_date": datetime.fromisoformat(ozon_data.get("operation_date", "").replace("Z", "+00:00")),
             "operation_type": ozon_data.get("operation_type", ""),
-            
-            # Финансы
             "amount": ozon_data.get("amount", 0.0),
-            
-            # Детализация расходов
             "breakdown": {
                 "commission": {
                     "base_commission": commission_base,
-                    "bonus_commission": 0.0,  # Пока 0, добавим позже когда будет система бонусов
+                    "bonus_commission": 0.0,
                     "total": commission_base
                 },
                 "logistics": {
                     "delivery_to_customer": logistics_delivery,
                     "last_mile": logistics_last_mile,
-                    "returns": 0.0,  # Для возвратов отдельная обработка
+                    "returns": 0.0,
                     "total": logistics_delivery + logistics_last_mile
                 },
                 "services": {
@@ -149,50 +97,48 @@ class OzonFinancialTransaction:
                     "packaging": service_packaging,
                     "total": service_storage + service_acquiring + service_pvz + service_packaging
                 },
-                "penalties": {
-                    "total": penalties
-                },
-                "other_charges": {
-                    "total": other_charges
-                }
+                "penalties": {"total": penalties},
+                "other_charges": {"total": other_charges}
             },
-            
-            # Товары
             "items": items,
-            
-            # Метаданные
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
             "data_source": "api",
-            "raw_data": ozon_data  # Сохраняем сырые данные для отладки
+            "raw_data": ozon_data
         }
         
         return transaction
 
 
-# ============================================================================
-# ИНТЕГРАЦИЯ С OZON API
-# ============================================================================
-
 async def get_ozon_api_credentials(seller_id: str):
     """Получить API ключи Ozon для продавца"""
     db = await get_database()
     
-    # Ищем API ключи в коллекции api_keys или settings
-    api_keys = await db.api_keys.find_one({
-        "seller_id": seller_id,
-        "marketplace": "ozon"
-    })
+    # Ищем API ключи
+    profile = await db.seller_profiles.find_one({"user_id": seller_id})
     
-    if not api_keys:
+    if not profile or not profile.get("api_keys"):
         raise HTTPException(
             status_code=404,
-            detail="Ozon API ключи не найдены. Добавьте их в настройках."
+            detail="Ozon API ключи не найдены. Добавьте их в настройках интеграций."
+        )
+    
+    # Ищем ключ для Ozon
+    ozon_key = None
+    for key in profile.get("api_keys", []):
+        if key.get("marketplace") == "ozon":
+            ozon_key = key
+            break
+    
+    if not ozon_key:
+        raise HTTPException(
+            status_code=404,
+            detail="Ozon API ключ не найден. Добавьте его в настройках."
         )
     
     return {
-        "client_id": api_keys.get("client_id"),
-        "api_key": api_keys.get("api_key")
+        "client_id": ozon_key.get("client_id"),
+        "api_key": ozon_key.get("api_key")
     }
 
 
@@ -203,19 +149,7 @@ async def fetch_ozon_transactions(
     date_to: datetime,
     operation_types: List[str] = None
 ) -> List[dict]:
-    """
-    Получить транзакции из Ozon API
-    
-    Args:
-        client_id: Ozon Client ID
-        api_key: Ozon API Key
-        date_from: Начало периода
-        date_to: Конец периода
-        operation_types: Типы операций (["orders"], ["returns"], и т.д.)
-    
-    Returns:
-        Список транзакций
-    """
+    """Получить транзакции из Ozon API"""
     url = "https://api-seller.ozon.ru/v3/finance/transaction/list"
     headers = {
         "Client-Id": client_id,
@@ -227,7 +161,7 @@ async def fetch_ozon_transactions(
     page = 1
     
     if operation_types is None:
-        operation_types = ["orders"]  # По умолчанию только продажи
+        operation_types = ["orders"]
     
     async with aiohttp.ClientSession() as session:
         while True:
@@ -261,16 +195,11 @@ async def fetch_ozon_transactions(
                 all_transactions.extend(operations)
                 page += 1
                 
-                # Защита от бесконечного цикла
                 if page > 100:
                     break
     
     return all_transactions
 
-
-# ============================================================================
-# API ENDPOINTS
-# ============================================================================
 
 @router.post("/sync-ozon-data")
 async def sync_ozon_data(
@@ -278,50 +207,35 @@ async def sync_ozon_data(
     date_to: str = Query(..., description="Дата конца периода (YYYY-MM-DD)"),
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    Синхронизировать данные из Ozon API
-    
-    Получает заказы и финансовые транзакции за указанный период
-    и сохраняет их в БД с детализацией всех расходов
-    """
+    """Синхронизировать данные из Ozon API"""
     seller_id = str(current_user["_id"])
     
-    # Парсим даты
     try:
-        # Добавляем время и timezone для корректного сравнения
         period_start = datetime.fromisoformat(f"{date_from}T00:00:00")
         period_end = datetime.fromisoformat(f"{date_to}T23:59:59")
     except ValueError:
-        raise HTTPException(status_code=400, detail="Неверный формат даты. Используйте YYYY-MM-DD")
+        raise HTTPException(status_code=400, detail="Неверный формат даты")
     
-    # Получаем API ключи
     credentials = await get_ozon_api_credentials(seller_id)
     
-    # Получаем транзакции из Ozon
     try:
         ozon_transactions = await fetch_ozon_transactions(
             credentials["client_id"],
             credentials["api_key"],
             period_start,
             period_end,
-            operation_types=["orders"]  # Пока только продажи
+            operation_types=["orders"]
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Ошибка при получении данных из Ozon: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Ошибка Ozon API: {str(e)}")
     
-    # Сохраняем в БД
     db = await get_database()
     saved_count = 0
     updated_count = 0
     
     for ozon_txn in ozon_transactions:
-        # Преобразуем в нашу модель
         transaction = OzonFinancialTransaction.from_ozon_api(seller_id, ozon_txn)
         
-        # Upsert (обновить если уже есть)
         result = await db.marketplace_transactions.update_one(
             {
                 "seller_id": seller_id,
@@ -339,11 +253,8 @@ async def sync_ozon_data(
     
     return {
         "status": "success",
-        "message": f"Синхронизация завершена",
-        "period": {
-            "from": date_from,
-            "to": date_to
-        },
+        "message": "Синхронизация завершена",
+        "period": {"from": date_from, "to": date_to},
         "statistics": {
             "total_transactions": len(ozon_transactions),
             "saved": saved_count,
@@ -354,54 +265,35 @@ async def sync_ozon_data(
 
 @router.get("/profit-report")
 async def get_profit_report(
-    date_from: str = Query(..., description="Дата начала периода (YYYY-MM-DD)"),
-    date_to: str = Query(..., description="Дата конца периода (YYYY-MM-DD)"),
-    marketplace: Optional[str] = Query(None, description="Фильтр по маркетплейсу (ozon, wb, yandex)"),
+    date_from: str = Query(..., description="Дата начала периода"),
+    date_to: str = Query(..., description="Дата конца периода"),
+    marketplace: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    Получить отчет о чистой прибыли за период
-    
-    Возвращает детальный отчет с разбивкой:
-    - Выручка
-    - Расходы (комиссии, логистика, услуги, штрафы)
-    - Чистая прибыль
-    - Маржа
-    """
+    """Получить отчет о чистой прибыли"""
     seller_id = str(current_user["_id"])
     
-    # Парсим даты
     try:
-        # Добавляем время и timezone для корректного сравнения
         period_start = datetime.fromisoformat(f"{date_from}T00:00:00")
         period_end = datetime.fromisoformat(f"{date_to}T23:59:59")
     except ValueError:
-        raise HTTPException(status_code=400, detail="Неверный формат даты. Используйте YYYY-MM-DD")
+        raise HTTPException(status_code=400, detail="Неверный формат даты")
     
     db = await get_database()
     
-    # Построить фильтр
     match_filter = {
         "seller_id": seller_id,
-        "operation_date": {
-            "$gte": period_start,
-            "$lte": period_end
-        }
+        "operation_date": {"$gte": period_start, "$lte": period_end}
     }
     if marketplace:
         match_filter["marketplace"] = marketplace
     
-    # Агрегация для расчета всех метрик
     pipeline = [
         {"$match": match_filter},
-        
-        # Группировка и суммирование
         {"$group": {
             "_id": None,
             "total_amount": {"$sum": "$amount"},
             "transaction_count": {"$sum": 1},
-            
-            # Расходы
             "commission_base": {"$sum": "$breakdown.commission.base_commission"},
             "commission_bonus": {"$sum": "$breakdown.commission.bonus_commission"},
             "logistics_delivery": {"$sum": "$breakdown.logistics.delivery_to_customer"},
@@ -413,8 +305,6 @@ async def get_profit_report(
             "service_packaging": {"$sum": "$breakdown.services.packaging"},
             "penalties": {"$sum": "$breakdown.penalties.total"},
             "other_charges": {"$sum": "$breakdown.other_charges.total"},
-            
-            # Все товары для расчета себестоимости
             "all_items": {"$push": "$items"}
         }}
     ]
@@ -422,19 +312,19 @@ async def get_profit_report(
     result = await db.marketplace_transactions.aggregate(pipeline).to_list(1)
     
     if not result or not result[0]:
-        # Нет данных за период
         return {
             "period": {"from": date_from, "to": date_to},
             "marketplace": marketplace or "all",
             "revenue": {"gross_sales": 0, "net_sales": 0},
-            "expenses": {"total": 0},
+            "cogs": {"total": 0, "percentage": 0},
+            "expenses": {"total_expenses": 0},
             "profit": {"net_profit": 0, "net_margin_pct": 0},
-            "message": "Нет данных за указанный период. Выполните синхронизацию."
+            "message": "Нет данных за указанный период"
         }
     
     data = result[0]
     
-    # Рассчитываем себестоимость (COGS) из всех товаров
+    # Рассчитываем себестоимость (COGS)
     all_items = data.get("all_items", [])
     total_cogs = 0.0
     for items_list in all_items:
@@ -442,7 +332,6 @@ async def get_profit_report(
             for item in items_list:
                 total_cogs += item.get("total_cost", 0.0)
     
-    # Рассчитываем метрики
     gross_sales = data.get("total_amount", 0.0)
     
     # Расходы
@@ -477,23 +366,17 @@ async def get_profit_report(
     operating_profit = gross_profit - total_expenses
     operating_margin_pct = (operating_profit / gross_sales * 100) if gross_sales > 0 else 0.0
     
-    # Чистая прибыль = Операционная прибыль (пока без налогов)
+    # Чистая прибыль = Операционная прибыль
     net_profit = operating_profit
     net_margin_pct = operating_margin_pct
     
-    # Формируем отчет
     report = {
-        "period": {
-            "from": date_from,
-            "to": date_to
-        },
+        "period": {"from": date_from, "to": date_to},
         "marketplace": marketplace or "all",
-        "statistics": {
-            "total_transactions": data.get("transaction_count", 0)
-        },
+        "statistics": {"total_transactions": data.get("transaction_count", 0)},
         "revenue": {
             "gross_sales": round(gross_sales, 2),
-            "returns": 0.0,  # TODO: добавить возвраты
+            "returns": 0.0,
             "net_sales": round(gross_sales, 2)
         },
         "cogs": {
@@ -519,12 +402,8 @@ async def get_profit_report(
                 "packaging": round(data.get("service_packaging", 0.0), 2),
                 "total": round(services_total, 2)
             },
-            "penalties": {
-                "total": round(penalties_total, 2)
-            },
-            "other_expenses": {
-                "total": round(other_total, 2)
-            },
+            "penalties": {"total": round(penalties_total, 2)},
+            "other_expenses": {"total": round(other_total, 2)},
             "total_expenses": round(total_expenses, 2)
         },
         "profit": {
@@ -542,62 +421,44 @@ async def get_profit_report(
 
 @router.get("/export-profit-report")
 async def export_profit_report_to_excel(
-    date_from: str = Query(..., description="Дата начала периода (YYYY-MM-DD)"),
-    date_to: str = Query(..., description="Дата конца периода (YYYY-MM-DD)"),
-    marketplace: Optional[str] = Query(None, description="Фильтр по маркетплейсу"),
+    date_from: str = Query(...),
+    date_to: str = Query(...),
+    marketplace: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    Экспортировать отчет о чистой прибыли в Excel
-    """
-    # Получаем данные отчета
+    """Экспортировать отчет в Excel"""
     report = await get_profit_report(date_from, date_to, marketplace, current_user)
     
-    # Создаем Excel файл
     output = BytesIO()
     
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # Лист 1: Сводка
         summary_data = {
             "Показатель": [
-                "Период",
-                "Маркетплейс",
-                "",
+                "Период", "Маркетплейс", "",
                 "ВЫРУЧКА",
-                "Валовая выручка",
-                "Возвраты",
-                "Чистая выручка",
-                "",
+                "Валовая выручка", "Возвраты", "Чистая выручка", "",
+                "СЕБЕСТОИМОСТЬ", "Закупочная цена товаров", "",
+                "ВАЛОВАЯ ПРИБЫЛЬ", "Валовая маржа (%)", "",
                 "РАСХОДЫ",
-                "Комиссии маркетплейса",
-                "  - Базовая комиссия",
-                "  - Комиссия от бонусов",
-                "Логистика",
-                "  - Доставка до покупателя",
-                "  - Последняя миля",
-                "  - Возвратная логистика",
-                "Услуги",
-                "  - Хранение",
-                "  - Эквайринг",
-                "  - Выдача на ПВЗ",
-                "  - Упаковка",
-                "Штрафы",
-                "Прочие расходы",
-                "",
-                "ИТОГО РАСХОДОВ",
-                "",
-                "ЧИСТАЯ ПРИБЫЛЬ",
-                "Чистая маржа (%)"
+                "Комиссии маркетплейса", "  - Базовая", "  - От бонусов",
+                "Логистика", "  - Доставка", "  - Последняя миля", "  - Возвраты",
+                "Услуги", "  - Хранение", "  - Эквайринг", "  - ПВЗ", "  - Упаковка",
+                "Штрафы", "Прочие", "",
+                "ИТОГО РАСХОДОВ", "",
+                "ОПЕРАЦИОННАЯ ПРИБЫЛЬ", "Операционная маржа (%)", "",
+                "ЧИСТАЯ ПРИБЫЛЬ", "Чистая маржа (%)"
             ],
             "Значение": [
                 f"{report['period']['from']} - {report['period']['to']}",
-                report['marketplace'],
-                "",
+                report['marketplace'], "",
                 "",
                 report['revenue']['gross_sales'],
                 report['revenue']['returns'],
-                report['revenue']['net_sales'],
+                report['revenue']['net_sales'], "",
                 "",
+                report['cogs']['total'], "",
+                report['profit']['gross_profit'],
+                report['profit']['gross_margin_pct'], "",
                 "",
                 "",
                 report['expenses']['commissions']['marketplace_base'],
@@ -612,21 +473,19 @@ async def export_profit_report_to_excel(
                 report['expenses']['services']['pvz_fees'],
                 report['expenses']['services']['packaging'],
                 report['expenses']['penalties']['total'],
-                report['expenses']['other_expenses']['total'],
-                "",
-                report['expenses']['total_expenses'],
-                "",
+                report['expenses']['other_expenses']['total'], "",
+                report['expenses']['total_expenses'], "",
+                report['profit']['operating_profit'],
+                report['profit']['operating_margin_pct'], "",
                 report['profit']['net_profit'],
                 report['profit']['net_margin_pct']
             ]
         }
         
-        df_summary = pd.DataFrame(summary_data)
-        df_summary.to_excel(writer, sheet_name='Сводка', index=False)
+        df = pd.DataFrame(summary_data)
+        df.to_excel(writer, sheet_name='Сводка', index=False)
     
     output.seek(0)
-    
-    # Формируем имя файла
     filename = f"profit_report_{date_from}_{date_to}.xlsx"
     
     return StreamingResponse(
@@ -638,20 +497,17 @@ async def export_profit_report_to_excel(
 
 @router.get("/transactions")
 async def get_transactions(
-    date_from: str = Query(..., description="Дата начала периода (YYYY-MM-DD)"),
-    date_to: str = Query(..., description="Дата конца периода (YYYY-MM-DD)"),
+    date_from: str = Query(...),
+    date_to: str = Query(...),
     marketplace: Optional[str] = Query(None),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    Получить список транзакций с детализацией
-    """
+    """Получить список транзакций"""
     seller_id = str(current_user["_id"])
     
     try:
-        # Добавляем время и timezone для корректного сравнения
         period_start = datetime.fromisoformat(f"{date_from}T00:00:00")
         period_end = datetime.fromisoformat(f"{date_to}T23:59:59")
     except ValueError:
@@ -666,15 +522,12 @@ async def get_transactions(
     if marketplace:
         match_filter["marketplace"] = marketplace
     
-    # Получаем транзакции
     transactions = await db.marketplace_transactions.find(
         match_filter
     ).sort("operation_date", -1).skip(offset).limit(limit).to_list(limit)
     
-    # Считаем общее количество
     total_count = await db.marketplace_transactions.count_documents(match_filter)
     
-    # Преобразуем ObjectId в строки
     for txn in transactions:
         txn["_id"] = str(txn["_id"])
         txn["operation_date"] = txn["operation_date"].isoformat()
