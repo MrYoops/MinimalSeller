@@ -1035,8 +1035,6 @@ function TransactionsView({ data, fmt, expandedRow, setExpandedRow }) {
 
 
 function TrendsView({ data, fmt }) {
-  const { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = require('recharts')
-  
   if (!data || !data.trends || data.trends.length === 0) {
     return (
       <div className="card-neon text-center py-12">
