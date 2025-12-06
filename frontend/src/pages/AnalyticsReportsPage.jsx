@@ -261,6 +261,11 @@ function AnalyticsReportsPage() {
   }
   
   useEffect(() => {
+    loadTaxSettings()
+    loadReportsHistory()
+  }, [])
+  
+  useEffect(() => {
     if (profitData || salesData || transactionsData) {
       loadData()
       loadExpenses()
