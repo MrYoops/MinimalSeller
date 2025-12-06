@@ -282,7 +282,13 @@ async def calculate_profit_from_reports(
         "period": {"from": period_start, "to": period_end},
         "statistics": {
             "total_transactions": len(transactions),
-            "total_returned_items": total_returned_qty
+            "total_returned_items": total_returned_qty,
+            "cogs_coverage": {
+                "items_with_price": cogs_items_count,
+                "items_missing_price": cogs_missing_count,
+                "coverage_pct": round((cogs_items_count / (cogs_items_count + cogs_missing_count) * 100), 1) 
+                                if (cogs_items_count + cogs_missing_count) > 0 else 0
+            }
         },
         "revenue": {
             # Продажи
@@ -305,6 +311,10 @@ async def calculate_profit_from_reports(
             # Итого
             "net_revenue": round(net_revenue, 2)
         },
+        "cogs": {
+            "total": round(total_cogs, 2),
+            "percentage": round((total_cogs / net_revenue * 100), 2) if net_revenue > 0 else 0
+        },
         "expenses": {
             "ozon_base_commission": round(total_commission, 2),
             "loyalty_programs": round(total_loyalty_expense, 2),
@@ -314,6 +324,10 @@ async def calculate_profit_from_reports(
             "total": round(total_expenses, 2)
         },
         "profit": {
+            "gross_profit": round(gross_profit, 2),
+            "gross_margin_pct": round(gross_margin, 2),
+            "operating_profit": round(operating_profit, 2),
+            "operating_margin_pct": round(operating_margin, 2),
             "net_profit": round(net_profit, 2),
             "net_margin_pct": round(net_margin, 2)
         }
