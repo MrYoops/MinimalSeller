@@ -34,6 +34,7 @@ import FinanceDashboard from './pages/FinanceDashboard'
 import PayoutsPage from './pages/PayoutsPage'
 import ProfitReportPage from './pages/ProfitReportPage'
 import TransactionsPage from './pages/TransactionsPage'
+import AnalyticsReportsPage from './pages/AnalyticsReportsPage'
 // Layout
 import MainLayout from './components/MainLayout'
 import { AuthProvider, useAuth } from './context/AuthContext'
