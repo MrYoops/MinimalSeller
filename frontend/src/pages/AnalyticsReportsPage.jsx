@@ -126,6 +126,56 @@ function AnalyticsReportsPage() {
     }
     setLoading(false)
   }
+
+  
+  const loadExpenses = async () => {
+    try {
+      const r = await api.get('/api/ozon-reports/expenses', {
+        params: { period_start: dateFrom, period_end: dateTo }
+      })
+      setExpenses(r.data.expenses || [])
+    } catch (error) {
+      console.error('Ошибка загрузки расходов', error)
+    }
+  }
+  
+  const addExpense = async () => {
+    if (!newExpense.amount || parseFloat(newExpense.amount) <= 0) {
+      toast.error('Введите сумму')
+      return
+    }
+    
+    try {
+      await api.post('/api/ozon-reports/add-expense', newExpense)
+      toast.success('Расход добавлен')
+      setNewExpense({
+        expense_date: getToday(),
+        expense_type: 'УПД услуги',
+        amount: '',
+        description: '',
+        document_number: ''
+      })
+      setShowExpenseForm(false)
+      await loadExpenses()
+      await loadData()
+    } catch (error) {
+      toast.error('Ошибка: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+  
+  const deleteExpense = async (id) => {
+    if (!confirm('Удалить расход?')) return
+    
+    try {
+      await api.delete(`/api/ozon-reports/expense/${id}`)
+      toast.success('Расход удален')
+      await loadExpenses()
+      await loadData()
+    } catch (error) {
+      toast.error('Ошибка удаления')
+    }
+  }
+
   
   const exportExcel = async () => {
     try {
