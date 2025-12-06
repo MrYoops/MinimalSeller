@@ -297,6 +297,114 @@ function AnalyticsReportsPage() {
               {`// Загрузите файлы из личного кабинета Ozon (Финансы → Документы)`}
             </p>
           </div>
+          
+          {/* УПРАВЛЕНИЕ РУЧНЫМИ РАСХОДАМИ */}
+          <div className="mt-4 pt-4 border-t border-mm-border">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-mono text-mm-cyan uppercase">РУЧНЫЕ РАСХОДЫ</h3>
+              <button 
+                onClick={() => setShowExpenseForm(!showExpenseForm)}
+                className="btn-secondary text-xs px-3 py-1"
+              >
+                {showExpenseForm ? 'ОТМЕНА' : '+ ДОБАВИТЬ'}
+              </button>
+            </div>
+            
+            {showExpenseForm && (
+              <div className="bg-mm-gray bg-opacity-10 p-4 rounded border border-mm-border mb-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-mm-text-secondary mb-1 font-mono">ДАТА</label>
+                    <input 
+                      type="date" 
+                      value={newExpense.expense_date}
+                      onChange={(e) => setNewExpense({...newExpense, expense_date: e.target.value})}
+                      className="w-full px-3 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-mm-text-secondary mb-1 font-mono">ТИП РАСХОДА</label>
+                    <select 
+                      value={newExpense.expense_type}
+                      onChange={(e) => setNewExpense({...newExpense, expense_type: e.target.value})}
+                      className="w-full px-3 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm"
+                    >
+                      <option>УПД услуги</option>
+                      <option>Агентские комиссии</option>
+                      <option>Продвижение</option>
+                      <option>Реклама</option>
+                      <option>Штрафы</option>
+                      <option>Прочее</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-mm-text-secondary mb-1 font-mono">СУММА (₽)</label>
+                    <input 
+                      type="number" 
+                      value={newExpense.amount}
+                      onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                      placeholder="0.00"
+                      className="w-full px-3 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-mm-text-secondary mb-1 font-mono">№ ДОКУМЕНТА</label>
+                    <input 
+                      type="text" 
+                      value={newExpense.document_number}
+                      onChange={(e) => setNewExpense({...newExpense, document_number: e.target.value})}
+                      placeholder="Необязательно"
+                      className="w-full px-3 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs text-mm-text-secondary mb-1 font-mono">ОПИСАНИЕ</label>
+                    <input 
+                      type="text" 
+                      value={newExpense.description}
+                      onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
+                      placeholder="Необязательно"
+                      className="w-full px-3 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm"
+                    />
+                  </div>
+                </div>
+                <button onClick={addExpense} className="btn-primary mt-3">
+                  СОХРАНИТЬ РАСХОД
+                </button>
+              </div>
+            )}
+            
+            {expenses.length > 0 && (
+              <div className="space-y-2">
+                {expenses.map(exp => (
+                  <div key={exp._id} className="flex justify-between items-center bg-mm-gray bg-opacity-10 p-3 rounded border border-mm-border">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-mono text-mm-cyan">{new Date(exp.expense_date).toLocaleDateString('ru-RU')}</span>
+                        <span className="text-xs bg-mm-border px-2 py-1 rounded">{exp.expense_type}</span>
+                        <span className="text-sm font-mono text-mm-text">{fmt(exp.amount)}</span>
+                      </div>
+                      {exp.description && (
+                        <div className="text-xs text-mm-text-secondary mt-1">{exp.description}</div>
+                      )}
+                      {exp.document_number && (
+                        <div className="text-xs text-mm-text-tertiary mt-1">№ {exp.document_number}</div>
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => deleteExpense(exp._id)}
+                      className="text-mm-red hover:text-mm-text text-sm"
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                ))}
+                <div className="text-right text-sm font-mono text-mm-cyan pt-2 border-t border-mm-border">
+                  Итого: {fmt(expenses.reduce((sum, e) => sum + e.amount, 0))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
