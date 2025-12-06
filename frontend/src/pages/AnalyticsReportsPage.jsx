@@ -400,6 +400,14 @@ function ProfitView({ data, fmt, pct }) {
             <span className="text-mm-red">-{fmt(data.expenses?.total)}</span>
           </div>
           
+          {/* ОПЕРАЦИОННАЯ ПРИБЫЛЬ */}
+          {data.profit?.operating_profit !== undefined && (
+            <div className="flex justify-between py-2 border-b border-mm-border font-semibold text-mm-cyan">
+              <span>= ОПЕРАЦИОННАЯ ПРИБЫЛЬ</span>
+              <span>{fmt(data.profit?.operating_profit)} ({pct(data.profit?.operating_margin_pct)})</span>
+            </div>
+          )}
+          
           {/* ИТОГО */}
           <div className="flex justify-between py-2 border-t-2 border-mm-cyan font-bold text-lg">
             <span className="text-mm-green">= ЧИСТАЯ ПРИБЫЛЬ</span>
