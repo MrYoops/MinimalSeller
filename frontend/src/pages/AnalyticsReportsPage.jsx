@@ -260,14 +260,24 @@ function ProfitView({ data, fmt, pct }) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card-neon p-6">
-          <div className="text-sm text-mm-text-secondary font-mono mb-2">ВЫРУЧКА</div>
-          <div className="text-3xl font-mono text-mm-cyan mb-2">{fmt(data.revenue?.gross_revenue)}</div>
-          <div className="text-xs text-mm-text-tertiary font-mono">Реализовано: {fmt(data.revenue?.realized)}</div>
+          <div className="text-sm text-mm-text-secondary font-mono mb-2">ЧИСТАЯ ВЫРУЧКА</div>
+          <div className="text-3xl font-mono text-mm-cyan mb-2">{fmt(data.revenue?.net_revenue)}</div>
+          <div className="text-xs text-mm-text-tertiary font-mono">
+            {data.revenue?.returns?.total_returned > 0 
+              ? `Валовая: ${fmt(data.revenue?.gross_revenue)} - Возвраты: ${fmt(data.revenue?.returns?.total_returned)}`
+              : `Валовая: ${fmt(data.revenue?.gross_revenue)}`
+            }
+          </div>
         </div>
         <div className="card-neon p-6">
           <div className="text-sm text-mm-text-secondary font-mono mb-2">РАСХОДЫ</div>
           <div className="text-3xl font-mono text-mm-red mb-2">{fmt(data.expenses?.total)}</div>
-          <div className="text-xs text-mm-text-tertiary font-mono">Комиссия Ozon</div>
+          <div className="text-xs text-mm-text-tertiary font-mono">
+            {data.statistics?.total_returned_items > 0 
+              ? `Возвратов: ${data.statistics.total_returned_items} шт.`
+              : 'Комиссия Ozon'
+            }
+          </div>
         </div>
         <div className="card-neon p-6">
           <div className="text-sm text-mm-text-secondary font-mono mb-2">ЧИСТАЯ ПРИБЫЛЬ</div>
