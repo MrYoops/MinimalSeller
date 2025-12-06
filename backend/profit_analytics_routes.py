@@ -629,8 +629,9 @@ async def get_transactions(
     seller_id = current_user["_id"]
     
     try:
-        period_start = datetime.fromisoformat(date_from)
-        period_end = datetime.fromisoformat(date_to)
+        # Добавляем время и timezone для корректного сравнения
+        period_start = datetime.fromisoformat(f"{date_from}T00:00:00")
+        period_end = datetime.fromisoformat(f"{date_to}T23:59:59")
     except ValueError:
         raise HTTPException(status_code=400, detail="Неверный формат даты")
     
