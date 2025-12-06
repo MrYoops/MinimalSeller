@@ -565,6 +565,22 @@ function ProfitView({ data, fmt, pct }) {
               <span className="text-mm-red">-{fmt(data.expenses?.fbo_fbs_services)}</span>
             </div>
           )}
+          {data.expenses?.manual_expenses > 0 && (
+            <>
+              <div className="flex justify-between py-2 border-b border-mm-border bg-mm-gray bg-opacity-20">
+                <span className="text-mm-text-secondary">- Ручные расходы</span>
+                <span className="text-mm-red">-{fmt(data.expenses?.manual_expenses)}</span>
+              </div>
+              {data.expenses?.manual_by_type && Object.keys(data.expenses.manual_by_type).length > 0 && (
+                Object.entries(data.expenses.manual_by_type).map(([type, amount]) => (
+                  <div key={type} className="flex justify-between py-2 border-b border-mm-border pl-6 text-xs">
+                    <span className="text-mm-text-tertiary">└ {type}</span>
+                    <span className="text-mm-text-tertiary">-{fmt(amount)}</span>
+                  </div>
+                ))
+              )}
+            </>
+          )}
           <div className="flex justify-between py-2 border-b border-mm-border font-bold">
             <span className="text-mm-red">= ИТОГО РАСХОДОВ</span>
             <span className="text-mm-red">-{fmt(data.expenses?.total)}</span>
