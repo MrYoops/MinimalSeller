@@ -232,7 +232,7 @@ function AnalyticsReportsPage() {
               </label>
             </div>
             <p className="text-xs text-mm-text-tertiary font-mono">
-              // Загрузите файлы из личного кабинета Ozon (Финансы → Документы)
+              {`// Загрузите файлы из личного кабинета Ozon (Финансы → Документы)`}
             </p>
           </div>
         </div>
