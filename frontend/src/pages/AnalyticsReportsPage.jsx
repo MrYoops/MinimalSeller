@@ -248,7 +248,7 @@ function AnalyticsReportsPage() {
         <TransactionsView data={transactionsData} fmt={fmt} expandedRow={expandedRow} setExpandedRow={setExpandedRow} />
       ) : (
         <div className="card-neon text-center py-12">
-          <p className="text-mm-text-secondary">Загрузите отчет и нажмите "ПОКАЗАТЬ"</p>
+          <p className="text-mm-text-secondary">Загрузите отчет и нажмите &quot;ПОКАЗАТЬ&quot;</p>
         </div>
       )}
     </div>
