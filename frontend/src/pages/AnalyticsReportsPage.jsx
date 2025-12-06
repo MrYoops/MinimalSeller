@@ -53,6 +53,11 @@ function AnalyticsReportsPage() {
   const [showReportsHistory, setShowReportsHistory] = useState(false)
   const [reportsHistory, setReportsHistory] = useState([])
   
+  // Для фильтра по товару
+  const [productFilter, setProductFilter] = useState('')
+  const [productsList, setProductsList] = useState([])
+  const [showProductsDropdown, setShowProductsDropdown] = useState(false)
+  
   const handleUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
