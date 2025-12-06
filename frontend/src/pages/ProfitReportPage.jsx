@@ -413,18 +413,31 @@ function ProfitReportPage() {
               <div className="pt-4 border-t-2 border-mm-cyan">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-1 h-6 bg-mm-green"></div>
-                  <h4 className={(report?.profit?.net_profit ?? 0) >= 0 ? 'text-mm-green uppercase' : 'text-mm-red uppercase'}>
-                    ЧИСТАЯ ПРИБЫЛЬ
-                  </h4>
+                  <h4 className="text-mm-green uppercase">ОПЕРАЦИОННАЯ ПРИБЫЛЬ</h4>
                 </div>
-                <div className="pl-6">
-                  <div className={`flex justify-between text-2xl font-bold ${(report?.profit?.net_profit ?? 0) >= 0 ? 'text-mm-green' : 'text-mm-red'}`}>
-                    <span>ЧИСТАЯ ПРИБЫЛЬ</span>
-                    <span>{formatCurrency(report?.profit?.net_profit)}</span>
+                <div className="pl-6 space-y-2">
+                  <div className="flex justify-between text-lg font-bold text-mm-green">
+                    <span>💎 ОПЕРАЦИОННАЯ ПРИБЫЛЬ</span>
+                    <span>{formatCurrency(report?.profit?.operating_profit)}</span>
                   </div>
-                  <div className="flex justify-between text-sm text-mm-text-secondary mt-2">
-                    <span>Чистая маржа</span>
-                    <span>{formatPercent(report?.profit?.net_margin_pct)}</span>
+                  <div className="flex justify-between text-sm text-mm-text-secondary">
+                    <span>Операционная маржа</span>
+                    <span>{formatPercent(report?.profit?.operating_margin_pct)}</span>
+                  </div>
+                  
+                  {/* Чистая прибыль (пока = операционной, без налогов) */}
+                  <div className="pt-3 mt-3 border-t border-mm-border">
+                    <div className={`flex justify-between text-2xl font-bold ${(report?.profit?.net_profit ?? 0) >= 0 ? 'text-mm-green' : 'text-mm-red'}`}>
+                      <span>✨ ЧИСТАЯ ПРИБЫЛЬ</span>
+                      <span>{formatCurrency(report?.profit?.net_profit)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-mm-text-secondary mt-1">
+                      <span>Чистая маржа</span>
+                      <span>{formatPercent(report?.profit?.net_margin_pct)}</span>
+                    </div>
+                    <p className="text-xs text-mm-text-tertiary mt-2 italic">
+                      // Налоги будут добавлены после настройки налогообложения
+                    </p>
                   </div>
                 </div>
               </div>
