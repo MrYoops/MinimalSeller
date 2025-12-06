@@ -469,11 +469,17 @@ async def get_profit_report(
         other_total
     )
     
-    # Чистая прибыль (без учета себестоимости пока)
-    net_profit = gross_sales - total_expenses
+    # Валовая прибыль = Выручка - Себестоимость
+    gross_profit = gross_sales - total_cogs
+    gross_margin_pct = (gross_profit / gross_sales * 100) if gross_sales > 0 else 0.0
     
-    # Маржа
-    net_margin_pct = (net_profit / gross_sales * 100) if gross_sales > 0 else 0.0
+    # Операционная прибыль = Валовая прибыль - Расходы
+    operating_profit = gross_profit - total_expenses
+    operating_margin_pct = (operating_profit / gross_sales * 100) if gross_sales > 0 else 0.0
+    
+    # Чистая прибыль = Операционная прибыль (пока без налогов)
+    net_profit = operating_profit
+    net_margin_pct = operating_margin_pct
     
     # Формируем отчет
     report = {
