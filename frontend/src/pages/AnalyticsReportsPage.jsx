@@ -486,6 +486,11 @@ function AnalyticsReportsPage() {
             }`}>
             <FiList className="inline mr-2" />ТРАНЗАКЦИИ
           </button>
+          <button onClick={() => setActiveReport('trends')} className={`px-6 py-3 rounded font-mono text-sm ${
+              activeReport === 'trends' ? 'bg-mm-cyan text-mm-black' : 'bg-mm-gray text-mm-text-secondary hover:bg-mm-border'
+            }`}>
+            <FiBarChart2 className="inline mr-2" />ГРАФИКИ
+          </button>
         </div>
 
         <div className="border-t border-mm-border pt-6">
