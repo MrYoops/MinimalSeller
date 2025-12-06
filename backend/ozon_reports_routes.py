@@ -240,17 +240,37 @@ async def calculate_profit_from_reports(
     
     # ИТОГО
     total_expenses = total_commission + total_loyalty_expense + total_acquiring + total_rfbs + total_fbo_fbs
-    net_profit = gross_revenue - total_expenses
-    net_margin = (net_profit / gross_revenue * 100) if gross_revenue > 0 else 0
+    
+    # ПРИБЫЛЬ (используем чистую выручку после возвратов)
+    net_profit = net_revenue - total_expenses
+    net_margin = (net_profit / net_revenue * 100) if net_revenue > 0 else 0
     
     return {
         "period": {"from": period_start, "to": period_end},
-        "statistics": {"total_transactions": len(transactions)},
+        "statistics": {
+            "total_transactions": len(transactions),
+            "total_returned_items": total_returned_qty
+        },
         "revenue": {
+            # Продажи
             "realized": round(total_realized, 2),
             "loyalty_payments": round(total_loyalty, 2),
             "discount_points": round(total_discounts, 2),
-            "gross_revenue": round(gross_revenue, 2)
+            "gross_revenue": round(gross_revenue, 2),
+            "total_accrued": round(total_accrued, 2),
+            
+            # Возвраты
+            "returns": {
+                "returned_amount": round(total_returned_amount, 2),
+                "returned_loyalty": round(total_returned_loyalty, 2),
+                "returned_discounts": round(total_returned_discounts, 2),
+                "returned_commission_back": round(total_returned_commission, 2),
+                "total_returned": round(total_returned, 2),
+                "returned_quantity": total_returned_qty
+            },
+            
+            # Итого
+            "net_revenue": round(net_revenue, 2)
         },
         "expenses": {
             "ozon_base_commission": round(total_commission, 2),
