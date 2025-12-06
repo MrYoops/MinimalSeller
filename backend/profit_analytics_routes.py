@@ -528,6 +528,10 @@ async def get_profit_report(
             "total_expenses": round(total_expenses, 2)
         },
         "profit": {
+            "gross_profit": round(gross_profit, 2),
+            "gross_margin_pct": round(gross_margin_pct, 2),
+            "operating_profit": round(operating_profit, 2),
+            "operating_margin_pct": round(operating_margin_pct, 2),
             "net_profit": round(net_profit, 2),
             "net_margin_pct": round(net_margin_pct, 2)
         }
