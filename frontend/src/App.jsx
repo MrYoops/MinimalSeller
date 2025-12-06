@@ -32,6 +32,7 @@ import StockSyncHistoryPage from './pages/StockSyncHistoryPage'
 import OrdersPageNew from './pages/OrdersPageNew'
 import FinanceDashboard from './pages/FinanceDashboard'
 import PayoutsPage from './pages/PayoutsPage'
+import ProfitReportPage from './pages/ProfitReportPage'
 // Layout
 import MainLayout from './components/MainLayout'
 import { AuthProvider, useAuth } from './context/AuthContext'
