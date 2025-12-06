@@ -103,7 +103,10 @@ async def seed_financial_transactions():
                     "sku": f"TEST-SKU-{i}",
                     "name": f"Тестовый товар #{i}",
                     "quantity": 1,
-                    "price": amount
+                    "price": amount,
+                    "purchase_price": amount * 0.60,  # Себестоимость 60% от цены продажи
+                    "total_sale": amount,
+                    "total_cost": amount * 0.60
                 }
             ],
             
