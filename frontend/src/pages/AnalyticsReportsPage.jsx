@@ -52,6 +52,48 @@ function AnalyticsReportsPage() {
     e.target.value = ''
   }
   
+  const handleUploadOther = async (e, reportType) => {
+    const file = e.target.files[0]
+    if (!file) return
+    
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    try {
+      let endpoint = ''
+      let successMessage = ''
+      
+      switch(reportType) {
+        case 'loyalty':
+          endpoint = '/api/ozon-reports/upload-loyalty'
+          successMessage = 'Отчет по лояльности загружен'
+          break
+        case 'acquiring':
+          endpoint = '/api/ozon-reports/upload-acquiring'
+          successMessage = 'Отчет по эквайрингу загружен'
+          break
+        case 'rfbs':
+          endpoint = '/api/ozon-reports/upload-rfbs'
+          successMessage = 'Отчет по логистике rFBS загружен'
+          break
+        default:
+          throw new Error('Неизвестный тип отчета')
+      }
+      
+      const response = await api.post(endpoint, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      toast.success(successMessage)
+      loadData()
+    } catch (error) {
+      toast.error('Ошибка: ' + (error.response?.data?.detail || error.message))
+    }
+    setUploading(false)
+    e.target.value = ''
+  }
+
+  
   const loadData = async () => {
     setLoading(true)
     try {
