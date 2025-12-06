@@ -42,6 +42,17 @@ function AnalyticsReportsPage() {
     document_number: ''
   })
   
+  // Для налоговых настроек
+  const [showTaxSettings, setShowTaxSettings] = useState(false)
+  const [taxSettings, setTaxSettings] = useState({
+    tax_system: null,
+    rate: 0
+  })
+  
+  // Для истории отчетов
+  const [showReportsHistory, setShowReportsHistory] = useState(false)
+  const [reportsHistory, setReportsHistory] = useState([])
+  
   const handleUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
