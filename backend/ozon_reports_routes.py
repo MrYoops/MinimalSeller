@@ -334,6 +334,8 @@ async def calculate_profit_from_reports(
             "acquiring": round(total_acquiring, 2),
             "rfbs_logistics": round(total_rfbs, 2),
             "fbo_fbs_services": round(total_fbo_fbs, 2),
+            "manual_expenses": round(total_manual_expenses, 2),
+            "manual_by_type": {k: round(v, 2) for k, v in manual_by_type.items()},
             "total": round(total_expenses, 2)
         },
         "profit": {
