@@ -9,7 +9,7 @@ import logging
 
 from database import get_database
 from auth_utils import get_current_user
-from ozon_report_parser import parse_ozon_order_realization_report
+from ozon_all_parsers import parse_ozon_order_realization_report
 
 router = APIRouter(prefix="/api/ozon-reports", tags=["ozon-reports"])
 logger = logging.getLogger(__name__)
