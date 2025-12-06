@@ -206,21 +206,38 @@ async def calculate_profit_from_reports(
             "profit": {"net_profit": 0, "net_margin_pct": 0}
         }
     
+    # ДОХОДЫ
     total_realized = sum(t["realized_amount"] for t in transactions)
     total_loyalty = sum(t["loyalty_payments"] for t in transactions)
     total_discounts = sum(t["discount_points"] for t in transactions)
+    gross_revenue = total_realized + total_loyalty + total_discounts
+    
+    # РАСХОДЫ - базовые из позаказного отчета
     total_commission = sum(t["ozon_base_commission"] for t in transactions)
     
-    # Получаем дополнительные расходы
+    # РАСХОДЫ - дополнительные из других отчетов
     loyalty_programs = await db.ozon_loyalty_programs.find({"seller_id": seller_id}).to_list(100)
     total_loyalty_expense = sum(p.get("total", 0) for p in loyalty_programs)
     
     acquiring_records = await db.ozon_acquiring.find({"seller_id": seller_id}).to_list(1000)
     total_acquiring = sum(a.get("rate", 0) for a in acquiring_records)
     
-    # Расчеты
-    gross_revenue = total_realized + total_loyalty + total_discounts
-    total_expenses = total_commission + total_loyalty_expense + total_acquiring
+    rfbs_logistics = await db.ozon_rfbs_logistics.find({"seller_id": seller_id}).to_list(1000)
+    total_rfbs = sum(r.get("total_logistics", 0) for r in rfbs_logistics)
+    
+    fbo_fbs_record = await db.ozon_fbo_fbs_services.find_one({"seller_id": seller_id})
+    total_fbo_fbs = fbo_fbs_record.get("total", 0) if fbo_fbs_record else 0
+    
+    # ИТОГО РАСХОДОВ
+    total_expenses = (
+        total_commission +
+        total_loyalty_expense +
+        total_acquiring +
+        total_rfbs +
+        total_fbo_fbs
+    )
+    
+    # ПРИБЫЛЬ
     net_profit = gross_revenue - total_expenses
     net_margin = (net_profit / gross_revenue * 100) if gross_revenue > 0 else 0
     
@@ -237,6 +254,8 @@ async def calculate_profit_from_reports(
             "ozon_base_commission": round(total_commission, 2),
             "loyalty_programs": round(total_loyalty_expense, 2),
             "acquiring": round(total_acquiring, 2),
+            "rfbs_logistics": round(total_rfbs, 2),
+            "fbo_fbs_services": round(total_fbo_fbs, 2),
             "total": round(total_expenses, 2)
         },
         "profit": {
