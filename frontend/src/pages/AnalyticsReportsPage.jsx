@@ -163,12 +163,35 @@ function AnalyticsReportsPage() {
             </div>
           </div>
           
-          <div className="mt-4 pt-4 border-t border-mm-border">
-            <label className="btn-secondary inline-flex items-center gap-2 cursor-pointer">
-              <FiUpload />
-              {uploading ? 'ЗАГРУЗКА...' : 'ЗАГРУЗИТЬ ПОЗАКАЗНЫЙ ОТЧЕТ'}
-              <input type="file" accept=".xlsx,.xls" onChange={handleUpload} disabled={uploading} className="hidden" />
-            </label>
+          <div className="mt-4 pt-4 border-t border-mm-border space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <label className="btn-secondary inline-flex items-center gap-2 cursor-pointer justify-center">
+                <FiUpload />
+                {uploading ? 'ЗАГРУЗКА...' : 'ПОЗАКАЗНЫЙ ОТЧЕТ'}
+                <input type="file" accept=".xlsx,.xls" onChange={handleUpload} disabled={uploading} className="hidden" />
+              </label>
+              
+              <label className="btn-secondary inline-flex items-center gap-2 cursor-pointer justify-center">
+                <FiUpload />
+                ОТЧЕТ ПО ЛОЯЛЬНОСТИ
+                <input type="file" accept=".xlsx,.xls" onChange={(e) => handleUploadOther(e, 'loyalty')} disabled={uploading} className="hidden" />
+              </label>
+              
+              <label className="btn-secondary inline-flex items-center gap-2 cursor-pointer justify-center">
+                <FiUpload />
+                ЭКВАЙРИНГ
+                <input type="file" accept=".xlsx,.xls" onChange={(e) => handleUploadOther(e, 'acquiring')} disabled={uploading} className="hidden" />
+              </label>
+              
+              <label className="btn-secondary inline-flex items-center gap-2 cursor-pointer justify-center">
+                <FiUpload />
+                ЛОГИСТИКА rFBS
+                <input type="file" accept=".xlsx,.xls" onChange={(e) => handleUploadOther(e, 'rfbs')} disabled={uploading} className="hidden" />
+              </label>
+            </div>
+            <p className="text-xs text-mm-text-tertiary font-mono">
+              // Загрузите файлы из личного кабинета Ozon (Финансы → Документы)
+            </p>
           </div>
         </div>
       </div>
