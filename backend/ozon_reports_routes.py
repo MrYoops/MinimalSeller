@@ -287,8 +287,36 @@ async def calculate_profit_from_reports(
     operating_profit = gross_profit - total_expenses
     operating_margin = (operating_profit / net_revenue * 100) if net_revenue > 0 else 0
     
-    # Чистая прибыль (пока без налогов)
-    net_profit = operating_profit
+    # НАЛОГИ
+    tax_settings = await db.tax_settings.find_one({"seller_id": seller_id})
+    tax_amount = 0
+    tax_system = None
+    tax_rate = 0
+    
+    if tax_settings and tax_settings.get("tax_system"):
+        tax_system = tax_settings["tax_system"]
+        tax_rate = tax_settings.get("rate", 0)
+        
+        # Расчет налоговой базы в зависимости от системы
+        if tax_system == "usn_income":
+            # УСН Доходы - 6% от валовой выручки
+            tax_base = gross_revenue
+            tax_amount = tax_base * (tax_rate / 100)
+        elif tax_system == "usn_income_expense":
+            # УСН Доходы минус Расходы - 15% от (выручка - расходы - COGS)
+            tax_base = max(0, net_revenue - total_cogs - total_expenses)
+            tax_amount = tax_base * (tax_rate / 100)
+        elif tax_system == "osn":
+            # ОСН - упрощенно 20% от прибыли (НДС уже учтен в ценах)
+            tax_base = operating_profit
+            tax_amount = tax_base * (tax_rate / 100)
+        elif tax_system in ["patent", "eshn"]:
+            # Патент/ЕСХН - 6% от доходов
+            tax_base = gross_revenue
+            tax_amount = tax_base * (tax_rate / 100)
+    
+    # Чистая прибыль = Операционная прибыль - Налоги
+    net_profit = operating_profit - tax_amount
     net_margin = (net_profit / net_revenue * 100) if net_revenue > 0 else 0
     
     return {
