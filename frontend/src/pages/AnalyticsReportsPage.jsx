@@ -298,6 +298,7 @@ function AnalyticsReportsPage() {
     loadTaxSettings()
     loadReportsHistory()
     loadProductsList()
+    loadTagsList()
   }, [])
   
   useEffect(() => {
