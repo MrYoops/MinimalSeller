@@ -281,10 +281,170 @@ function AnalyticsReportsPage() {
   
   return (
     <div className="space-y-6 pb-8">
-      <div>
-        <h2 className="text-2xl mb-2 text-mm-cyan uppercase">АНАЛИТИКА И ОТЧЁТЫ</h2>
-        <p className="comment">// Анализ на основе документов Ozon</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl mb-2 text-mm-cyan uppercase">АНАЛИТИКА И ОТЧЁТЫ</h2>
+          <p className="comment">// Анализ на основе документов Ozon</p>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowTaxSettings(!showTaxSettings)}
+            className="btn-secondary text-sm px-4"
+          >
+            ⚙️ НАЛОГИ
+          </button>
+          <button 
+            onClick={() => setShowReportsHistory(!showReportsHistory)}
+            className="btn-secondary text-sm px-4"
+          >
+            📚 ИСТОРИЯ
+          </button>
+        </div>
       </div>
+
+      {/* МОДАЛЬНОЕ ОКНО НАЛОГОВЫХ НАСТРОЕК */}
+      {showTaxSettings && (
+        <div className="card-neon p-6 bg-mm-gray bg-opacity-30">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-mono text-mm-cyan uppercase">НАСТРОЙКА НАЛОГООБЛОЖЕНИЯ</h3>
+            <button onClick={() => setShowTaxSettings(false)} className="text-mm-text-secondary hover:text-mm-cyan">
+              ✕
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <button 
+              onClick={() => saveTaxSettings('usn_income')}
+              className={`p-4 rounded border-2 transition-colors ${
+                taxSettings?.tax_system === 'usn_income' 
+                  ? 'border-mm-cyan bg-mm-cyan bg-opacity-10' 
+                  : 'border-mm-border hover:border-mm-cyan'
+              }`}
+            >
+              <div className="font-mono text-lg text-mm-cyan">УСН Доходы</div>
+              <div className="text-sm text-mm-text-secondary mt-1">6% от выручки</div>
+            </button>
+            
+            <button 
+              onClick={() => saveTaxSettings('usn_income_expense')}
+              className={`p-4 rounded border-2 transition-colors ${
+                taxSettings?.tax_system === 'usn_income_expense' 
+                  ? 'border-mm-cyan bg-mm-cyan bg-opacity-10' 
+                  : 'border-mm-border hover:border-mm-cyan'
+              }`}
+            >
+              <div className="font-mono text-lg text-mm-cyan">УСН Доходы-Расходы</div>
+              <div className="text-sm text-mm-text-secondary mt-1">15% от прибыли</div>
+            </button>
+            
+            <button 
+              onClick={() => saveTaxSettings('osn')}
+              className={`p-4 rounded border-2 transition-colors ${
+                taxSettings?.tax_system === 'osn' 
+                  ? 'border-mm-cyan bg-mm-cyan bg-opacity-10' 
+                  : 'border-mm-border hover:border-mm-cyan'
+              }`}
+            >
+              <div className="font-mono text-lg text-mm-cyan">ОСН</div>
+              <div className="text-sm text-mm-text-secondary mt-1">20% налог на прибыль</div>
+            </button>
+            
+            <button 
+              onClick={() => saveTaxSettings('patent')}
+              className={`p-4 rounded border-2 transition-colors ${
+                taxSettings?.tax_system === 'patent' 
+                  ? 'border-mm-cyan bg-mm-cyan bg-opacity-10' 
+                  : 'border-mm-border hover:border-mm-cyan'
+              }`}
+            >
+              <div className="font-mono text-lg text-mm-cyan">Патент</div>
+              <div className="text-sm text-mm-text-secondary mt-1">6% фиксированный</div>
+            </button>
+            
+            <button 
+              onClick={() => saveTaxSettings('eshn')}
+              className={`p-4 rounded border-2 transition-colors ${
+                taxSettings?.tax_system === 'eshn' 
+                  ? 'border-mm-cyan bg-mm-cyan bg-opacity-10' 
+                  : 'border-mm-border hover:border-mm-cyan'
+              }`}
+            >
+              <div className="font-mono text-lg text-mm-cyan">ЕСХН</div>
+              <div className="text-sm text-mm-text-secondary mt-1">6% для с/х</div>
+            </button>
+            
+            <button 
+              onClick={() => { setTaxSettings({ tax_system: null, rate: 0 }); saveTaxSettings(null); }}
+              className={`p-4 rounded border-2 transition-colors ${
+                !taxSettings?.tax_system 
+                  ? 'border-mm-cyan bg-mm-cyan bg-opacity-10' 
+                  : 'border-mm-border hover:border-mm-cyan'
+              }`}
+            >
+              <div className="font-mono text-lg text-mm-text-secondary">Без налога</div>
+              <div className="text-sm text-mm-text-tertiary mt-1">Не учитывать</div>
+            </button>
+          </div>
+          
+          {taxSettings?.tax_system && (
+            <div className="mt-4 p-3 bg-mm-black rounded border border-mm-border">
+              <div className="text-sm font-mono text-mm-cyan">
+                Текущая система: {taxSettings.tax_system === 'usn_income' ? 'УСН Доходы 6%' :
+                                  taxSettings.tax_system === 'usn_income_expense' ? 'УСН Доходы-Расходы 15%' :
+                                  taxSettings.tax_system === 'osn' ? 'ОСН 20%' :
+                                  taxSettings.tax_system === 'patent' ? 'Патент 6%' :
+                                  taxSettings.tax_system === 'eshn' ? 'ЕСХН 6%' : 'Не установлена'}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* МОДАЛЬНОЕ ОКНО ИСТОРИИ ОТЧЕТОВ */}
+      {showReportsHistory && (
+        <div className="card-neon p-6 bg-mm-gray bg-opacity-30">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-mono text-mm-cyan uppercase">ИСТОРИЯ ЗАГРУЖЕННЫХ ОТЧЕТОВ</h3>
+            <button onClick={() => setShowReportsHistory(false)} className="text-mm-text-secondary hover:text-mm-cyan">
+              ✕
+            </button>
+          </div>
+          
+          {reportsHistory.length === 0 ? (
+            <div className="text-center py-8 text-mm-text-secondary">
+              Нет загруженных отчетов
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {reportsHistory.map(report => (
+                <div key={report._id} className="flex justify-between items-center bg-mm-black p-4 rounded border border-mm-border">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-mono text-mm-cyan">
+                        {new Date(report.uploaded_at).toLocaleString('ru-RU')}
+                      </span>
+                      <span className="text-xs bg-mm-border px-2 py-1 rounded">
+                        {report.report_type === 'order_realization' ? 'Позаказный отчет' : report.report_type}
+                      </span>
+                    </div>
+                    <div className="text-sm text-mm-text mt-1">{report.file_name}</div>
+                    <div className="text-xs text-mm-text-tertiary mt-1">
+                      Транзакций: {report.summary?.total_transactions || 0} | 
+                      Выручка: {fmt(report.summary?.total_revenue || 0)}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => deleteReport(report._id)}
+                    className="text-mm-red hover:text-mm-text text-sm ml-4"
+                  >
+                    Удалить
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="card-neon p-6">
         <div className="flex gap-2 mb-6">
