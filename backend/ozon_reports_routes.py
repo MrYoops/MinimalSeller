@@ -275,8 +275,8 @@ async def calculate_profit_from_reports(
             else:
                 cogs_missing_count += 1
     
-    # ИТОГОВЫЕ РАСХОДЫ
-    total_expenses = total_commission + total_loyalty_expense + total_acquiring + total_rfbs + total_fbo_fbs
+    # ИТОГОВЫЕ РАСХОДЫ (включая ручные)
+    total_expenses = total_commission + total_loyalty_expense + total_acquiring + total_rfbs + total_fbo_fbs + total_manual_expenses
     
     # ПРИБЫЛЬ
     # Валовая прибыль = Чистая выручка - Себестоимость
