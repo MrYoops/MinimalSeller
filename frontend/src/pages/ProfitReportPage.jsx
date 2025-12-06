@@ -291,15 +291,15 @@ function ProfitReportPage() {
                   <div className="pl-4 space-y-1">
                     <div className="flex justify-between">
                       <span className="text-mm-text-tertiary">├─ Базовая комиссия</span>
-                      <span>{formatCurrency(report.expenses.commissions.marketplace_base)}</span>
+                      <span>{formatCurrency(safeGet(report, 'expenses.commissions.marketplace_base'))}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-mm-text-tertiary">└─ Комиссия от бонусов (9%)</span>
-                      <span>{formatCurrency(report.expenses.commissions.bonus_commission)}</span>
+                      <span>{formatCurrency(safeGet(report, 'expenses.commissions.bonus_commission'))}</span>
                     </div>
                     <div className="flex justify-between font-bold pt-1">
                       <span>ИТОГО комиссии</span>
-                      <span>{formatCurrency(report.expenses.commissions.total)}</span>
+                      <span>{formatCurrency(safeGet(report, 'expenses.commissions.total'))}</span>
                     </div>
                   </div>
                 </div>
