@@ -135,6 +135,9 @@ function AnalyticsReportsPage() {
       } else if (activeReport === 'sales') {
         const r = await api.get('/api/ozon-reports/sales-report', { params })
         setSalesData(r.data)
+      } else if (activeReport === 'trends') {
+        const r = await api.get('/api/ozon-reports/trends', { params: { period_start: dateFrom, period_end: dateTo } })
+        setTrendsData(r.data)
       } else {
         const r = await api.get('/api/ozon-reports/transactions-list', { params: {...params, limit: 100, offset: 0} })
         setTransactionsData(r.data)
