@@ -238,6 +238,19 @@ async def calculate_profit_from_reports(
     fbo_fbs_record = await db.ozon_fbo_fbs_services.find_one({"seller_id": seller_id})
     total_fbo_fbs = fbo_fbs_record.get("total", 0) if fbo_fbs_record else 0
     
+    # РУЧНЫЕ РАСХОДЫ (УПД, агентские услуги и т.д.)
+    manual_expenses = await db.ozon_manual_expenses.find({
+        "seller_id": seller_id,
+        "expense_date": {"$gte": date_from, "$lte": date_to}
+    }).to_list(1000)
+    total_manual_expenses = sum(e.get("amount", 0) for e in manual_expenses)
+    
+    # Группируем по типам для детализации
+    manual_by_type = {}
+    for e in manual_expenses:
+        exp_type = e.get("expense_type", "Прочее")
+        manual_by_type[exp_type] = manual_by_type.get(exp_type, 0) + e.get("amount", 0)
+    
     # СЕБЕСТОИМОСТЬ (COGS)
     total_cogs = 0
     cogs_items_count = 0
