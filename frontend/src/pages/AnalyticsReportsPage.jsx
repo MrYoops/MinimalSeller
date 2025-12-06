@@ -26,6 +26,7 @@ function AnalyticsReportsPage() {
   const [profitData, setProfitData] = useState(null)
   const [salesData, setSalesData] = useState(null)
   const [transactionsData, setTransactionsData] = useState(null)
+  const [trendsData, setTrendsData] = useState(null)
   const [dateFrom, setDateFrom] = useState(getFirstDayOfMonth())
   const [dateTo, setDateTo] = useState(getToday())
   const [tagFilter, setTagFilter] = useState('')
