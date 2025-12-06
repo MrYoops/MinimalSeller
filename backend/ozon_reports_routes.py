@@ -780,3 +780,146 @@ async def delete_manual_expense(
     
     return {"status": "success", "deleted": expense_id}
 
+
+
+# ============================================================================
+# НАСТРОЙКИ НАЛОГООБЛОЖЕНИЯ
+# ============================================================================
+
+@router.get("/tax-settings")
+async def get_tax_settings(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить настройки налогообложения"""
+    seller_id = str(current_user["_id"])
+    db = await get_database()
+    
+    settings = await db.tax_settings.find_one({"seller_id": seller_id})
+    
+    if not settings:
+        # Возвращаем настройки по умолчанию
+        return {
+            "tax_system": None,
+            "rate": 0,
+            "effective_from": None
+        }
+    
+    settings["_id"] = str(settings["_id"])
+    if settings.get("effective_from"):
+        settings["effective_from"] = settings["effective_from"].isoformat()
+    
+    return settings
+
+
+@router.post("/tax-settings")
+async def save_tax_settings(
+    settings_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Сохранить настройки налогообложения"""
+    seller_id = str(current_user["_id"])
+    db = await get_database()
+    
+    # Валидация
+    if "tax_system" not in settings_data:
+        raise HTTPException(status_code=400, detail="Укажите систему налогообложения")
+    
+    tax_system = settings_data["tax_system"]
+    
+    # Определяем ставку по системе
+    tax_rates = {
+        "usn_income": 6.0,
+        "usn_income_expense": 15.0,
+        "osn": 20.0,
+        "patent": 6.0,
+        "eshn": 6.0
+    }
+    
+    rate = tax_rates.get(tax_system, 0)
+    
+    settings = {
+        "seller_id": seller_id,
+        "tax_system": tax_system,
+        "rate": rate,
+        "effective_from": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    
+    await db.tax_settings.update_one(
+        {"seller_id": seller_id},
+        {"$set": settings},
+        upsert=True
+    )
+    
+    return {
+        "status": "success",
+        "settings": {
+            "tax_system": tax_system,
+            "rate": rate
+        }
+    }
+
+
+# ============================================================================
+# ИСТОРИЯ ЗАГРУЖЕННЫХ ОТЧЕТОВ
+# ============================================================================
+
+@router.get("/reports-history")
+async def get_reports_history(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить историю загруженных отчетов"""
+    seller_id = str(current_user["_id"])
+    db = await get_database()
+    
+    reports = await db.ozon_reports.find(
+        {"seller_id": seller_id}
+    ).sort("uploaded_at", -1).to_list(100)
+    
+    for r in reports:
+        r["_id"] = str(r["_id"])
+        r["uploaded_at"] = r["uploaded_at"].isoformat()
+    
+    return {
+        "reports": reports,
+        "total": len(reports)
+    }
+
+
+@router.delete("/report/{report_id}")
+async def delete_report(
+    report_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Удалить отчет и все связанные транзакции"""
+    seller_id = str(current_user["_id"])
+    db = await get_database()
+    
+    from bson import ObjectId
+    
+    # Проверяем существование отчета
+    report = await db.ozon_reports.find_one({
+        "_id": ObjectId(report_id),
+        "seller_id": seller_id
+    })
+    
+    if not report:
+        raise HTTPException(status_code=404, detail="Отчет не найден")
+    
+    # Удаляем связанные транзакции
+    trans_result = await db.ozon_transactions.delete_many({
+        "seller_id": seller_id,
+        "report_id": report_id
+    })
+    
+    # Удаляем сам отчет
+    await db.ozon_reports.delete_one({
+        "_id": ObjectId(report_id)
+    })
+    
+    return {
+        "status": "success",
+        "deleted_report": report_id,
+        "deleted_transactions": trans_result.deleted_count
+    }
+
