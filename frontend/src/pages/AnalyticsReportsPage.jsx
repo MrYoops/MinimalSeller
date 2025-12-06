@@ -1034,4 +1034,144 @@ function TransactionsView({ data, fmt, expandedRow, setExpandedRow }) {
   )
 }
 
+
+function TrendsView({ data, fmt }) {
+  const { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = require('recharts')
+  
+  if (!data || !data.trends || data.trends.length === 0) {
+    return (
+      <div className="card-neon text-center py-12">
+        <p className="text-mm-text-secondary">Нет данных для графиков</p>
+      </div>
+    )
+  }
+  
+  // Подготовка данных для графиков
+  const trends = data.trends
+  
+  // Для pie chart - структура расходов (берем последний день как пример)
+  const totalRevenue = trends.reduce((sum, t) => sum + t.revenue, 0)
+  const totalReturns = trends.reduce((sum, t) => sum + t.returns, 0)
+  const totalCommission = trends.reduce((sum, t) => sum + t.commission, 0)
+  
+  const expensesData = [
+    { name: 'Комиссия Ozon', value: totalCommission, color: '#ff4444' },
+    { name: 'Возвраты', value: totalReturns, color: '#ff8844' }
+  ]
+  
+  return (
+    <div className="space-y-6">
+      {/* Динамика выручки и прибыли */}
+      <div className="card-neon p-6">
+        <h3 className="text-lg font-mono text-mm-cyan uppercase mb-4">ДИНАМИКА ВЫРУЧКИ И ПРИБЫЛИ</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={trends}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+            <XAxis 
+              dataKey="date" 
+              stroke="#888"
+              style={{ fontSize: '12px', fontFamily: 'monospace' }}
+            />
+            <YAxis 
+              stroke="#888"
+              style={{ fontSize: '12px', fontFamily: 'monospace' }}
+              tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+            />
+            <Tooltip 
+              contentStyle={{ 
+                backgroundColor: '#1a1a1a', 
+                border: '1px solid #00ffff',
+                borderRadius: '4px',
+                fontFamily: 'monospace',
+                fontSize: '12px'
+              }}
+              formatter={(value) => fmt(value)}
+            />
+            <Legend 
+              wrapperStyle={{ fontFamily: 'monospace', fontSize: '12px' }}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="revenue" 
+              stroke="#00ffff" 
+              strokeWidth={2}
+              name="Выручка"
+              dot={{ fill: '#00ffff', r: 4 }}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="profit" 
+              stroke="#00ff88" 
+              strokeWidth={2}
+              name="Прибыль"
+              dot={{ fill: '#00ff88', r: 4 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      
+      {/* Структура расходов */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="card-neon p-6">
+          <h3 className="text-lg font-mono text-mm-cyan uppercase mb-4">СТРУКТУРА РАСХОДОВ</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={expensesData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {expensesData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#1a1a1a', 
+                  border: '1px solid #00ffff',
+                  fontFamily: 'monospace'
+                }}
+                formatter={(value) => fmt(value)}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        
+        {/* Количество транзакций по дням */}
+        <div className="card-neon p-6">
+          <h3 className="text-lg font-mono text-mm-cyan uppercase mb-4">ТРАНЗАКЦИИ ПО ДНЯМ</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={trends}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <XAxis 
+                dataKey="date" 
+                stroke="#888"
+                style={{ fontSize: '10px', fontFamily: 'monospace' }}
+              />
+              <YAxis 
+                stroke="#888"
+                style={{ fontSize: '12px', fontFamily: 'monospace' }}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#1a1a1a', 
+                  border: '1px solid #00ffff',
+                  fontFamily: 'monospace'
+                }}
+              />
+              <Bar dataKey="transactions" fill="#00ffff" name="Транзакции" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
 export default AnalyticsReportsPage
