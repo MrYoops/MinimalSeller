@@ -100,6 +100,9 @@ function ProfitReportPage() {
   }
 
   const formatCurrency = (amount) => {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      amount = 0
+    }
     return new Intl.NumberFormat('ru-RU', {
       style: 'currency',
       currency: 'RUB',
@@ -108,7 +111,16 @@ function ProfitReportPage() {
   }
 
   const formatPercent = (percent) => {
+    if (percent === undefined || percent === null || isNaN(percent)) {
+      percent = 0
+    }
     return `${percent.toFixed(2)}%`
+  }
+  
+  // Безопасный доступ к вложенным полям
+  const safeGet = (obj, path, defaultValue = 0) => {
+    const value = path.split('.').reduce((current, key) => current?.[key], obj)
+    return value !== undefined && value !== null ? value : defaultValue
   }
 
   return (
