@@ -485,7 +485,7 @@ function AnalyticsReportsPage() {
         </div>
 
         <div className="border-t border-mm-border pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm text-mm-text-secondary mb-2 font-mono">ПЕРИОД С:</label>
               <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
@@ -498,8 +498,43 @@ function AnalyticsReportsPage() {
             </div>
             <div>
               <label className="block text-sm text-mm-text-secondary mb-2 font-mono">ТЕГ ТОВАРА:</label>
-              <input type="text" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} placeholder="MINIMALMOD, crucial..."
+              <input type="text" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} placeholder="crucial..."
                 className="w-full px-4 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm text-mm-text focus:border-mm-cyan focus:outline-none placeholder:text-mm-text-tertiary" />
+            </div>
+            <div className="relative">
+              <label className="block text-sm text-mm-text-secondary mb-2 font-mono">ТОВАР:</label>
+              <input 
+                type="text" 
+                value={productFilter} 
+                onChange={(e) => setProductFilter(e.target.value)}
+                onFocus={() => setShowProductsDropdown(true)}
+                placeholder="Выберите товар..."
+                className="w-full px-4 py-2 bg-mm-black border border-mm-border rounded font-mono text-sm text-mm-text focus:border-mm-cyan focus:outline-none placeholder:text-mm-text-tertiary" 
+              />
+              {showProductsDropdown && productsList.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-mm-black border border-mm-cyan rounded max-h-60 overflow-y-auto">
+                  <div 
+                    className="px-4 py-2 hover:bg-mm-cyan hover:bg-opacity-20 cursor-pointer text-sm"
+                    onClick={() => { setProductFilter(''); setShowProductsDropdown(false); }}
+                  >
+                    <span className="text-mm-text-secondary">Все товары</span>
+                  </div>
+                  {productsList
+                    .filter(p => !productFilter || p.display.toLowerCase().includes(productFilter.toLowerCase()))
+                    .slice(0, 10)
+                    .map(p => (
+                      <div 
+                        key={p.article}
+                        className="px-4 py-2 hover:bg-mm-cyan hover:bg-opacity-20 cursor-pointer text-sm"
+                        onClick={() => { setProductFilter(p.article); setShowProductsDropdown(false); }}
+                      >
+                        <span className="text-mm-cyan font-mono">{p.article}</span>
+                        <span className="text-mm-text-secondary ml-2">{p.name}</span>
+                      </div>
+                    ))
+                  }
+                </div>
+              )}
             </div>
             <div className="flex items-end gap-2">
               <button onClick={loadData} disabled={loading} className="btn-primary flex-1">
