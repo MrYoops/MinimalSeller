@@ -2,7 +2,7 @@
 Парсинг Excel отчетов от маркетплейсов (Ozon, Wildberries, Яндекс.Маркет)
 """
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from typing import Optional
 from datetime import datetime
 import pandas as pd
