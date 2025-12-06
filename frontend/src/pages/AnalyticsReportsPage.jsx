@@ -702,6 +702,8 @@ function AnalyticsReportsPage() {
         <ProfitView data={profitData} fmt={fmt} pct={pct} />
       ) : activeReport === 'sales' && salesData ? (
         <SalesView data={salesData} fmt={fmt} />
+      ) : activeReport === 'trends' && trendsData ? (
+        <TrendsView data={trendsData} fmt={fmt} />
       ) : activeReport === 'transactions' && transactionsData ? (
         <TransactionsView data={transactionsData} fmt={fmt} expandedRow={expandedRow} setExpandedRow={setExpandedRow} />
       ) : (
