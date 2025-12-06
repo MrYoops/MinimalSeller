@@ -284,7 +284,7 @@ async def sync_ozon_data(
     Получает заказы и финансовые транзакции за указанный период
     и сохраняет их в БД с детализацией всех расходов
     """
-    seller_id = current_user["_id"]
+    seller_id = str(current_user["_id"])
     
     # Парсим даты
     try:
@@ -368,7 +368,7 @@ async def get_profit_report(
     - Чистая прибыль
     - Маржа
     """
-    seller_id = current_user["_id"]
+    seller_id = str(current_user["_id"])
     
     # Парсим даты
     try:
@@ -626,7 +626,7 @@ async def get_transactions(
     """
     Получить список транзакций с детализацией
     """
-    seller_id = current_user["_id"]
+    seller_id = str(current_user["_id"])
     
     try:
         # Добавляем время и timezone для корректного сравнения
