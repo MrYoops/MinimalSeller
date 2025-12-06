@@ -441,9 +441,18 @@ export default function CatalogProductsPage() {
           <table className="w-full">
             <thead className="bg-mm-dark border-b border-mm-border">
               <tr>
+                <th className="px-4 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedProducts.length === productsWithPhotos.length && productsWithPhotos.length > 0}
+                    onChange={(e) => toggleSelectAll(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">Фото</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">Артикул</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">Название</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">Теги</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">МП</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">Цена</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-mm-text-secondary uppercase">Бренд</th>
@@ -456,6 +465,14 @@ export default function CatalogProductsPage() {
             <tbody className="divide-y divide-mm-border">
               {productsWithPhotos.map((product) => (
                 <tr key={product.id} className="hover:bg-mm-dark/50 transition">
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.includes(product.id)}
+                      onChange={() => toggleProductSelection(product.id)}
+                      className="w-4 h-4"
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     {product.firstPhoto ? (
                       <img
