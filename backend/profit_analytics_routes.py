@@ -434,6 +434,14 @@ async def get_profit_report(
     
     data = result[0]
     
+    # Рассчитываем себестоимость (COGS) из всех товаров
+    all_items = data.get("all_items", [])
+    total_cogs = 0.0
+    for items_list in all_items:
+        if items_list:
+            for item in items_list:
+                total_cogs += item.get("total_cost", 0.0)
+    
     # Рассчитываем метрики
     gross_sales = data.get("total_amount", 0.0)
     
