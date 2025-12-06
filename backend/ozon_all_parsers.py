@@ -8,7 +8,6 @@ from io import BytesIO
 from datetime import datetime
 from typing import List, Dict, Union
 import logging
-import PyPDF2
 
 logger = logging.getLogger(__name__)
 
