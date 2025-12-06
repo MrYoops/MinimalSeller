@@ -51,16 +51,29 @@ function ProfitReportPage() {
 
   const loadReport = async () => {
     setLoading(true)
+    setError(null)
     try {
       const response = await api.get('/api/profit-analytics/profit-report', {
         params: { date_from: dateFrom, date_to: dateTo }
       })
-      setReport(response.data)
+      
+      console.log('Report response:', response.data)
+      
+      // Проверяем что данные корректные
+      if (response.data && response.data.revenue && response.data.expenses && response.data.profit) {
+        setReport(response.data)
+      } else {
+        setError('Нет данных за выбранный период')
+        setReport(null)
+      }
     } catch (error) {
       console.error('Failed to load report:', error)
-      alert('❌ Ошибка загрузки отчета: ' + (error.response?.data?.detail || error.message))
+      const errorMessage = error.response?.data?.detail || error.message || 'Неизвестная ошибка'
+      setError(`Ошибка загрузки отчета: ${errorMessage}`)
+      setReport(null)
     }
     setLoading(false)
+  }
   }
 
   const exportToExcel = async () => {
