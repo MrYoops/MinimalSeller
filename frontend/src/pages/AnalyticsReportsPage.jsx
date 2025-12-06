@@ -238,6 +238,18 @@ function AnalyticsReportsPage() {
     } catch (error) {
       toast.error('Ошибка удаления')
     }
+
+  
+  // Функции для фильтра по товару
+  const loadProductsList = async () => {
+    try {
+      const r = await api.get('/api/ozon-reports/products-list')
+      setProductsList(r.data.products || [])
+    } catch (error) {
+      console.error('Ошибка загрузки товаров', error)
+    }
+  }
+
   }
 
 
