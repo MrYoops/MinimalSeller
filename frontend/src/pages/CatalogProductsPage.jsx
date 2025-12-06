@@ -367,6 +367,57 @@ export default function CatalogProductsPage() {
         )}
       </div>
 
+      {/* Tags Management Button */}
+      <div className="flex justify-start">
+        <button
+          onClick={() => setShowTagsModal(true)}
+          className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded hover:bg-purple-500/30 flex items-center gap-2 transition"
+        >
+          <FiTag /> УПРАВЛЕНИЕ ТЕГАМИ
+        </button>
+      </div>
+
+      {/* Bulk Actions Panel */}
+      {selectedProducts.length > 0 && (
+        <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+          <div className="flex items-center gap-4">
+            <span className="text-mm-text font-mono">
+              Выбрано товаров: <span className="text-purple-300 font-bold">{selectedProducts.length}</span>
+            </span>
+            <div className="flex-1 flex items-center gap-2">
+              <select
+                value={selectedActionTag}
+                onChange={(e) => setSelectedActionTag(e.target.value)}
+                className="px-3 py-2 bg-mm-dark border border-mm-border text-mm-text rounded"
+              >
+                <option value="">-- Выберите тег --</option>
+                {allTags.map(tag => (
+                  <option key={tag} value={tag}>{tag}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleBulkAssignTag}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+              >
+                Присвоить тег
+              </button>
+              <button
+                onClick={handleBulkRemoveTag}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+              >
+                Удалить тег
+              </button>
+            </div>
+            <button
+              onClick={() => setSelectedProducts([])}
+              className="px-3 py-2 bg-mm-dark border border-mm-border text-mm-text-secondary rounded hover:bg-mm-gray transition"
+            >
+              Отменить выбор
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Products Table */}
       {loading ? (
         <div className="text-center py-12">
