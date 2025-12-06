@@ -236,7 +236,7 @@
 
 ### 2. Откройте систему
 
-URL: https://warehouse-flow-32.preview.emergentagent.com/analytics-reports
+URL: https://ecommerce-analytics-2.preview.emergentagent.com/analytics-reports
 
 Логин: seller@test.com
 Пароль: password123

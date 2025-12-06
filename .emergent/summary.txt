@@ -1,145 +1,181 @@
 <analysis>**original_problem_statement:**
-The user initially requested to add a search bar and filters to the stock page. The conversation then evolved to debugging why stock levels were not updating correctly, why new orders were not reserving stock, and a request for a detailed explanation of the entire order processing and stock synchronization lifecycle.
+The user wants to implement a comprehensive financial analytics system, similar to the one on , capable of processing uploaded reports from marketplaces.
 
-The user's direct requests were:
-1.  On the Склад остатки (Stock Balances) page, add a search bar for article and name.
-2.  Add a filter for in stock or not in stock.
-3.  Suggest any other useful improvements for that page.
-4.  Fix why order  did not have its items reserved.
-5.  Implement automatic stock deduction when an order is processed.
-6.  Explain how the order and stock system works.
-7.  Confirm that stock is automatically sent to Ozon after an internal stock level change.
+**PRODUCT REQUIREMENTS:**
+1.  **Core Functionality:** Build an analytics system that ingests financial reports from Ozon (and later Wildberries, Yandex.Market) to calculate key metrics.
+2.  **Profit Calculation:** The primary goal is to calculate the **exact net profit**. This must account for all revenue streams and all types of expenses.
+3.  **Ozon's Point System:** It is critically important to understand and correctly incorporate Ozon's system of баллы (points/bonuses), as the user states the economy is built on this.
+4.  **Report Handling:** The system must allow users to upload various financial reports provided by Ozon (the user uploaded 15 different  and  files for November).
+5.  **User Interface:**
+    *   A dropdown menu to select different reports (e.g., Net Profit, Gross Sales, Transactions).
+    *   Filters for date ranges, product tags, and specific products.
+    *   The UI must be stable and not show white crooked empty fields.
+6.  **Data Export:** Implement functionality to export the generated reports to Excel.
+7.  **Cost of Goods Sold (COGS):** The system must account for the purchase price of goods. The user specified that this cost should be updated via the Приемка на склад (Goods Receipt) process.
+8.  **Taxation:** The system must allow the user to select their tax system (УСН, НДС etc.) and incorporate tax calculations into the final profit.
+9.  **Returns:** The system must correctly parse and account for customer returns.
+
+The user has repeatedly emphasized a preference for **slow, high-quality, and thorough development** over speed. Initial attempts by the agent to deliver quickly resulted in broken, incomplete functionality and user frustration.
 
 **User's preferred language**: Russian. You MUST respond in Russian.
 
 **what currently exists?**
-- **Backend:**
-    - The stock update API () is confirmed to be working correctly and saving data to the  database.
-    - The  has been significantly enhanced. It now correctly reserves stock for new orders (status new, awaiting_packaging), and contains the logic to deduct stock for shipped orders and return stock for cancelled orders. The scheduler is confirmed to start automatically with the backend server.
-    - A temporary endpoint  was added to  to retroactively fix the reservation for a specific order.
-- **Frontend:**
-    - The  component has been completely overhauled. It now features a comprehensive filter and search bar, allowing users to search by name/SKU, filter by availability (В наличии, Нет в наличии), sort results, and toggle views for Критический остаток (Critical Stock) and Только зарезервированные (Reserved Only).
-    - The filtering logic is implemented client-side using React's  hook.
+-   **Backend:** A robust set of FastAPI endpoints () has been created to handle the analytics functionality.
+    -   A sophisticated parser () can process the main, complex Позаказный отчет о реализации (Itemized Sales Report) from an uploaded Excel file. This parser correctly handles the file's multi-level headers and, crucially, extracts the two different types of Ozon баллы (bonus points) which are vital for accurate revenue calculation.
+    -   Data from the parsed report is saved into a  collection in MongoDB using Pydantic models defined in .
+    -   Endpoints exist to calculate P&L, list top-selling products, and list all transactions based on the data in the database.
+    -   An endpoint to export the P&L report to an  file is implemented and working.
+-   **Frontend:** A new page () serves as the main analytics dashboard.
+    -   It features a dropdown menu to switch between Чистая прибыль (Net Profit), Общие продажи (Gross Sales), and Транзакции (Transactions) views.
+    -   It includes functioning date pickers and an input field for filtering by product tags.
+    -   It has a button to upload the Позаказный отчет.
+    -   The page correctly fetches and displays the calculated data from the backend.
 
 **Last working item**:
-- **Last item agent was working:** The agent was explaining to the user why the automatic stock synchronization to Ozon did not occur after a manual stock reservation. The root cause was identified: the user's warehouse in the system has no configured links to any Ozon marketplace warehouses. The agent performed a one-time manual sync to update Ozon and asked the user if they want to proceed with configuring the permanent automatic link.
-- **Status:** USER VERIFICATION PENDING
-- **Agent Testing Done:** Y (The agent confirmed the manual sync worked by asking the user, who replied ну вроде остаток передался - well, it seems the stock was transferred).
-- **Which testing method agent to use?** NA. The next step depends on the user's decision. If the user agrees to create the link, the agent may need to guide them or implement a UI for it.
-- **User Testing Done:** Y
+-   **Last item agent was working:** The agent finished creating comprehensive handover documents (, , ) at the user's request. This was done to prepare for a fork so that the next agent could seamlessly continue development based on a clear list of remaining tasks.
+-   **Status:** FINISHED
+-   **Agent Testing Done:** Y
+-   **Which testing method agent to use?** NA
+-   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): Automatic stock synchronization to Ozon is not configured.**
--   **Issue 2 (P2): Non-functional checkboxes in warehouse settings UI.**
+-   **Issue 1 (P0): Inaccurate Profit Calculation due to Missing Expenses & Returns.**
+-   **Issue 2 (P0): Missing Cost of Goods Sold (COGS) Calculation.**
+-   **Issue 3 (P1): Missing Tax Calculation.**
 
 **Issues Detail:**
--   **Issue 1: Automatic stock synchronization to Ozon is not configured.**
-    -   **Attempted fixes:** The agent successfully performed a one-time manual synchronization by calling the  endpoint. This is not a permanent solution.
+-   **Issue 1: Inaccurate Profit Calculation due to Missing Expenses & Returns.**
+    -   **Attempted fixes:** The current implementation only parses the main Позаказный отчет. It does not process several other critical reports provided by the user, especially the PDF-based УПД (Universal Transfer Document) which contains ~40,000 RUB of service fees, agent commissions, and other costs. It also ignores the returns columns in the main report.
     -   **Next debug checklist:**
-        1.  Wait for the user's confirmation to proceed with creating a permanent warehouse link.
-        2.  If the user agrees, the agent needs to implement a way to link the internal warehouse (рр) to the corresponding Ozon warehouse. This could be done via a UI enhancement in  or as a direct database operation if the user provides the Ozon warehouse ID.
-    -   **Why fix this issue and what will be achieved with the fix?** This is critical for the system's core function. Fixing it will ensure that any change in  stock is automatically pushed to Ozon, preventing overselling and keeping stock levels accurate across platforms.
-    -   **Status:** BLOCKED (Awaiting user confirmation)
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both. The backend sync logic and the frontend UI for creating the link (if implemented).
-
--   **Issue 2: Non-functional checkboxes in warehouse settings UI.**
-    -   **Attempted fixes:** This issue was identified in a previous session but not addressed in this one. The plan was to remove the unimplemented checkboxes.
-    -   **Next debug checklist:**
-        1.  Confirm with the user if they want the non-functional checkboxes (СКЛАД ДЛЯ УЧЕТА ОСТАТКОВ FBO and НЕ ЗАГРУЖАТЬ ЗАКАЗЫ) removed from the UI to avoid confusion.
-        2.  If yes, edit  and remove the corresponding UI elements.
-    -   **Why fix this issue and what will be achieved with the fix?** This will improve UX by removing confusing UI elements that have no backend functionality.
+        1.  Implement a PDF parser (e.g., using  or a similar library) to extract data from  and .
+        2.  Create parsers for the remaining Excel reports (e.g., , ).
+        3.  Modify the main report parser in  to process data from the Возвращено (Returned) columns (columns 14-20).
+        4.  Update the profit calculation logic in  to subtract these new expenses and returned amounts.
+    -   **Why fix this issue and what will be achieved with the fix?** This is the highest priority. Fixing this will make the final profit figure significantly more accurate by including tens of thousands of rubles in missing costs.
     -   **Status:** NOT STARTED
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend.
-    -   **Blocked on other issue:** None.
+    -   **Should Test frontend/backend/both after fix?** Backend.
+
+-   **Issue 2: Missing Cost of Goods Sold (COGS) Calculation.**
+    -   **Attempted fixes:** None. The architecture for this has not been built.
+    -   **Next debug checklist:**
+        1.  The user stated COGS should be managed via Приемка на склад (Goods Receipt). The agent must first locate this functionality or create it.
+        2.  The  model needs to be linked to a product catalog to retrieve the .
+        3.  Update the profit calculation pipeline in  to calculate COGS () and introduce Gross Profit (Выручка - COGS) and Operating Profit (Gross Profit - Expenses).
+        4.  Update the  frontend to display these new metrics.
+    -   **Why fix this issue and what will be achieved with the fix?** This is critical for understanding true product profitability. Without it, the profit figure is actually gross margin, not net profit.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Both.
+
+-   **Issue 3: Missing Tax Calculation.**
+    -   **Attempted fixes:** None.
+    -   **Next debug checklist:**
+        1.  Create a new settings page on the frontend (e.g., ).
+        2.  Implement a UI for users to select their tax system (УСН 6%, УСН 15%, ОСН) and save it to the user's profile in the database.
+        3.  Modify the profit calculation in  to subtract the calculated tax from the operating profit to arrive at the final net profit.
+    -   **Why fix this issue and what will be achieved with the fix?** This provides the final, true net profit figure after all obligations.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Both.
 
 **In progress Task List**:
-- None. All active development tasks for this session were completed.
+- None.
 
 **Upcoming and Future Tasks**
-- **Task 1 (P2): Suggest further improvements for the Stock page.** The user asked и еще что можешь предложить (and what else can you suggest). The agent could propose features like batch editing, export to CSV, or viewing movement history per item.
+All upcoming tasks are documented in .
+**Upcoming Tasks (P1):**
+1.  **UI Filter for Products:** Implement frontend logic to use the existing backend capability to filter reports by specific products/SKUs.
+2.  **History of Uploaded Reports:** Create a UI section that shows a list of already uploaded reports for a given period to prevent duplicate uploads and provide transparency.
+3.  **UI Feedback:** Add loading indicators and toast notifications for file uploads and report generation.
+
+**Future Tasks (P2):**
+1.  **Data Visualization:** Add charts and graphs to the analytics page to visualize trends in sales, profits, and expenses.
+2.  **Wildberries & Yandex.Market Integration:** Extend the system to support report parsing and analytics for other marketplaces.
+3.  **Advanced Analytics:** Implement ABC analysis, profitability analysis by category, and forecasting.
 
 **Completed work in this session**
-- **Resolved Critical Bug:** Diagnosed and conclusively proved that the stock update UI in  works correctly. The agent identified that the initial bug report was based on checking an incorrect database.
-- **Feature: Enhanced Stock Page UI/UX:** Implemented a comprehensive set of filters on the stock page (), including search by name/SKU, filtering by stock status, sorting, and toggles for critical/reserved stock. This work was verified by the testing agent and screenshots.
-- **Fixed Order Reservation Logic:** Updated  to correctly reserve stock for orders with statuses new and awaiting_shipment.
-- **Implemented Automatic Stock Deduction:** Added logic to  to automatically manage stock levels (deduct on fulfillment, return on cancellation) as order statuses change.
-- **Fixed Existing Order:** Retroactively reserved stock for order  by creating and using a temporary manual reservation API endpoint.
-- **Provided Detailed Explanations:** Gave the user a thorough walkthrough of the internal reservation system (, , ) and the order processing lifecycle.
+-   **Analytics Module Foundation:** Built the core backend and frontend infrastructure for the analytics system.
+-   **Complex Excel Parser:** Successfully reverse-engineered and built a parser for the Позаказный отчет о реализации from Ozon. This was a major achievement, as it correctly handles multi-level headers and the two different types of Ozon баллы (bonus points) that are crucial for accurate revenue calculation.
+-   **Initial P&L Report:** Implemented a working Profit & Loss report that displays revenue, expenses (from the one parsed report), and net profit.
+-   **Multi-View Dashboard:** Created a frontend page with a dropdown to switch between P&L, Top Sales, and Transaction list views.
+-   **File Upload & Processing:** Implemented the full flow of uploading an Excel report via the UI, processing it on the backend, and storing the results in the database.
+-   **Excel Export:** Created a working feature to export the generated P&L report to an  file.
+-   **Handover Documentation:** Created detailed documentation (, ) to ensure a smooth transition for the next agent.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Non-functional checkboxes in warehouse settings UI.** This was carried over from a previous session and not prioritized. It is now listed in the All Pending/In progress Issue list.
+- All known unfixed issues are captured in the **All Pending/In progress Issue list** section above. The primary ones involve the incomplete parsing of all 15 financial documents, lack of COGS, and no tax calculation.
 
 **Known issue recurrence from previous fork**
-- **Issue recurrence in previous fork:** UI for updating stock quantity is not working.
-- **Recurrence count:** 1
-- **Status:** RESOLVED. The agent thoroughly investigated this and confirmed the functionality is working as expected. The issue was a misunderstanding of the database being used for verification.
+-   N/A
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend:** FastAPI, APScheduler for background tasks, Motor (async MongoDB driver), debugging via direct DB queries and .
--   **Frontend:** React, hooks (, , ), client-side filtering, and interaction with a REST API.
--   **Core Logic:** Understanding the difference between total stock (), committed stock (), and sellable stock (), and how this internal ledger maps to the single stock figure sent to external marketplaces like Ozon.
+-   **Backend:** FastAPI, Pydantic for data modeling.
+-   **Data Parsing:** Heavy use of the  library to parse complex, multi-header  files. The core logic involves skipping initial metadata rows and mapping combined header rows to a flat data structure.
+-   **Database:** MongoDB ( driver) for storing parsed financial transactions. Aggregation pipelines are used for calculations.
+-   **Frontend:** React, / for state management,  for API calls, and standard components for UI (buttons, file inputs).
+-   **Financial Logic:** Understanding the composition of Ozon's revenue, including base sales, and two types of compensatory bonus points (баллы лояльности and баллы за скидки).
 
 **key DB schema**
 -   **Database:** 
--   **inventory:** 
--   **orders:** 
--   **warehouses:**  (The  array is currently empty for the user's warehouse).
+    -   **marketplace_transactions:** 
+    -   **financial_expenses:**  (This is planned but not fully implemented for all expense types).
 
 **changes in tech stack**
-- None.
+-   Added , , and  to the backend dependencies.
 
 **All files of reference**
--   : Contains the new filter UI and is the main page for stock management.
--   : Contains the core logic for automatic order processing and stock reservation.
--   : Contains the temporary manual reservation endpoint.
--   : This is where the non-functional checkboxes are, and where a UI for linking warehouses would likely be added.
+-   : **CRITICAL.** Contains the full, detailed plan for the next agent.
+-   : Contains the core intellectual property of the current implementation—the logic to parse Ozon's main report.
+-   : The heart of the backend analytics API.
+-   : The main user-facing component.
+-   : A summary of the agent's research into the 15 user-provided documents, which forms the basis for future work.
 
 **Areas that need refactoring**:
-- The temporary endpoint  in  was created for a one-time fix and should be removed to clean up the codebase.
+- The agent created and then abandoned several files like , , . These should be cleaned up to avoid confusion. The final, consolidated logic resides in  and .
 
 **key api endpoints**
--   : Fetches the list of all stock items.
--   : Updates the quantity of a single stock item.
-body: 
--   : Manually triggers a full stock synchronization to linked marketplaces.
--   : (Temporary) Manually reserves items for an existing order.
+-   : Uploads and processes the main Позаказный отчет.
+-   : Calculates and returns P&L data for a given period.
+-   : Returns top-selling products.
+-   : Returns a paginated list of all transactions.
+-   : Exports the P&L report to an Excel file.
 
 **Critical Info for New Agent**
--   You must communicate with the user in **Russian**.
--   The highest priority is to resolve the lack of automatic stock synchronization. This is a configuration issue, not a bug. Wait for the user's confirmation before proceeding to add a warehouse link.
--   The user prefers a methodical, slow and steady pace. Explain your actions clearly.
--   The critical bug regarding stock updates not being saved has been **resolved**. Do not reinvestigate this. The functionality is confirmed to be working.
--   The database name is .
+-   **WORK SLOWLY AND METHODICALLY.** The user has explicitly and repeatedly stated that quality and correctness are far more important than speed. Do not deliver partially completed features. Test thoroughly before showing the user.
+-   **ALL FUTURE WORK SHOULD BE BASED ON THE 15 REPORTS PROVIDED BY THE USER.** The agent has analyzed them and stored the findings in . Do not rely on generic API documentation; use the structure from the real files.
+-   **START WITH THE TASKS IN .** This file was created at the user's request and contains the prioritized list of what to do next. The highest priority is to parse the remaining reports (especially the PDFs) to account for all expenses.
+-   The core logic for Ozon revenue is: **Total Accrual = Sale Amount + Loyalty Payouts + Points for Discounts - Ozon Commission**. This is implemented correctly but must be preserved.
 
 **documents created in this job**
-- None. The agent updated the existing .
+-   
+-   
+-   
+-   
+-   
+-   
 
 **Last 10 User Messages and any pending user messages**
-1.  **User:** Please explain what happens when a new order arrives. (Status: ADDRESSED - Agent provided a detailed explanation).
-2.  **User:** OK, so if an order comes in now, will the stock be deducted? (Status: ADDRESSED - Agent investigated and found it would not, leading to the next fixes).
-3.  **User:** I see order  but the items are not in reserve. Why? (Status: FIXED - Agent diagnosed the issue and manually reserved the items).
-4.  **User:** OK, go with the first option (fix the reservation logic). (Status: DONE - Agent implemented the fix).
-5.  **User:** I don't see the reserve for order . (Status: FIXED - Agent explained the fix is for *new* orders and then manually fixed the existing one).
-6.  **User:** So the database changed. Should the stock automatically be sent to Ozon now? Should it be 3 on each warehouse? (Status: ADDRESSED - Agent investigated and found the warehouse link was missing).
-7.  **User:** Wait, do you put the item in reserve inside Ozon? Or is it your system? (Status: ADDRESSED - Agent provided a detailed explanation of the internal vs external stock system).
-8.  **User:** Well, it seems the stock was transferred. (Status: ACKNOWLEDGED - User confirms the manual sync worked).
-9.  **(No new messages)** The agent's last message asked the user if they want to create a permanent warehouse link for automatic synchronization. Awaiting response.
+1.  **User:** What is left unimplemented? (Status: ADDRESSED - Agent provided a comprehensive list).
+2.  **User:** Agreed. Can we save these tasks for a new chat/fork? (Status: ADDRESSED - Agent created handover documents).
+3.  **User:** (Provides clarification on COGS, agrees with priorities). (Status: ACKNOWLEDGED).
+4.  **User:** OK, I'm ready to fork. (Status: ACKNOWLEDGED).
+5.  **User:** Can you save the tasks to a file for the next chat? (Status: DONE - Agent created ).
+6.  **(No new messages)** The user is expected to start a new session (fork) and instruct the new agent to continue based on the handover files.
 
 **Project Health Check:**
--   **Partially Configured:** The automatic stock synchronization feature is implemented but not active because the user's warehouse is not linked to an Ozon marketplace warehouse. This is a configuration gap, not a broken feature.
+-   **Partially Implemented:** The foundation of the analytics system is built and functional for one primary report. However, it gives an incomplete and therefore inaccurate financial picture because it's missing major expense categories from other reports, COGS, and taxes.
 
 **3rd Party Integrations**:
--   Ozon Seller API - requires User API Key.
+-   Ozon Seller API - requires User API Key. The user confirmed keys are already in the system, but the agent has not yet used them, relying instead on uploaded files.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. Used to test the new frontend filters on , reporting 96% success.
+-   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None.
+-   **Test files created:** None. Testing was done manually via  and screenshots.
 -   **Known regressions:** None.
 
 **Credentials to test flow:**
@@ -147,4 +183,4 @@ body:
 -   **Password:** 
 
 **What agent forgot to execute**
-- The agent did not address the non-functional checkboxes in the warehouse settings UI (), an issue carried over from the previous handover summary. The focus was entirely on the more critical stock and order processing workflow.</analysis>
+-   The agent did a good job of self-correcting and ultimately captured all remaining tasks in the handover documents. The main initial oversight was not taking the user's request for slow and quality work seriously, which led to rework. The agent also has not implemented parsers for the majority of the 15 financial documents provided by the user.</analysis>
