@@ -819,6 +819,78 @@ async def get_products_list(
             "display": f"{p['_id']} - {p['product_name'][:50]}" if p['product_name'] else p['_id']
         })
     
+
+
+@router.get("/trends")
+async def get_trends_data(
+    period_start: str,
+    period_end: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить данные для графиков - динамика по дням"""
+    seller_id = str(current_user["_id"])
+    
+    try:
+        date_from = datetime.fromisoformat(f"{period_start}T00:00:00")
+        date_to = datetime.fromisoformat(f"{period_end}T23:59:59")
+    except:
+        raise HTTPException(status_code=400, detail="Неверный формат даты")
+    
+    db = await get_database()
+    
+    # Агрегируем транзакции по дням
+    pipeline = [
+        {
+            "$match": {
+                "seller_id": seller_id,
+                "operation_date": {"$gte": date_from, "$lte": date_to}
+            }
+        },
+        {
+            "$group": {
+                "_id": {
+                    "$dateToString": {
+                        "format": "%Y-%m-%d",
+                        "date": "$operation_date"
+                    }
+                },
+                "revenue": {"$sum": "$realized_amount"},
+                "loyalty": {"$sum": "$loyalty_payments"},
+                "discounts": {"$sum": "$discount_points"},
+                "commission": {"$sum": "$ozon_base_commission"},
+                "returns": {"$sum": "$total_returned"},
+                "transactions_count": {"$sum": 1}
+            }
+        },
+        {
+            "$sort": {"_id": 1}
+        }
+    ]
+    
+    daily_data = await db.ozon_transactions.aggregate(pipeline).to_list(100)
+    
+    # Преобразуем для фронтенда
+    trends = []
+    for day in daily_data:
+        gross_revenue = day["revenue"] + day["loyalty"] + day["discounts"]
+        net_revenue = gross_revenue - day["returns"]
+        profit = net_revenue - day["commission"]
+        
+        trends.append({
+            "date": day["_id"],
+            "revenue": round(gross_revenue, 2),
+            "net_revenue": round(net_revenue, 2),
+            "commission": round(day["commission"], 2),
+            "returns": round(day["returns"], 2),
+            "profit": round(profit, 2),
+            "transactions": day["transactions_count"]
+        })
+    
+    return {
+        "trends": trends,
+        "total_days": len(trends)
+    }
+
     return {"products": result, "total": len(result)}
 
         e["expense_date"] = e["expense_date"].isoformat()
