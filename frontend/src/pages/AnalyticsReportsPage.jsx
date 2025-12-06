@@ -279,6 +279,7 @@ function ProfitView({ data, fmt, pct }) {
       <div className="card-neon p-6">
         <h3 className="text-lg font-mono text-mm-cyan uppercase mb-4">ДЕТАЛИЗАЦИЯ</h3>
         <div className="space-y-3 font-mono text-sm">
+          {/* ПРОДАЖИ */}
           <div className="flex justify-between py-2 border-b border-mm-border">
             <span className="text-mm-text-secondary">Реализовано</span>
             <span>{fmt(data.revenue?.realized)}</span>
@@ -295,6 +296,40 @@ function ProfitView({ data, fmt, pct }) {
             <span>= ВАЛОВАЯ ВЫРУЧКА</span>
             <span>{fmt(data.revenue?.gross_revenue)}</span>
           </div>
+          
+          {/* ВОЗВРАТЫ */}
+          {data.revenue?.returns && data.revenue.returns.total_returned > 0 && (
+            <>
+              <div className="flex justify-between py-2 border-b border-mm-border bg-mm-gray bg-opacity-20">
+                <span className="text-mm-text-secondary">- Возвраты ({data.revenue.returns.returned_quantity} шт.)</span>
+                <span className="text-mm-red">-{fmt(data.revenue.returns.total_returned)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-mm-border pl-6 text-xs">
+                <span className="text-mm-text-tertiary">└ Возвращено сумма</span>
+                <span className="text-mm-text-tertiary">-{fmt(data.revenue.returns.returned_amount)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-mm-border pl-6 text-xs">
+                <span className="text-mm-text-tertiary">└ Баллы возврат</span>
+                <span className="text-mm-text-tertiary">-{fmt(data.revenue.returns.returned_discounts)}</span>
+              </div>
+              {data.revenue.returns.returned_loyalty > 0 && (
+                <div className="flex justify-between py-2 border-b border-mm-border pl-6 text-xs">
+                  <span className="text-mm-text-tertiary">└ Лояльность возврат</span>
+                  <span className="text-mm-text-tertiary">-{fmt(data.revenue.returns.returned_loyalty)}</span>
+                </div>
+              )}
+              <div className="flex justify-between py-2 border-b border-mm-border pl-6 text-xs">
+                <span className="text-mm-text-tertiary">└ Комиссия (вернулась)</span>
+                <span className="text-mm-cyan">+{fmt(data.revenue.returns.returned_commission_back)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-mm-border font-semibold">
+                <span>= ЧИСТАЯ ВЫРУЧКА</span>
+                <span>{fmt(data.revenue?.net_revenue)}</span>
+              </div>
+            </>
+          )}
+          
+          {/* РАСХОДЫ */}
           <div className="flex justify-between py-2 border-b border-mm-border">
             <span className="text-mm-text-secondary">- Базовая комиссия Ozon</span>
             <span className="text-mm-red">-{fmt(data.expenses?.ozon_base_commission)}</span>
@@ -327,6 +362,8 @@ function ProfitView({ data, fmt, pct }) {
             <span className="text-mm-red">= ИТОГО РАСХОДОВ</span>
             <span className="text-mm-red">-{fmt(data.expenses?.total)}</span>
           </div>
+          
+          {/* ИТОГО */}
           <div className="flex justify-between py-2 border-t-2 border-mm-cyan font-bold text-lg">
             <span className="text-mm-green">= ЧИСТАЯ ПРИБЫЛЬ</span>
             <span className="text-mm-green">{fmt(data.profit?.net_profit)}</span>
