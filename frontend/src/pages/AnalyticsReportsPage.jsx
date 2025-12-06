@@ -280,6 +280,7 @@ function AnalyticsReportsPage() {
   useEffect(() => {
     loadTaxSettings()
     loadReportsHistory()
+    loadProductsList()
   }, [])
   
   useEffect(() => {
