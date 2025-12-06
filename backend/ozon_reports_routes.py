@@ -87,6 +87,56 @@ async def upload_loyalty_report(
     for program in result["programs"]:
         await db.ozon_loyalty_programs.update_one(
             {"seller_id": seller_id, "program_name": program["program_name"]},
+
+
+@router.post("/upload-rfbs-logistics")
+async def upload_rfbs_logistics_report(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    seller_id = str(current_user["_id"])
+    content = await file.read()
+    
+    try:
+        result = parse_rfbs_logistics_report(content, seller_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Ошибка: {str(e)}")
+    
+    db = await get_database()
+    
+    for service in result["services"]:
+        await db.ozon_rfbs_logistics.update_one(
+            {"seller_id": seller_id, "posting_number": service["posting_number"]},
+            {"$set": service},
+            upsert=True
+        )
+    
+    return {"status": "success", "total_logistics": result["total_rfbs_logistics"]}
+
+
+@router.post("/upload-fbo-fbs-services")
+async def upload_fbo_fbs_services_report(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    seller_id = str(current_user["_id"])
+    content = await file.read()
+    
+    try:
+        result = parse_fbo_fbs_services_report(content, seller_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Ошибка: {str(e)}")
+    
+    db = await get_database()
+    
+    await db.ozon_fbo_fbs_services.update_one(
+        {"seller_id": seller_id},
+        {"$set": {"total": result["total_fbo_fbs_services"], "updated_at": datetime.utcnow()}},
+        upsert=True
+    )
+    
+    return {"status": "success", "total_services": result["total_fbo_fbs_services"]}
+
             {"$set": program},
             upsert=True
         )
