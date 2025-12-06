@@ -780,6 +780,47 @@ async def get_manual_expenses(
     
     for e in expenses:
         e["_id"] = str(e["_id"])
+
+
+# ============================================================================
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# ============================================================================
+
+@router.get("/products-list")
+async def get_products_list(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить список уникальных товаров из транзакций"""
+    seller_id = str(current_user["_id"])
+    db = await get_database()
+    
+    # Получаем уникальные товары из транзакций
+    pipeline = [
+        {"$match": {"seller_id": seller_id}},
+        {"$group": {
+            "_id": "$article",
+            "product_name": {"$first": "$product_name"},
+            "sku": {"$first": "$sku"},
+            "total_quantity": {"$sum": "$quantity"},
+            "total_revenue": {"$sum": "$realized_amount"}
+        }},
+        {"$sort": {"total_revenue": -1}},
+        {"$limit": 200}
+    ]
+    
+    products = await db.ozon_transactions.aggregate(pipeline).to_list(200)
+    
+    result = []
+    for p in products:
+        result.append({
+            "article": p["_id"],
+            "name": p["product_name"][:80] if p["product_name"] else "",
+            "sku": p.get("sku", ""),
+            "display": f"{p['_id']} - {p['product_name'][:50]}" if p['product_name'] else p['_id']
+        })
+    
+    return {"products": result, "total": len(result)}
+
         e["expense_date"] = e["expense_date"].isoformat()
         e["created_at"] = e["created_at"].isoformat()
     
