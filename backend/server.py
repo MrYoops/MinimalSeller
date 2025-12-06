@@ -1760,6 +1760,13 @@ try:
 except Exception as e:
     logger.error(f"Failed to include profit_analytics_routes: {e}")
 
+try:
+    from ozon_bonuses_routes import router as ozon_bonuses_router
+    app.include_router(ozon_bonuses_router)
+    logger.info("Ozon bonuses routes included")
+except Exception as e:
+    logger.error(f"Failed to include ozon_bonuses_routes: {e}")
+
 # Skip analytics_routes for now (requires openai)
 # try:
 #     from analytics_routes import router as analytics_router
