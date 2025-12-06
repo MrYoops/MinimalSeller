@@ -373,6 +373,11 @@ async def calculate_profit_from_reports(
             "operating_margin_pct": round(operating_margin, 2),
             "net_profit": round(net_profit, 2),
             "net_margin_pct": round(net_margin, 2)
+        },
+        "taxes": {
+            "system": tax_system,
+            "rate": tax_rate,
+            "amount": round(tax_amount, 2)
         }
     }
 
