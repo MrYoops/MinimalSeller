@@ -36,6 +36,8 @@ def parse_ozon_order_realization_report(file_content: Union[bytes, str], seller_
             "sku": ss(row[3]),
             "article": ss(row[2]),
             "product_name": ss(row[1]),
+            
+            # ПРОДАЖИ
             "quantity": si(row[8]),
             "realized_amount": sf(row[5]),
             "loyalty_payments": sf(row[6]),
@@ -43,7 +45,16 @@ def parse_ozon_order_realization_report(file_content: Union[bytes, str], seller_
             "price": sf(row[9]),
             "ozon_base_commission": sf(row[12]),
             "total_to_accrue": sf(row[13]),
+            
+            # ВОЗВРАТЫ (колонки 14-20)
             "returned_amount": sf(row[14]),
+            "returned_loyalty_payments": sf(row[15]),
+            "returned_discount_points": sf(row[16]),
+            "returned_quantity": si(row[17]),
+            "returned_price": sf(row[18]),
+            "returned_commission": sf(row[19]),
+            "total_returned": sf(row[20]),
+            
             "operation_date": op_date,
             "document_type": "order_realization",
             "created_at": datetime.utcnow()
