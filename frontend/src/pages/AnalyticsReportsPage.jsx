@@ -819,6 +819,20 @@ function ProfitView({ data, fmt, pct }) {
             </div>
           )}
           
+          {/* НАЛОГИ */}
+          {data.taxes && data.taxes.amount > 0 && (
+            <div className="flex justify-between py-2 border-b border-mm-border">
+              <span className="text-mm-text-secondary">
+                - Налог ({data.taxes.system === 'usn_income' ? 'УСН 6%' :
+                          data.taxes.system === 'usn_income_expense' ? 'УСН 15%' :
+                          data.taxes.system === 'osn' ? 'ОСН 20%' :
+                          data.taxes.system === 'patent' ? 'Патент 6%' :
+                          data.taxes.system === 'eshn' ? 'ЕСХН 6%' : data.taxes.rate + '%'})
+              </span>
+              <span className="text-mm-red">-{fmt(data.taxes.amount)}</span>
+            </div>
+          )}
+          
           {/* ИТОГО */}
           <div className="flex justify-between py-2 border-t-2 border-mm-cyan font-bold text-lg">
             <span className="text-mm-green">= ЧИСТАЯ ПРИБЫЛЬ</span>
