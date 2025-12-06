@@ -1767,6 +1767,13 @@ try:
 except Exception as e:
     logger.error(f"Failed to include ozon_bonuses_routes: {e}")
 
+try:
+    from reports_parser_routes import router as reports_parser_router
+    app.include_router(reports_parser_router)
+    logger.info("Reports parser routes included")
+except Exception as e:
+    logger.error(f"Failed to include reports_parser_routes: {e}")
+
 # Skip analytics_routes for now (requires openai)
 # try:
 #     from analytics_routes import router as analytics_router
