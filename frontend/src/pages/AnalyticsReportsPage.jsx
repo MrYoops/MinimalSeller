@@ -31,6 +31,17 @@ function AnalyticsReportsPage() {
   const [tagFilter, setTagFilter] = useState('')
   const [expandedRow, setExpandedRow] = useState(null)
   
+  // Для управления расходами
+  const [showExpenseForm, setShowExpenseForm] = useState(false)
+  const [expenses, setExpenses] = useState([])
+  const [newExpense, setNewExpense] = useState({
+    expense_date: getToday(),
+    expense_type: 'УПД услуги',
+    amount: '',
+    description: '',
+    document_number: ''
+  })
+  
   const handleUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
