@@ -597,6 +597,114 @@ async def update_purchase_prices(
 @router.post("/import-purchase-prices")
 async def import_purchase_prices_from_csv(
     file: UploadFile = File(...),
+
+
+# ============================================================================
+# РУЧНОЕ УПРАВЛЕНИЕ РАСХОДАМИ
+# ============================================================================
+
+@router.post("/add-expense")
+async def add_manual_expense(
+    expense_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Добавить ручной расход (УПД, агентские услуги и т.д.)"""
+    seller_id = str(current_user["_id"])
+    db = await get_database()
+    
+    # Валидация
+    required_fields = ["expense_date", "expense_type", "amount"]
+    for field in required_fields:
+        if field not in expense_data:
+            raise HTTPException(status_code=400, detail=f"Поле {field} обязательно")
+    
+    try:
+        expense_date = datetime.fromisoformat(expense_data["expense_date"])
+    except:
+        raise HTTPException(status_code=400, detail="Неверный формат даты")
+    
+    amount = float(expense_data["amount"])
+    if amount < 0:
+        raise HTTPException(status_code=400, detail="Сумма не может быть отрицательной")
+    
+    expense = {
+        "seller_id": seller_id,
+        "expense_date": expense_date,
+        "expense_type": expense_data["expense_type"],
+        "amount": amount,
+        "description": expense_data.get("description", ""),
+        "document_number": expense_data.get("document_number", ""),
+        "created_at": datetime.utcnow()
+    }
+    
+    result = await db.ozon_manual_expenses.insert_one(expense)
+    expense["_id"] = str(result.inserted_id)
+    expense["expense_date"] = expense["expense_date"].isoformat()
+    expense["created_at"] = expense["created_at"].isoformat()
+    
+    return {
+        "status": "success",
+        "expense": expense
+    }
+
+
+@router.get("/expenses")
+async def get_manual_expenses(
+    period_start: Optional[str] = Query(None),
+    period_end: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить список ручных расходов"""
+    seller_id = str(current_user["_id"])
+    db = await get_database()
+    
+    match_filter = {"seller_id": seller_id}
+    
+    if period_start and period_end:
+        try:
+            date_from = datetime.fromisoformat(f"{period_start}T00:00:00")
+            date_to = datetime.fromisoformat(f"{period_end}T23:59:59")
+            match_filter["expense_date"] = {"$gte": date_from, "$lte": date_to}
+        except:
+            pass
+    
+    expenses = await db.ozon_manual_expenses.find(match_filter).sort("expense_date", -1).to_list(1000)
+    
+    for e in expenses:
+        e["_id"] = str(e["_id"])
+        e["expense_date"] = e["expense_date"].isoformat()
+        e["created_at"] = e["created_at"].isoformat()
+    
+    total = sum(e["amount"] for e in expenses)
+    
+    return {
+        "expenses": expenses,
+        "total": round(total, 2),
+        "count": len(expenses)
+    }
+
+
+@router.delete("/expense/{expense_id}")
+async def delete_manual_expense(
+    expense_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Удалить ручной расход"""
+    seller_id = str(current_user["_id"])
+    db = await get_database()
+    
+    from bson import ObjectId
+    
+    result = await db.ozon_manual_expenses.delete_one({
+        "_id": ObjectId(expense_id),
+        "seller_id": seller_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Расход не найден")
+    
+    return {"status": "success", "deleted": expense_id}
+
     current_user: dict = Depends(get_current_user)
 ):
     """Импорт закупочных цен из CSV/Excel файла"""
