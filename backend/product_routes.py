@@ -572,6 +572,8 @@ async def bulk_assign_tags(request: BulkTagsRequest):
     """
     Массово присвоить тег товарам
     """
+    seller_id = await get_current_seller_id()  # Для совместимости
+    
     if not request.tag or len(request.tag.strip()) == 0:
         raise HTTPException(status_code=400, detail="Имя тега не может быть пустым")
     
@@ -601,6 +603,8 @@ async def bulk_remove_tags(request: BulkTagsRequest):
     """
     Массово удалить тег у товаров
     """
+    seller_id = await get_current_seller_id()  # Для совместимости
+    
     if not request.tag or len(request.tag.strip()) == 0:
         raise HTTPException(status_code=400, detail="Имя тега не может быть пустым")
     
