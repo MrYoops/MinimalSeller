@@ -564,24 +564,24 @@ async def delete_tag(tag_name: str):
 
 
 @router.post("/bulk-assign-tags")
-async def bulk_assign_tags(product_ids: List[str], tag: str):
+async def bulk_assign_tags(request: BulkTagsRequest):
     """
     Массово присвоить тег товарам
     """
-    if not tag or len(tag.strip()) == 0:
+    if not request.tag or len(request.tag.strip()) == 0:
         raise HTTPException(status_code=400, detail="Имя тега не может быть пустым")
     
-    if not product_ids or len(product_ids) == 0:
+    if not request.product_ids or len(request.product_ids) == 0:
         raise HTTPException(status_code=400, detail="Не выбраны товары")
     
-    tag = tag.strip()
+    tag = request.tag.strip()
     
     db = await get_database()
     products_collection = db.product_catalog
     
     # Добавляем тег к выбранным товарам (используем $addToSet чтобы избежать дубликатов)
     result = await products_collection.update_many(
-        {"_id": {"$in": product_ids}},
+        {"_id": {"$in": request.product_ids}},
         {"$addToSet": {"tags": tag}}
     )
     
@@ -593,24 +593,24 @@ async def bulk_assign_tags(product_ids: List[str], tag: str):
 
 
 @router.post("/bulk-remove-tags")
-async def bulk_remove_tags(product_ids: List[str], tag: str):
+async def bulk_remove_tags(request: BulkTagsRequest):
     """
     Массово удалить тег у товаров
     """
-    if not tag or len(tag.strip()) == 0:
+    if not request.tag or len(request.tag.strip()) == 0:
         raise HTTPException(status_code=400, detail="Имя тега не может быть пустым")
     
-    if not product_ids or len(product_ids) == 0:
+    if not request.product_ids or len(request.product_ids) == 0:
         raise HTTPException(status_code=400, detail="Не выбраны товары")
     
-    tag = tag.strip()
+    tag = request.tag.strip()
     
     db = await get_database()
     products_collection = db.product_catalog
     
     # Удаляем тег у выбранных товаров
     result = await products_collection.update_many(
-        {"_id": {"$in": product_ids}},
+        {"_id": {"$in": request.product_ids}},
         {"$pull": {"tags": tag}}
     )
     
