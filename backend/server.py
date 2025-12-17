@@ -1729,6 +1729,89 @@ try:
 except Exception as e:
     logger.error(f"Failed to include product_routes: {e}")
 
+# ============================================================================
+# TAGS ENDPOINTS (Public - no auth required)
+# ============================================================================
+
+from pydantic import BaseModel
+from typing import List
+
+class BulkTagsRequest(BaseModel):
+    product_ids: List[str]
+    tag: str
+
+@app.get("/api/products/tags")
+async def get_all_tags_public():
+    """Получить список всех уникальных тегов"""
+    pipeline = [
+        {"$unwind": "$tags"},
+        {"$group": {"_id": "$tags"}},
+        {"$sort": {"_id": 1}}
+    ]
+    result = await db.product_catalog.aggregate(pipeline).to_list(None)
+    tags = [doc["_id"] for doc in result if doc["_id"]]
+    return {"tags": tags}
+
+@app.post("/api/products/tags")
+async def create_tag_public(tag_name: str):
+    """Создать новый тег"""
+    if not tag_name or len(tag_name.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Имя тега не может быть пустым")
+    tag_name = tag_name.strip()
+    existing = await db.product_catalog.find_one({"tags": tag_name})
+    if existing:
+        raise HTTPException(status_code=400, detail="Тег уже существует")
+    return {"tag": tag_name, "message": "Тег создан"}
+
+@app.delete("/api/products/tags/{tag_name}")
+async def delete_tag_public(tag_name: str):
+    """Удалить тег из всех товаров"""
+    result = await db.product_catalog.update_many(
+        {"tags": tag_name},
+        {"$pull": {"tags": tag_name}}
+    )
+    return {
+        "deleted": True,
+        "modified_count": result.modified_count,
+        "message": f"Тег '{tag_name}' удален из {result.modified_count} товаров"
+    }
+
+@app.post("/api/products/bulk-assign-tags")
+async def bulk_assign_tags_public(request: BulkTagsRequest):
+    """Массово присвоить тег товарам"""
+    if not request.tag or len(request.tag.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Имя тега не может быть пустым")
+    if not request.product_ids or len(request.product_ids) == 0:
+        raise HTTPException(status_code=400, detail="Не выбраны товары")
+    tag = request.tag.strip()
+    result = await db.product_catalog.update_many(
+        {"_id": {"$in": request.product_ids}},
+        {"$addToSet": {"tags": tag}}
+    )
+    return {
+        "success": True,
+        "modified_count": result.modified_count,
+        "message": f"Тег '{tag}' присвоен {result.modified_count} товарам"
+    }
+
+@app.post("/api/products/bulk-remove-tags")
+async def bulk_remove_tags_public(request: BulkTagsRequest):
+    """Массово удалить тег у товаров"""
+    if not request.tag or len(request.tag.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Имя тега не может быть пустым")
+    if not request.product_ids or len(request.product_ids) == 0:
+        raise HTTPException(status_code=400, detail="Не выбраны товары")
+    tag = request.tag.strip()
+    result = await db.product_catalog.update_many(
+        {"_id": {"$in": request.product_ids}},
+        {"$pull": {"tags": tag}}
+    )
+    return {
+        "success": True,
+        "modified_count": result.modified_count,
+        "message": f"Тег '{tag}' удален у {result.modified_count} товаров"
+    }
+
 # Skip warehouse_links_routes for now (requires proper dependency setup)
 # try:
 #     from warehouse_links_routes import router as warehouse_links_router
