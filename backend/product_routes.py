@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List, Optional
 from datetime import datetime
 from bson import ObjectId
+from pydantic import BaseModel
 import re
 import os
 try:
@@ -16,6 +17,11 @@ from models import (
     ListingQualityScore
 )
 from database import get_database
+
+# Модели для работы с тегами
+class BulkTagsRequest(BaseModel):
+    product_ids: List[str]
+    tag: str
 
 router = APIRouter(prefix="/api/products", tags=["products"])
 
