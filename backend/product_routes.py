@@ -505,6 +505,7 @@ async def get_all_tags():
     """
     Получить список всех уникальных тегов из товаров
     """
+    seller_id = await get_current_seller_id()  # Для совместимости
     db = await get_database()
     products_collection = db.product_catalog
     
@@ -526,6 +527,8 @@ async def create_tag(tag_name: str):
     """
     Создать новый тег (фактически просто валидация имени)
     """
+    seller_id = await get_current_seller_id()  # Для совместимости
+    
     if not tag_name or len(tag_name.strip()) == 0:
         raise HTTPException(status_code=400, detail="Имя тега не может быть пустым")
     
@@ -547,6 +550,7 @@ async def delete_tag(tag_name: str):
     """
     Удалить тег из всех товаров
     """
+    seller_id = await get_current_seller_id()  # Для совместимости
     db = await get_database()
     products_collection = db.product_catalog
     
