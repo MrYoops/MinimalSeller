@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
 # Backend URL
-BACKEND_URL = "https://marketanalytics-5.preview.emergentagent.com/api"
+BACKEND_URL = "https://product-tagging.preview.emergentagent.com/api"
 
 # Test credentials
 TEST_SELLER_EMAIL = "seller@test.com"
