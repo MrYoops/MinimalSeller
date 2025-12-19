@@ -467,8 +467,10 @@ async def get_business_economics(
         "raw_data_check": {
             "positive_operations": round(raw["positive_sum"], 2),
             "negative_operations": round(raw["negative_sum"], 2),
-            "calculated_profit": round(raw["net_total"], 2),
-            "note": "Эти цифры напрямую из Ozon API без преобразований"
+            "mp_profit_before_cogs": round(raw["net_total"], 2),
+            "cogs_total": round(total_cogs, 2),
+            "calculated_profit": round(raw["net_total"] - total_cogs, 2),
+            "note": "Прибыль = Доходы - Расходы МП - Себестоимость"
         },
         "income_breakdown": {
             "sales": round(current_data["income"]["sales"], 2),
