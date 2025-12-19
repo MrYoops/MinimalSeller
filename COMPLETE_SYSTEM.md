@@ -236,7 +236,7 @@
 
 ### 2. Откройте систему
 
-URL: https://marketplace-metrics.preview.emergentagent.com/analytics-reports
+URL: https://sellermetrics-2.preview.emergentagent.com/analytics-reports
 
 Логин: seller@test.com
 Пароль: password123
