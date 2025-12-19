@@ -703,7 +703,9 @@ function AnalyticsReportsPage() {
         </div>
       </div>
 
-      {loading ? (
+      {activeReport === 'economics' ? (
+        <BusinessEconomicsTab dateFrom={dateFrom} dateTo={dateTo} marketplace="ozon" />
+      ) : loading ? (
         <div className="text-center py-12"><p className="text-mm-cyan animate-pulse">// ЗАГРУЗКА...</p></div>
       ) : activeReport === 'profit' && profitData ? (
         <ProfitView data={profitData} fmt={fmt} pct={pct} />
