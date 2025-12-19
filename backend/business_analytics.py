@@ -880,9 +880,15 @@ async def get_ozon_orders(
         items = op.get("items", [])
         
         if posting_number not in order_map:
+            # Определяем тип доставки (FBS/FBO)
+            delivery_schema = posting.get("delivery_schema", "").upper()
+            if delivery_schema not in ["FBS", "FBO"]:
+                delivery_schema = "FBS"  # По умолчанию FBS
+            
             order_map[posting_number] = {
                 "id": posting_number,
                 "posting_number": posting_number,
+                "delivery_type": delivery_schema,  # FBS или FBO
                 "items": [],
                 "item_names": [],
                 "revenue": 0,
