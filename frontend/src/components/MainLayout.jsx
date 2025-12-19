@@ -89,6 +89,7 @@ const MainLayout = ({ children }) => {
     { label: 'Товары', path: '/catalog/products', icon: FiGrid },
     { label: 'Категории', path: '/catalog/categories', icon: FiTag },
     { label: 'Цены', path: '/catalog/pricing', icon: FiDollarSign },
+    { label: 'Закупочные цены (COGS)', path: '/purchase-prices', icon: FiLayers },
     { label: 'Сопоставление', path: '/catalog/matching', icon: FiLink },
     { label: 'Импорт товаров', path: '/catalog/import', icon: FiUpload },
   ];
