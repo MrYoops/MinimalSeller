@@ -294,10 +294,11 @@ async def get_business_economics(
     # Categorize
     current_data = categorize_operations(operations)
     
-    # Calculate key metrics
-    gross_income = current_data["income"]["total"]
-    total_expenses = current_data["expense"]["total"]
-    net_profit = gross_income - total_expenses
+    # Calculate key metrics using RAW totals (точные данные из API)
+    raw = current_data["raw_totals"]
+    gross_income = raw["positive_sum"]       # Все поступления
+    total_expenses = abs(raw["negative_sum"]) # Все списания (в abs)
+    net_profit = raw["net_total"]            # ТОЧНАЯ чистая прибыль из API
     margin_pct = (net_profit / gross_income * 100) if gross_income > 0 else 0
     
     result = {
@@ -311,6 +312,13 @@ async def get_business_economics(
             "total_expenses": round(total_expenses, 2),
             "net_profit": round(net_profit, 2),
             "margin_pct": round(margin_pct, 2)
+        },
+        # Также добавим сырые данные для проверки
+        "raw_data_check": {
+            "positive_operations": round(raw["positive_sum"], 2),
+            "negative_operations": round(raw["negative_sum"], 2),
+            "calculated_profit": round(raw["net_total"], 2),
+            "note": "Эти цифры напрямую из Ozon API без преобразований"
         },
         "income_breakdown": {
             "sales": round(current_data["income"]["sales"], 2),
