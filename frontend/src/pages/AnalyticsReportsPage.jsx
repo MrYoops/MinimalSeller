@@ -505,6 +505,11 @@ function AnalyticsReportsPage() {
             }`}>
             <FiBarChart2 className="inline mr-2" />ГРАФИКИ
           </button>
+          <button onClick={() => setActiveReport('economics')} className={`px-6 py-3 rounded font-mono text-sm ${
+              activeReport === 'economics' ? 'bg-mm-cyan text-mm-black' : 'bg-mm-gray text-mm-text-secondary hover:bg-mm-border'
+            }`} data-testid="economics-tab-btn">
+            <FiPieChart className="inline mr-2" />ЭКОНОМИКА
+          </button>
         </div>
 
         <div className="border-t border-mm-border pt-6">
