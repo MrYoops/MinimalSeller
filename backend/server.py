@@ -5853,10 +5853,10 @@ async def get_all_products_pricing(
         
         result = []
         for product in products:
-            # ВАЖНО: используем UUID, не ObjectId!
-            product_id = product.get("id")
+            # Используем UUID если есть, иначе ObjectId
+            product_id = product.get("id") or str(product.get("_id", ""))
             if not product_id:
-                continue  # Skip products without UUID
+                continue  # Skip products without any ID
             
             # Получить фото из product_photos
             photo_doc = await db.product_photos.find_one({"product_id": str(product["_id"])})
