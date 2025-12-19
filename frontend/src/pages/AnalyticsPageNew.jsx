@@ -221,13 +221,15 @@ function OrdersTab({ dateFrom, dateTo, api }) {
             <thead className="bg-mm-gray/50">
               {marketplace === 'ozon' ? (
                 <tr>
-                  <th className="text-left p-4 font-mono text-mm-cyan">Номер отправления</th>
-                  <th className="text-center p-4 font-mono text-mm-cyan">Тип</th>
-                  <th className="text-left p-4 font-mono text-mm-cyan">Статус</th>
-                  <th className="text-left p-4 font-mono text-mm-cyan">Товары</th>
-                  <th className="text-right p-4 font-mono text-mm-cyan">Выручка</th>
-                  <th className="text-right p-4 font-mono text-mm-cyan">Расходы</th>
-                  <th className="text-right p-4 font-mono text-mm-cyan">Прибыль</th>
+                  <th className="text-left p-3 font-mono text-mm-cyan text-xs">Номер</th>
+                  <th className="text-center p-3 font-mono text-mm-cyan text-xs">Тип</th>
+                  <th className="text-left p-3 font-mono text-mm-cyan text-xs">Статус</th>
+                  <th className="text-left p-3 font-mono text-mm-cyan text-xs">Товары</th>
+                  <th className="text-right p-3 font-mono text-mm-cyan text-xs">Выручка</th>
+                  <th className="text-right p-3 font-mono text-mm-cyan text-xs">Расх. МП</th>
+                  <th className="text-right p-3 font-mono text-mm-cyan text-xs">COGS</th>
+                  <th className="text-right p-3 font-mono text-mm-cyan text-xs">Налог</th>
+                  <th className="text-right p-3 font-mono text-mm-cyan text-xs">Прибыль</th>
                 </tr>
               ) : (
                 <tr>
