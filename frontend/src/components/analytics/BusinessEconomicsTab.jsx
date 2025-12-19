@@ -260,14 +260,48 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
 
   return (
     <div className="space-y-6" data-testid="business-economics-tab">
+      {/* Marketplace selector */}
+      <div className="flex items-center gap-2 p-1 bg-mm-gray rounded-lg w-fit">
+        <button
+          onClick={() => setActiveMarketplace('ozon')}
+          className={`px-4 py-2 rounded-md font-mono text-sm transition-all ${
+            activeMarketplace === 'ozon' 
+              ? 'bg-[#005bff] text-white' 
+              : 'text-mm-text-secondary hover:text-mm-text'
+          }`}
+          data-testid="ozon-tab"
+        >
+          🟠 Ozon
+        </button>
+        <button
+          onClick={() => setActiveMarketplace('yandex')}
+          className={`px-4 py-2 rounded-md font-mono text-sm transition-all ${
+            activeMarketplace === 'yandex' 
+              ? 'bg-[#ffcc00] text-black' 
+              : 'text-mm-text-secondary hover:text-mm-text'
+          }`}
+          data-testid="yandex-tab"
+        >
+          🔴 Яндекс.Маркет {yandexData ? '' : '(нет ключа)'}
+        </button>
+        <button
+          disabled
+          className="px-4 py-2 rounded-md font-mono text-sm text-mm-text-secondary/50 cursor-not-allowed"
+        >
+          🟣 WB (скоро)
+        </button>
+      </div>
+
       {/* Header with actions */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-mono text-mm-cyan uppercase">
-            ЭКОНОМИКА БИЗНЕСА
+            ЭКОНОМИКА БИЗНЕСА — {MARKETPLACE_CONFIG[activeMarketplace]?.name || activeMarketplace}
           </h3>
           <p className="text-mm-text-secondary text-sm">
-            Период: {dateFrom} — {dateTo} ({data.period?.days} дней) • {data.operations_count} операций
+            Период: {dateFrom} — {dateTo} ({data.period?.days} дней) 
+            {activeMarketplace === 'ozon' && ` • ${data.operations_count} операций`}
+            {activeMarketplace === 'yandex' && yandexData && ` • ${yandexData.summary?.total_orders || 0} заказов`}
           </p>
         </div>
         <div className="flex items-center gap-3">
