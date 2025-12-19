@@ -817,8 +817,40 @@ async def import_purchase_prices_from_csv(
 
 
 # ============================================================================
-# ЗАГРУЗКА ЗАКУПОЧНЫХ ЦЕН С ВЫБОРОМ СТОЛБЦОВ
+# ЗАГРУЗКА ЗАКУПОЧНЫХ ЦЕН С АВТОМАТИЧЕСКИМ ОПРЕДЕЛЕНИЕМ СТОЛБЦОВ
 # ============================================================================
+
+def auto_detect_columns(columns: list) -> dict:
+    """
+    Автоматическое определение столбцов артикула и цены по названиям.
+    Возвращает {'article_column': ..., 'price_column': ...}
+    """
+    article_keywords = ['артикул', 'article', 'sku', 'код', 'code', 'арт', 'id товара', 'offer_id', 'offerid']
+    price_keywords = ['закупочная', 'закупка', 'себестоимость', 'cogs', 'cost', 'purchase', 'цена закупки', 
+                      'price', 'цена', 'стоимость', 'закуп']
+    
+    article_col = None
+    price_col = None
+    
+    for col in columns:
+        col_lower = str(col).lower().strip()
+        
+        # Ищем столбец артикула
+        if not article_col:
+            for keyword in article_keywords:
+                if keyword in col_lower:
+                    article_col = col
+                    break
+        
+        # Ищем столбец цены (но не "цена продажи")
+        if not price_col:
+            for keyword in price_keywords:
+                if keyword in col_lower and 'продаж' not in col_lower:
+                    price_col = col
+                    break
+    
+    return {'article_column': article_col, 'price_column': price_col}
+
 
 @router.post("/preview-price-import")
 async def preview_price_import(
@@ -826,8 +858,7 @@ async def preview_price_import(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Загрузка файла и возврат предпросмотра: список столбцов и первые строки.
-    Пользователь потом выбирает какой столбец = артикул, какой = цена.
+    Загрузка файла и возврат предпросмотра с автоматическим определением столбцов.
     """
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Поддерживаются только CSV и Excel файлы")
@@ -840,7 +871,10 @@ async def preview_price_import(
             try:
                 df = pd.read_csv(BytesIO(content), encoding='utf-8')
             except:
-                df = pd.read_csv(BytesIO(content), encoding='cp1251')
+                try:
+                    df = pd.read_csv(BytesIO(content), encoding='cp1251')
+                except:
+                    df = pd.read_csv(BytesIO(content), encoding='latin-1')
         else:
             df = pd.read_excel(BytesIO(content))
         
@@ -848,22 +882,28 @@ async def preview_price_import(
         df = df.dropna(how='all').dropna(axis=1, how='all')
         
         # Получаем список столбцов
-        columns = df.columns.tolist()
+        columns = [str(c) for c in df.columns.tolist()]
+        
+        # Автоматически определяем столбцы
+        detected = auto_detect_columns(columns)
         
         # Получаем первые 10 строк для предпросмотра
         preview_rows = df.head(10).fillna('').to_dict('records')
         
         # Преобразуем все значения в строки для JSON
         for row in preview_rows:
-            for key in row:
-                row[key] = str(row[key]) if row[key] != '' else ''
+            for key in list(row.keys()):
+                row[str(key)] = str(row[key]) if row[key] != '' else ''
+                if str(key) != key:
+                    del row[key]
         
         return {
             "status": "success",
             "filename": file.filename,
             "columns": columns,
             "total_rows": len(df),
-            "preview": preview_rows
+            "preview": preview_rows,
+            "auto_detected": detected
         }
         
     except Exception as e:
