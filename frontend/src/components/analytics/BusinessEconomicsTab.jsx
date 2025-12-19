@@ -491,8 +491,32 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
       {/* OZON SECTION - Only show when Ozon is active */}
       {activeMarketplace === 'ozon' && (
         <>
+      {/* Tax settings panel */}
+      <div className="card-neon p-4 bg-mm-gray/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-mm-text-secondary text-sm">Система налогообложения:</span>
+            <select
+              value={currentTaxSystem}
+              onChange={(e) => updateTaxSystem(e.target.value)}
+              className="bg-mm-gray border border-mm-border rounded px-3 py-1.5 text-mm-text text-sm"
+            >
+              {taxSystems.map(sys => (
+                <option key={sys.code} value={sys.code}>{sys.name}</option>
+              ))}
+            </select>
+          </div>
+          {data?.tax_info && (
+            <div className="text-sm">
+              <span className="text-mm-text-secondary">Налог ({data.tax_info.name}): </span>
+              <span className="text-orange-400 font-mono">{formatCurrency(data.tax_info.tax_amount || 0)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <SummaryCard
           title="Доходы"
           value={formatCurrency(data.summary?.gross_income || 0)}
@@ -505,16 +529,23 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
           title="Расходы"
           value={formatCurrency(data.summary?.total_expenses || 0)}
           change={data.comparison?.changes?.expenses_change_pct}
-          subtitle="Все удержания"
+          subtitle="Все удержания МП"
           icon={FiTrendingDown}
           colorClass="text-red-500"
           inverted={true}
         />
+        <div className="card-neon p-5 bg-orange-500/10 border-orange-500/30">
+          <div className="flex items-start justify-between mb-2">
+            <span className="text-mm-text-secondary text-sm font-mono uppercase">НАЛОГ</span>
+          </div>
+          <div className="text-2xl font-bold text-orange-400">{formatCurrency(data.summary?.tax_amount || 0)}</div>
+          <div className="text-mm-text-secondary text-xs">{data.tax_info?.name || 'УСН 6%'}</div>
+        </div>
         <SummaryCard
           title="Чистая прибыль"
           value={formatCurrency(data.summary?.net_profit || 0)}
           change={data.comparison?.changes?.profit_change_pct}
-          subtitle={`Маржа: ${data.summary?.margin_pct?.toFixed(1) || 0}%`}
+          subtitle={`После налогов • Маржа: ${data.summary?.margin_pct?.toFixed(1) || 0}%`}
           icon={FiDollarSign}
           colorClass={data.summary?.net_profit >= 0 ? 'text-green-500' : 'text-red-500'}
         />
