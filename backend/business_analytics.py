@@ -830,3 +830,138 @@ async def update_tax_settings(
         "system_info": TAX_SYSTEMS[tax_system]
     }
 
+
+# ============================================================================
+# ЗАКАЗЫ OZON
+# ============================================================================
+
+@router.get("/orders")
+async def get_ozon_orders(
+    date_from: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    date_to: str = Query(..., description="End date (YYYY-MM-DD)"),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Получить список заказов Ozon за период.
+    Извлекает заказы из операций продаж (OperationAgentDeliveredToCustomer).
+    """
+    seller_id = str(current_user["_id"])
+    
+    try:
+        period_start = datetime.fromisoformat(f"{date_from}T00:00:00")
+        period_end = datetime.fromisoformat(f"{date_to}T23:59:59")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    # Get credentials
+    credentials = await get_ozon_credentials(seller_id)
+    
+    # Fetch operations
+    operations = await fetch_ozon_operations(
+        credentials["client_id"],
+        credentials["api_key"],
+        period_start,
+        period_end
+    )
+    
+    # Извлекаем заказы из операций продаж
+    orders = []
+    order_map = {}  # posting_number -> order data
+    
+    for op in operations:
+        posting = op.get("posting", {})
+        posting_number = posting.get("posting_number", "")
+        
+        if not posting_number:
+            continue
+        
+        op_type = op.get("operation_type", "")
+        amount = op.get("amount", 0)
+        items = op.get("items", [])
+        
+        if posting_number not in order_map:
+            order_map[posting_number] = {
+                "id": posting_number,
+                "posting_number": posting_number,
+                "items": [],
+                "item_names": [],
+                "revenue": 0,
+                "expenses": 0,
+                "services": [],
+                "status": "DELIVERED" if op_type == "OperationAgentDeliveredToCustomer" else "PROCESSING",
+                "operations": []
+            }
+        
+        order = order_map[posting_number]
+        
+        # Добавляем товары
+        for item in items:
+            item_name = item.get("name", "")
+            if item_name and item_name not in order["item_names"]:
+                order["item_names"].append(item_name)
+                order["items"].append({
+                    "sku": item.get("sku", ""),
+                    "name": item_name
+                })
+        
+        # Считаем финансы
+        if amount > 0:
+            order["revenue"] += amount
+        else:
+            order["expenses"] += abs(amount)
+        
+        # Статус заказа
+        if op_type == "OperationAgentDeliveredToCustomer":
+            order["status"] = "DELIVERED"
+        elif "Return" in op_type:
+            order["status"] = "RETURNED"
+        elif "Cancel" in op_type:
+            order["status"] = "CANCELLED"
+        
+        order["operations"].append({
+            "type": op_type,
+            "amount": amount
+        })
+        
+        # Собираем услуги
+        for service in op.get("services", []):
+            order["services"].append({
+                "name": service.get("name", ""),
+                "price": service.get("price", 0)
+            })
+    
+    # Преобразуем в список
+    for posting_number, order in order_map.items():
+        order["profit"] = round(order["revenue"] - order["expenses"], 2)
+        order["revenue"] = round(order["revenue"], 2)
+        order["expenses"] = round(order["expenses"], 2)
+        order["items_count"] = len(order["items"])
+        order["items_text"] = ", ".join(order["item_names"][:2])
+        if len(order["item_names"]) > 2:
+            order["items_text"] += f" (+{len(order["item_names"]) - 2})"
+        orders.append(order)
+    
+    # Сортируем по выручке
+    orders.sort(key=lambda x: x["revenue"], reverse=True)
+    
+    # Статистика
+    total_revenue = sum(o["revenue"] for o in orders)
+    total_expenses = sum(o["expenses"] for o in orders)
+    total_profit = sum(o["profit"] for o in orders)
+    delivered_count = sum(1 for o in orders if o["status"] == "DELIVERED")
+    
+    return {
+        "orders": orders,
+        "summary": {
+            "total_orders": len(orders),
+            "delivered": delivered_count,
+            "total_revenue": round(total_revenue, 2),
+            "total_expenses": round(total_expenses, 2),
+            "total_profit": round(total_profit, 2)
+        },
+        "period": {
+            "from": date_from,
+            "to": date_to
+        }
+    }
+
