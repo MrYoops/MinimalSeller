@@ -1356,7 +1356,7 @@ async def export_products_economics(
         ws.write(row, 2, p["sku"])
         ws.write(row, 3, ", ".join(p["tags"]) if p["tags"] else "")
         ws.write(row, 4, p["sales_count"])
-        ws.write(row, 5, p["returns_count"])
+        ws.write(row, 5, p["returned"])
         ws.write(row, 6, p["purchase_price"], money_format)
         ws.write(row, 7, p["revenue"], money_format)
         ws.write(row, 8, p["mp_expenses"], money_format)
