@@ -71,6 +71,87 @@ SERVICE_TYPE_MAPPING = {
 }
 
 
+async def calculate_cogs(operations: List[Dict], seller_id: str) -> Dict[str, Any]:
+    """
+    Рассчитывает себестоимость проданных товаров (COGS).
+    
+    Анализирует операции продаж, извлекает SKU/offer_id,
+    находит закупочные цены в базе данных и считает общую себестоимость.
+    """
+    db = await get_database()
+    
+    # Загружаем все закупочные цены продавца (по артикулу, без учёта регистра)
+    products = await db.product_catalog.find(
+        {"seller_id": seller_id, "purchase_price": {"$gt": 0}},
+        {"article": 1, "purchase_price": 1, "sku": 1, "offer_id": 1}
+    ).to_list(10000)
+    
+    # Создаём словарь для быстрого поиска: нижний_регистр -> цена
+    price_map = {}
+    for p in products:
+        article = p.get("article", "")
+        if article:
+            price_map[article.lower().strip()] = p.get("purchase_price", 0)
+        # Также добавляем по SKU и offer_id если есть
+        if p.get("sku"):
+            price_map[str(p["sku"]).lower().strip()] = p.get("purchase_price", 0)
+        if p.get("offer_id"):
+            price_map[str(p["offer_id"]).lower().strip()] = p.get("purchase_price", 0)
+    
+    total_cogs = 0
+    items_with_cogs = 0
+    items_without_cogs = 0
+    cogs_details = []
+    
+    for op in operations:
+        op_type = op.get("operation_type", "")
+        
+        # Считаем COGS только для продаж (доставленных клиенту)
+        if op_type != "OperationAgentDeliveredToCustomer":
+            continue
+        
+        items = op.get("items", [])
+        for item in items:
+            sku = item.get("sku", "")
+            offer_id = item.get("offer_id", "")
+            name = item.get("name", "")
+            
+            # Ищем закупочную цену по SKU или offer_id
+            purchase_price = 0
+            matched_key = None
+            
+            if sku:
+                sku_lower = str(sku).lower().strip()
+                if sku_lower in price_map:
+                    purchase_price = price_map[sku_lower]
+                    matched_key = sku
+            
+            if not purchase_price and offer_id:
+                offer_id_lower = str(offer_id).lower().strip()
+                if offer_id_lower in price_map:
+                    purchase_price = price_map[offer_id_lower]
+                    matched_key = offer_id
+            
+            if purchase_price > 0:
+                total_cogs += purchase_price
+                items_with_cogs += 1
+                cogs_details.append({
+                    "sku": sku or offer_id,
+                    "name": name[:50] if name else "",
+                    "purchase_price": purchase_price
+                })
+            else:
+                items_without_cogs += 1
+    
+    return {
+        "total_cogs": round(total_cogs, 2),
+        "items_with_cogs": items_with_cogs,
+        "items_without_cogs": items_without_cogs,
+        "coverage_pct": round(items_with_cogs / (items_with_cogs + items_without_cogs) * 100, 1) if (items_with_cogs + items_without_cogs) > 0 else 0,
+        "details": cogs_details[:50]  # Первые 50 для отладки
+    }
+
+
 async def get_ozon_credentials(seller_id: str) -> Dict[str, str]:
     """Get Ozon API credentials for seller"""
     db = await get_database()
