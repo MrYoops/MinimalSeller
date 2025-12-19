@@ -756,7 +756,7 @@ async def import_purchase_prices_from_csv(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user)
 ):
-    """Импорт закупочных цен из CSV/Excel файла"""
+    """Импорт закупочных цен из CSV/Excel файла (старый метод с фиксированными колонками)"""
     seller_id = str(current_user["_id"])
     
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
@@ -813,6 +813,171 @@ async def import_purchase_prices_from_csv(
         
     except Exception as e:
         logger.error(f"Import error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Ошибка импорта: {str(e)}")
+
+
+# ============================================================================
+# ЗАГРУЗКА ЗАКУПОЧНЫХ ЦЕН С ВЫБОРОМ СТОЛБЦОВ
+# ============================================================================
+
+@router.post("/preview-price-import")
+async def preview_price_import(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Загрузка файла и возврат предпросмотра: список столбцов и первые строки.
+    Пользователь потом выбирает какой столбец = артикул, какой = цена.
+    """
+    if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Поддерживаются только CSV и Excel файлы")
+    
+    content = await file.read()
+    
+    try:
+        if file.filename.endswith('.csv'):
+            # Пробуем разные кодировки
+            try:
+                df = pd.read_csv(BytesIO(content), encoding='utf-8')
+            except:
+                df = pd.read_csv(BytesIO(content), encoding='cp1251')
+        else:
+            df = pd.read_excel(BytesIO(content))
+        
+        # Убираем полностью пустые строки и столбцы
+        df = df.dropna(how='all').dropna(axis=1, how='all')
+        
+        # Получаем список столбцов
+        columns = df.columns.tolist()
+        
+        # Получаем первые 10 строк для предпросмотра
+        preview_rows = df.head(10).fillna('').to_dict('records')
+        
+        # Преобразуем все значения в строки для JSON
+        for row in preview_rows:
+            for key in row:
+                row[key] = str(row[key]) if row[key] != '' else ''
+        
+        return {
+            "status": "success",
+            "filename": file.filename,
+            "columns": columns,
+            "total_rows": len(df),
+            "preview": preview_rows
+        }
+        
+    except Exception as e:
+        logger.error(f"Preview error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Ошибка чтения файла: {str(e)}")
+
+
+@router.post("/apply-price-import")
+async def apply_price_import(
+    file: UploadFile = File(...),
+    article_column: str = Query(..., description="Название столбца с артикулом"),
+    price_column: str = Query(..., description="Название столбца с закупочной ценой"),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Применить импорт закупочных цен с указанными столбцами.
+    Пользователь указывает какой столбец содержит артикул, какой - цену.
+    """
+    seller_id = str(current_user["_id"])
+    
+    if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Поддерживаются только CSV и Excel файлы")
+    
+    content = await file.read()
+    
+    try:
+        if file.filename.endswith('.csv'):
+            try:
+                df = pd.read_csv(BytesIO(content), encoding='utf-8')
+            except:
+                df = pd.read_csv(BytesIO(content), encoding='cp1251')
+        else:
+            df = pd.read_excel(BytesIO(content))
+        
+        # Проверяем наличие указанных столбцов
+        if article_column not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Столбец '{article_column}' не найден в файле")
+        if price_column not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Столбец '{price_column}' не найден в файле")
+        
+        db = await get_database()
+        updated_count = 0
+        created_count = 0
+        errors = []
+        skipped = 0
+        
+        for idx, row in df.iterrows():
+            try:
+                article = str(row[article_column]).strip()
+                price_raw = row[price_column]
+                
+                # Пропускаем пустые артикулы
+                if not article or article == 'nan' or article == '':
+                    skipped += 1
+                    continue
+                
+                # Парсим цену (поддержка разных форматов)
+                if pd.isna(price_raw) or str(price_raw).strip() == '':
+                    skipped += 1
+                    continue
+                    
+                price_str = str(price_raw).replace(',', '.').replace(' ', '').replace('₽', '').replace('руб', '')
+                try:
+                    price = float(price_str)
+                except ValueError:
+                    errors.append(f"Строка {idx + 2}: не удалось распознать цену '{price_raw}'")
+                    continue
+                
+                if price < 0:
+                    errors.append(f"Строка {idx + 2}: отрицательная цена для '{article}'")
+                    continue
+                
+                # Пробуем обновить существующий товар
+                result = await db.product_catalog.update_one(
+                    {"seller_id": seller_id, "article": article},
+                    {"$set": {"purchase_price": price, "updated_at": datetime.utcnow()}}
+                )
+                
+                if result.matched_count > 0:
+                    updated_count += 1
+                else:
+                    # Товар не найден - создаём новую запись с минимальными данными
+                    # Это позволяет потом связать с реальным товаром
+                    await db.product_catalog.insert_one({
+                        "seller_id": seller_id,
+                        "article": article,
+                        "name": f"Товар {article}",
+                        "purchase_price": price,
+                        "price": 0,
+                        "marketplace": "unknown",
+                        "created_at": datetime.utcnow(),
+                        "updated_at": datetime.utcnow()
+                    })
+                    created_count += 1
+                    
+            except Exception as e:
+                errors.append(f"Строка {idx + 2}: {str(e)}")
+        
+        return {
+            "status": "success",
+            "statistics": {
+                "total_rows": len(df),
+                "updated": updated_count,
+                "created": created_count,
+                "skipped": skipped,
+                "errors_count": len(errors)
+            },
+            "errors": errors[:20] if errors else None  # Показываем первые 20 ошибок
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Apply import error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Ошибка импорта: {str(e)}")
 
 
