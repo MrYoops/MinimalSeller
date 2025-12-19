@@ -608,3 +608,86 @@ async def sync_ozon_operations(
             "updated": updated
         }
     }
+
+
+# Tax system settings endpoints
+TAX_SYSTEMS = {
+    "usn_6": {"name": "УСН 6% (доходы)", "rate": 0.06, "description": "Упрощённая система, 6% от всех доходов"},
+    "usn_15": {"name": "УСН 15% (доходы-расходы)", "rate": 0.15, "description": "Упрощённая система, 15% от прибыли"},
+    "osn": {"name": "ОСН", "rate": 0.20, "description": "Общая система, 20% НДС + налог на прибыль"},
+    "patent": {"name": "Патент", "rate": 0, "description": "Фиксированная сумма налога"},
+    "self_employed": {"name": "Самозанятый 6%", "rate": 0.06, "description": "Налог на профессиональный доход 6%"}
+}
+
+
+@router.get("/tax-systems")
+async def get_tax_systems():
+    """Get list of available tax systems"""
+    return {
+        "systems": [
+            {"code": code, **info}
+            for code, info in TAX_SYSTEMS.items()
+        ]
+    }
+
+
+@router.get("/tax-settings")
+async def get_tax_settings(current_user: dict = Depends(get_current_user)):
+    """Get current tax settings for seller"""
+    seller_id = str(current_user["_id"])
+    
+    db = await get_database()
+    from bson import ObjectId
+    
+    profile = await db.seller_profiles.find_one({"user_id": seller_id})
+    if not profile:
+        try:
+            profile = await db.seller_profiles.find_one({"user_id": ObjectId(seller_id)})
+        except:
+            pass
+    
+    current_system = profile.get("tax_system", "usn_6") if profile else "usn_6"
+    
+    return {
+        "current_system": current_system,
+        "system_info": TAX_SYSTEMS.get(current_system, TAX_SYSTEMS["usn_6"]),
+        "available_systems": list(TAX_SYSTEMS.keys())
+    }
+
+
+@router.post("/tax-settings")
+async def update_tax_settings(
+    tax_system: str = Query(..., description="Tax system code: usn_6, usn_15, osn, patent, self_employed"),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update tax settings for seller"""
+    seller_id = str(current_user["_id"])
+    
+    if tax_system not in TAX_SYSTEMS:
+        raise HTTPException(status_code=400, detail=f"Invalid tax system. Available: {list(TAX_SYSTEMS.keys())}")
+    
+    db = await get_database()
+    from bson import ObjectId
+    
+    # Try to update with string ID first
+    result = await db.seller_profiles.update_one(
+        {"user_id": seller_id},
+        {"$set": {"tax_system": tax_system, "tax_updated_at": datetime.utcnow()}}
+    )
+    
+    if result.modified_count == 0:
+        # Try with ObjectId
+        try:
+            result = await db.seller_profiles.update_one(
+                {"user_id": ObjectId(seller_id)},
+                {"$set": {"tax_system": tax_system, "tax_updated_at": datetime.utcnow()}}
+            )
+        except:
+            pass
+    
+    return {
+        "status": "success",
+        "tax_system": tax_system,
+        "system_info": TAX_SYSTEMS[tax_system]
+    }
+
