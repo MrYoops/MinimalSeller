@@ -150,28 +150,41 @@ async def fetch_ozon_operations(
 
 
 def categorize_operations(operations: List[Dict]) -> Dict[str, Any]:
-    """Categorize operations into income/expense categories"""
+    """
+    Categorize operations into income/expense categories.
+    
+    ВАЖНО: Используем СЫРЫЕ суммы из Ozon API:
+    - amount > 0 = деньги НА счёт (доход)
+    - amount < 0 = деньги СО счёта (расход)
+    
+    Формула: Чистая прибыль = Сумма всех amount
+    """
     
     # Initialize categories
     result = {
         "income": {
-            "sales": 0,
-            "compensations": 0,
+            "sales": 0,           # Продажи (OperationAgentDeliveredToCustomer)
+            "compensations": 0,   # Компенсации от маркетплейса
             "other": 0,
             "total": 0
         },
         "expense": {
-            "returns": 0,
-            "penalties": 0,
-            "loyalty_points": 0,
-            "subscription": 0,
-            "storage": 0,
-            "acquiring": 0,
-            "early_payment": 0,
-            "logistics": 0,
-            "client_compensation": 0,
+            "returns": 0,         # Возвраты средств клиентам
+            "penalties": 0,       # Штрафы (дефект-рейт)
+            "loyalty_points": 0,  # Баллы и кэшбэк
+            "subscription": 0,    # Подписка Premium
+            "storage": 0,         # Хранение
+            "acquiring": 0,       # Эквайринг
+            "early_payment": 0,   # Комиссия за раннюю выплату
+            "logistics": 0,       # Логистика
+            "client_compensation": 0,  # Компенсации клиентам
             "other": 0,
             "total": 0
+        },
+        "raw_totals": {
+            "positive_sum": 0,    # Все положительные операции
+            "negative_sum": 0,    # Все отрицательные операции
+            "net_total": 0        # Чистый итог (прибыль/убыток)
         },
         "details": {
             "by_operation_type": defaultdict(lambda: {"count": 0, "amount": 0}),
@@ -183,27 +196,60 @@ def categorize_operations(operations: List[Dict]) -> Dict[str, Any]:
         op_type = op.get("operation_type", "unknown")
         amount = op.get("amount", 0)
         
+        # Track raw totals (это ТОЧНЫЕ цифры из API)
+        if amount > 0:
+            result["raw_totals"]["positive_sum"] += amount
+        else:
+            result["raw_totals"]["negative_sum"] += amount
+        result["raw_totals"]["net_total"] += amount
+        
         # Track by operation type
         result["details"]["by_operation_type"][op_type]["count"] += 1
         result["details"]["by_operation_type"][op_type]["amount"] += amount
         
-        # Categorize by mapping
+        # Categorize for display (используем abs для расходов)
         mapping = OPERATION_TYPE_MAPPING.get(op_type, {})
-        category = mapping.get("category", "expense" if amount < 0 else "income")
-        subcategory = mapping.get("subcategory", "other")
         
-        if category == "income":
-            if subcategory in result["income"]:
-                result["income"][subcategory] += amount
+        # Определяем категорию по знаку суммы, а не по маппингу
+        if amount > 0:
+            # Положительная сумма = доход
+            subcategory = mapping.get("subcategory", "other")
+            if subcategory == "sales" or op_type == "OperationAgentDeliveredToCustomer":
+                result["income"]["sales"] += amount
+            elif subcategory == "compensations" or "Compensation" in op_type or "Reexposure" in op_type:
+                result["income"]["compensations"] += amount
             else:
                 result["income"]["other"] += amount
             result["income"]["total"] += amount
         else:
-            if subcategory in result["expense"]:
-                result["expense"][subcategory] += abs(amount)
+            # Отрицательная сумма = расход
+            abs_amount = abs(amount)
+            subcategory = mapping.get("subcategory", "other")
+            
+            if "Return" in op_type or "ClientReturn" in op_type:
+                result["expense"]["returns"] += abs_amount
+            elif "DefectRate" in op_type or "penalty" in op_type.lower():
+                result["expense"]["penalties"] += abs_amount
+            elif "Points" in op_type or "Cashback" in op_type or "Premium" in op_type and "Subscription" not in op_type:
+                result["expense"]["loyalty_points"] += abs_amount
+            elif "Subscription" in op_type:
+                result["expense"]["subscription"] += abs_amount
+            elif "Storage" in op_type:
+                result["expense"]["storage"] += abs_amount
+            elif "Acquiring" in op_type:
+                result["expense"]["acquiring"] += abs_amount
+            elif "EarlyPayment" in op_type or "FlexiblePayment" in op_type:
+                result["expense"]["early_payment"] += abs_amount
+            elif "Delivery" in op_type or "Logistic" in op_type or "3pl" in op_type.lower():
+                result["expense"]["logistics"] += abs_amount
+            elif "PartialCompensation" in op_type:
+                result["expense"]["client_compensation"] += abs_amount
+            elif subcategory in result["expense"]:
+                result["expense"][subcategory] += abs_amount
             else:
-                result["expense"]["other"] += abs(amount)
-            result["expense"]["total"] += abs(amount)
+                result["expense"]["other"] += abs_amount
+            
+            result["expense"]["total"] += abs_amount
         
         # Track services
         for service in op.get("services", []):
