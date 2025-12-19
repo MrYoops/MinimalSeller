@@ -189,6 +189,54 @@ function PurchasePricesPage() {
     currency: 'RUB' 
   }).format(n || 0)
   
+  // Фильтрация и сортировка товаров
+  const filteredProducts = React.useMemo(() => {
+    let result = [...products]
+    
+    // Поиск
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(p => 
+        p.article?.toLowerCase().includes(query) || 
+        p.name?.toLowerCase().includes(query)
+      )
+    }
+    
+    // Фильтр по наличию цены
+    if (filter === 'with_price') {
+      result = result.filter(p => p.purchase_price > 0)
+    } else if (filter === 'without_price') {
+      result = result.filter(p => !p.purchase_price || p.purchase_price === 0)
+    }
+    
+    // Сортировка
+    switch (sortBy) {
+      case 'price_asc':
+        result.sort((a, b) => (a.purchase_price || 0) - (b.purchase_price || 0))
+        break
+      case 'price_desc':
+        result.sort((a, b) => (b.purchase_price || 0) - (a.purchase_price || 0))
+        break
+      case 'margin_asc':
+        result.sort((a, b) => (a.margin_pct || 0) - (b.margin_pct || 0))
+        break
+      case 'margin_desc':
+        result.sort((a, b) => (b.margin_pct || 0) - (a.margin_pct || 0))
+        break
+      case 'sale_price_desc':
+        result.sort((a, b) => (b.price || 0) - (a.price || 0))
+        break
+      case 'sale_price_asc':
+        result.sort((a, b) => (a.price || 0) - (b.price || 0))
+        break
+      default:
+        // по названию
+        result.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    }
+    
+    return result
+  }, [products, filter, sortBy, searchQuery])
+  
   return (
     <div className="space-y-6 pb-8">
       <div>
