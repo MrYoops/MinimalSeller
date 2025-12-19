@@ -592,7 +592,7 @@ function PurchasePricesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {products.map((p) => (
+                    {filteredProducts.map((p) => (
                       <tr key={p._id} className="border-b border-mm-border hover:bg-mm-gray hover:bg-opacity-10">
                         <td className="py-3 px-4 font-mono text-sm">{p.article}</td>
                         <td className="py-3 px-4 text-sm">{p.name}</td>
