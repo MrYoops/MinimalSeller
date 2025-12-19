@@ -644,9 +644,9 @@ function PurchasePricesPage() {
                 </table>
               </div>
               
-              {products.length === 0 && (
+              {filteredProducts.length === 0 && (
                 <div className="text-center py-12 text-mm-text-secondary">
-                  Нет товаров для отображения
+                  {products.length === 0 ? 'Нет товаров для отображения' : 'Нет товаров по заданным фильтрам'}
                 </div>
               )}
             </div>
