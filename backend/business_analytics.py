@@ -956,12 +956,16 @@ async def get_ozon_orders(
     total_expenses = sum(o["expenses"] for o in orders)
     total_profit = sum(o["profit"] for o in orders)
     delivered_count = sum(1 for o in orders if o["status"] == "DELIVERED")
+    fbs_count = sum(1 for o in orders if o.get("delivery_type") == "FBS")
+    fbo_count = sum(1 for o in orders if o.get("delivery_type") == "FBO")
     
     return {
         "orders": orders,
         "summary": {
             "total_orders": len(orders),
             "delivered": delivered_count,
+            "fbs_count": fbs_count,
+            "fbo_count": fbo_count,
             "total_revenue": round(total_revenue, 2),
             "total_expenses": round(total_expenses, 2),
             "total_profit": round(total_profit, 2)
