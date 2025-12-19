@@ -32,8 +32,9 @@ const formatCurrency = (value) => {
 // Orders Tab Component
 function OrdersTab({ dateFrom, dateTo, api }) {
   const [orders, setOrders] = useState([])
+  const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [marketplace, setMarketplace] = useState('yandex')
+  const [marketplace, setMarketplace] = useState('ozon')
 
   const loadOrders = async () => {
     setLoading(true)
@@ -43,6 +44,13 @@ function OrdersTab({ dateFrom, dateTo, api }) {
           params: { date_from: dateFrom, date_to: dateTo }
         })
         setOrders(response.data.orders || [])
+        setSummary(null)
+      } else if (marketplace === 'ozon') {
+        const response = await api.get('/api/business-analytics/orders', {
+          params: { date_from: dateFrom, date_to: dateTo }
+        })
+        setOrders(response.data.orders || [])
+        setSummary(response.data.summary || null)
       }
     } catch (error) {
       toast.error('Ошибка загрузки заказов')
@@ -61,14 +69,16 @@ function OrdersTab({ dateFrom, dateTo, api }) {
     'DELIVERED': 'bg-green-500/20 text-green-400',
     'PROCESSING': 'bg-blue-500/20 text-blue-400',
     'PICKUP': 'bg-yellow-500/20 text-yellow-400',
-    'CANCELLED': 'bg-red-500/20 text-red-400'
+    'CANCELLED': 'bg-red-500/20 text-red-400',
+    'RETURNED': 'bg-orange-500/20 text-orange-400'
   }
 
   const statusNames = {
     'DELIVERED': 'Доставлено',
     'PROCESSING': 'В обработке',
     'PICKUP': 'В пункте выдачи',
-    'CANCELLED': 'Отменено'
+    'CANCELLED': 'Отменено',
+    'RETURNED': 'Возврат'
   }
 
   return (
@@ -77,18 +87,20 @@ function OrdersTab({ dateFrom, dateTo, api }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setMarketplace('ozon')}
+            className={`px-4 py-2 rounded-md font-mono text-sm transition-all ${
+              marketplace === 'ozon' ? 'bg-[#005bff] text-white' : 'bg-mm-gray text-mm-text-secondary hover:text-mm-text'
+            }`}
+          >
+            🟠 Ozon
+          </button>
+          <button
             onClick={() => setMarketplace('yandex')}
-            className={`px-4 py-2 rounded-md font-mono text-sm ${
-              marketplace === 'yandex' ? 'bg-yellow-500 text-black' : 'bg-mm-gray text-mm-text-secondary'
+            className={`px-4 py-2 rounded-md font-mono text-sm transition-all ${
+              marketplace === 'yandex' ? 'bg-yellow-500 text-black' : 'bg-mm-gray text-mm-text-secondary hover:text-mm-text'
             }`}
           >
             🔴 Яндекс.Маркет
-          </button>
-          <button
-            disabled
-            className="px-4 py-2 rounded-md font-mono text-sm bg-mm-gray text-mm-text-secondary/50 cursor-not-allowed"
-          >
-            🟠 Ozon (скоро)
           </button>
         </div>
         <button
@@ -100,6 +112,34 @@ function OrdersTab({ dateFrom, dateTo, api }) {
           Обновить
         </button>
       </div>
+      
+      {/* Summary for Ozon */}
+      {marketplace === 'ozon' && summary && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="card-neon p-4 text-center">
+            <div className="text-2xl font-bold text-mm-cyan">{summary.total_orders}</div>
+            <div className="text-sm text-mm-text-secondary">Заказов</div>
+          </div>
+          <div className="card-neon p-4 text-center">
+            <div className="text-2xl font-bold text-green-400">{summary.delivered}</div>
+            <div className="text-sm text-mm-text-secondary">Доставлено</div>
+          </div>
+          <div className="card-neon p-4 text-center">
+            <div className="text-2xl font-bold text-mm-text">{formatCurrency(summary.total_revenue)}</div>
+            <div className="text-sm text-mm-text-secondary">Выручка</div>
+          </div>
+          <div className="card-neon p-4 text-center">
+            <div className="text-2xl font-bold text-red-400">{formatCurrency(summary.total_expenses)}</div>
+            <div className="text-sm text-mm-text-secondary">Расходы</div>
+          </div>
+          <div className="card-neon p-4 text-center">
+            <div className={`text-2xl font-bold ${summary.total_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {formatCurrency(summary.total_profit)}
+            </div>
+            <div className="text-sm text-mm-text-secondary">Прибыль</div>
+          </div>
+        </div>
+      )}
 
       {/* Orders table */}
       <div className="card-neon overflow-hidden">
