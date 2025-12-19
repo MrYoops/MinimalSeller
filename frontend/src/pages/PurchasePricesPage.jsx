@@ -489,6 +489,77 @@ function PurchasePricesPage() {
             </div>
           </div>
           
+          {/* Фильтры */}
+          <div className="card-neon p-4">
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Поиск */}
+              <div className="flex-1 min-w-[200px]">
+                <input
+                  type="text"
+                  placeholder="Поиск по артикулу или названию..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-mm-black border border-mm-border rounded px-4 py-2 text-mm-text focus:border-mm-cyan outline-none"
+                />
+              </div>
+              
+              {/* Фильтр по наличию цены */}
+              <div className="flex items-center gap-2">
+                <span className="text-mm-text-secondary text-sm">Показать:</span>
+                <div className="flex bg-mm-gray rounded overflow-hidden">
+                  <button
+                    onClick={() => setFilter('all')}
+                    className={`px-3 py-2 text-sm font-mono transition-colors ${
+                      filter === 'all' ? 'bg-mm-cyan text-mm-black' : 'text-mm-text-secondary hover:text-mm-text'
+                    }`}
+                  >
+                    Все ({stats.total})
+                  </button>
+                  <button
+                    onClick={() => setFilter('with_price')}
+                    className={`px-3 py-2 text-sm font-mono transition-colors ${
+                      filter === 'with_price' ? 'bg-green-500 text-mm-black' : 'text-mm-text-secondary hover:text-mm-text'
+                    }`}
+                  >
+                    С ценой ({stats.with_price})
+                  </button>
+                  <button
+                    onClick={() => setFilter('without_price')}
+                    className={`px-3 py-2 text-sm font-mono transition-colors ${
+                      filter === 'without_price' ? 'bg-red-500 text-mm-black' : 'text-mm-text-secondary hover:text-mm-text'
+                    }`}
+                  >
+                    Без цены ({stats.total - stats.with_price})
+                  </button>
+                </div>
+              </div>
+              
+              {/* Сортировка */}
+              <div className="flex items-center gap-2">
+                <span className="text-mm-text-secondary text-sm">Сортировка:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-mm-black border border-mm-border rounded px-3 py-2 text-mm-text text-sm focus:border-mm-cyan outline-none"
+                >
+                  <option value="name">По названию</option>
+                  <option value="price_desc">Закупочная ↓ (дорогие)</option>
+                  <option value="price_asc">Закупочная ↑ (дешёвые)</option>
+                  <option value="sale_price_desc">Цена продажи ↓</option>
+                  <option value="sale_price_asc">Цена продажи ↑</option>
+                  <option value="margin_desc">Маржа ↓ (высокая)</option>
+                  <option value="margin_asc">Маржа ↑ (низкая)</option>
+                </select>
+              </div>
+            </div>
+            
+            {/* Счётчик результатов */}
+            <div className="mt-3 text-sm text-mm-text-secondary">
+              Показано: <span className="text-mm-cyan font-mono">{filteredProducts.length}</span> товаров
+              {searchQuery && <span> по запросу "{searchQuery}"</span>}
+            </div>
+          </div>
+          
           {/* Таблица товаров */}
           {loading ? (
             <div className="text-center py-12">
