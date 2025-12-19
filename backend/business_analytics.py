@@ -938,7 +938,8 @@ async def get_ozon_orders(
         order["items_count"] = len(order["items"])
         order["items_text"] = ", ".join(order["item_names"][:2])
         if len(order["item_names"]) > 2:
-            order["items_text"] += f" (+{len(order["item_names"]) - 2})"
+            extra_count = len(order["item_names"]) - 2
+            order["items_text"] += f" (+{extra_count})"
         orders.append(order)
     
     # Сортируем по выручке
