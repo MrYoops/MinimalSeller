@@ -74,7 +74,15 @@ SERVICE_TYPE_MAPPING = {
 async def get_ozon_credentials(seller_id: str) -> Dict[str, str]:
     """Get Ozon API credentials for seller"""
     db = await get_database()
+    
+    # Try both string and ObjectId formats
+    from bson import ObjectId
     profile = await db.seller_profiles.find_one({"user_id": seller_id})
+    if not profile:
+        try:
+            profile = await db.seller_profiles.find_one({"user_id": ObjectId(seller_id)})
+        except:
+            pass
     
     if not profile or not profile.get("api_keys"):
         raise HTTPException(status_code=404, detail="API ключи не найдены")
