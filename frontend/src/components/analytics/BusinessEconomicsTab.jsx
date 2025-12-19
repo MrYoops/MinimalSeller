@@ -251,14 +251,24 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
   const prepareExpenseChartData = () => {
     if (!data?.expense_breakdown) return []
     
-    return Object.entries(data.expense_breakdown)
+    const expenses = Object.entries(data.expense_breakdown)
       .filter(([key, val]) => val.amount > 0)
       .map(([key, val]) => ({
         name: EXPENSE_LABELS[key] || val.name,
         value: val.amount,
         color: EXPENSE_COLORS[key] || EXPENSE_COLORS.other
       }))
-      .sort((a, b) => b.value - a.value)
+    
+    // Добавляем себестоимость (COGS) если есть
+    if (data.summary?.cogs > 0) {
+      expenses.push({
+        name: 'Себестоимость',
+        value: data.summary.cogs,
+        color: EXPENSE_COLORS.cogs
+      })
+    }
+    
+    return expenses.sort((a, b) => b.value - a.value)
   }
 
   const expenseChartData = prepareExpenseChartData()
