@@ -20,6 +20,7 @@ const MARKETPLACE_CONFIG = {
 
 // Color palette for expense categories
 const EXPENSE_COLORS = {
+  cogs: '#a855f7',           // Purple - себестоимость
   penalties: '#ef4444',      // Red - штрафы
   returns: '#f97316',        // Orange - возвраты
   subscription: '#8b5cf6',   // Purple - подписка
@@ -33,6 +34,7 @@ const EXPENSE_COLORS = {
 }
 
 const EXPENSE_LABELS = {
+  cogs: 'Себестоимость',
   penalties: 'Штрафы',
   returns: 'Возвраты',
   subscription: 'Подписка',
