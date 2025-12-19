@@ -7,8 +7,16 @@ import {
 } from 'recharts'
 import { 
   FiTrendingUp, FiTrendingDown, FiDollarSign, FiAlertTriangle,
-  FiRefreshCw, FiChevronDown, FiChevronUp, FiInfo
+  FiRefreshCw, FiChevronDown, FiChevronUp, FiInfo, FiShoppingCart,
+  FiPackage, FiMapPin
 } from 'react-icons/fi'
+
+// Marketplace logos/colors
+const MARKETPLACE_CONFIG = {
+  ozon: { name: 'Ozon', color: '#005bff', icon: '🟠' },
+  yandex: { name: 'Яндекс.Маркет', color: '#ffcc00', icon: '🔴' },
+  wb: { name: 'Wildberries', color: '#cb11ab', icon: '🟣' }
+}
 
 // Color palette for expense categories
 const EXPENSE_COLORS = {
