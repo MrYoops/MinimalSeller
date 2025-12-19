@@ -390,11 +390,16 @@ async def get_business_economics(
     # Categorize
     current_data = categorize_operations(operations)
     
+    # Рассчитываем себестоимость проданных товаров (COGS)
+    cogs_data = await calculate_cogs(operations, seller_id)
+    total_cogs = cogs_data["total_cogs"]
+    
     # Calculate key metrics using RAW totals (точные данные из API)
     raw = current_data["raw_totals"]
     gross_income = raw["positive_sum"]       # Все поступления
-    total_expenses = abs(raw["negative_sum"]) # Все списания (в abs)
-    net_profit_before_tax = raw["net_total"]  # Прибыль ДО налогов
+    total_mp_expenses = abs(raw["negative_sum"]) # Расходы маркетплейса (в abs)
+    total_expenses = total_mp_expenses + total_cogs  # Общие расходы = МП + COGS
+    net_profit_before_tax = raw["net_total"] - total_cogs  # Прибыль ДО налогов (минус COGS!)
     margin_pct = (net_profit_before_tax / gross_income * 100) if gross_income > 0 else 0
     
     # Получаем настройки налогообложения из профиля продавца
