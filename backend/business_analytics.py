@@ -443,10 +443,19 @@ async def get_business_economics(
         "summary": {
             "gross_income": round(gross_income, 2),
             "total_expenses": round(total_expenses, 2),
+            "cogs": round(total_cogs, 2),  # Себестоимость проданных товаров
+            "mp_expenses": round(total_mp_expenses, 2),  # Расходы маркетплейса
             "profit_before_tax": round(net_profit_before_tax, 2),
             "tax_amount": round(tax_amount, 2),
             "net_profit": round(net_profit, 2),
             "margin_pct": round(margin_pct, 2)
+        },
+        "cogs_info": {
+            "total": round(total_cogs, 2),
+            "items_with_cogs": cogs_data["items_with_cogs"],
+            "items_without_cogs": cogs_data["items_without_cogs"],
+            "coverage_pct": cogs_data["coverage_pct"],
+            "note": "Себестоимость рассчитана по закупочным ценам из каталога"
         },
         "tax_info": {
             "system": tax_system,
