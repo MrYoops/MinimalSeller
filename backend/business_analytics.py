@@ -1194,46 +1194,73 @@ async def get_products_economics(
         if tag and tag not in stats["tags"]:
             continue
         
-        revenue = stats["revenue"]
-        mp_expenses = stats["mp_expenses"]
-        sales_count = stats["sales_count"]
+        delivered = stats["delivered_count"]
+        returned = stats["returned_count"]
+        
+        # ЧИСТЫЕ ПРОДАЖИ = доставлено - возвращено
+        net_sales = max(0, delivered - returned)
+        
+        # Финансовые показатели
+        sales_revenue = stats["sales_revenue"]         # Выручка от продаж
+        return_costs = stats["return_costs"]           # Возвраты (деньги вернули клиенту)
+        commission = stats["commission"]               # Комиссии
+        logistics = stats["logistics"]                 # Логистика
+        other_expenses = stats["other_expenses"]       # Прочее (баллы и т.д.)
+        compensations = stats["compensations"]         # Компенсации от МП
+        
+        # ЧИСТАЯ ВЫРУЧКА = продажи - возвраты + компенсации
+        net_revenue = sales_revenue - return_costs + compensations
+        
+        # РАСХОДЫ МП = комиссии + логистика + прочее
+        mp_expenses = commission + logistics + other_expenses
+        
         purchase_price = stats["purchase_price"]
         
-        # Себестоимость = закупочная цена × количество продаж
-        cogs = purchase_price * sales_count
+        # СЕБЕСТОИМОСТЬ = закупочная цена × ЧИСТЫЕ продажи
+        cogs = purchase_price * net_sales
         
-        # Налог
+        # Налог (от чистой выручки)
         if tax_system == "usn_6":
-            tax = revenue * tax_rate
+            tax = max(0, net_revenue) * tax_rate
         else:
-            profit_before_tax = revenue - mp_expenses - cogs
+            profit_before_tax = net_revenue - mp_expenses - cogs
             tax = max(0, profit_before_tax * tax_rate)
         
-        # Чистая прибыль
-        profit = revenue - mp_expenses - cogs - tax
+        # ЧИСТАЯ ПРИБЫЛЬ = Чистая выручка - Расходы МП - COGS - Налог
+        profit = net_revenue - mp_expenses - cogs - tax
         
-        # Маржинальность
-        margin_pct = (profit / revenue * 100) if revenue > 0 else 0
+        # Маржинальность (от чистой выручки)
+        margin_pct = (profit / net_revenue * 100) if net_revenue > 0 else 0
         
         # Прибыль на единицу
-        profit_per_unit = profit / sales_count if sales_count > 0 else 0
+        profit_per_unit = profit / net_sales if net_sales > 0 else 0
+        
+        # Пропускаем товары без активности
+        if delivered == 0 and returned == 0:
+            continue
         
         products_result.append({
             "name": stats["name"],
             "sku": stats["sku"],
             "article": stats["article"],
             "tags": stats["tags"],
-            "sales_count": sales_count,
-            "returns_count": stats["returns_count"],
+            "delivered": delivered,
+            "returned": returned,
+            "sales_count": net_sales,  # Чистые продажи
             "purchase_price": round(purchase_price, 2),
-            "revenue": round(revenue, 2),
+            "revenue": round(net_revenue, 2),  # Чистая выручка
+            "sales_revenue": round(sales_revenue, 2),
+            "return_costs": round(return_costs, 2),
             "mp_expenses": round(mp_expenses, 2),
+            "commission": round(commission, 2),
+            "logistics": round(logistics, 2),
             "cogs": round(cogs, 2),
             "tax": round(tax, 2),
             "profit": round(profit, 2),
             "margin_pct": round(margin_pct, 1),
             "profit_per_unit": round(profit_per_unit, 2),
-            "has_purchase_price": purchase_price > 0
+            "has_purchase_price": purchase_price > 0,
+            "is_returned": returned >= delivered  # Товар полностью возвращён
         })
     
     # Сортируем по прибыли (убыточные сверху)
