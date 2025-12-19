@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiSave, FiUpload, FiDownload, FiEdit2, FiCheck, FiX, FiAlertCircle, FiCheckCircle } from 'react-icons/fi'
+import { FiSave, FiUpload, FiDownload, FiEdit2, FiCheck, FiX, FiAlertCircle, FiCheckCircle, FiLoader } from 'react-icons/fi'
 import { toast } from 'sonner'
 
 function PurchasePricesPage() {
@@ -13,9 +13,10 @@ function PurchasePricesPage() {
   const [changes, setChanges] = useState({})
   const [stats, setStats] = useState({ total: 0, with_price: 0 })
   
-  // Состояние для импорта с выбором столбцов
+  // Состояние для импорта
   const [importMode, setImportMode] = useState(false)
   const [previewData, setPreviewData] = useState(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
   const [selectedFile, setSelectedFile] = useState(null)
   const [articleColumn, setArticleColumn] = useState('')
   const [priceColumn, setPriceColumn] = useState('')
@@ -106,6 +107,7 @@ function PurchasePricesPage() {
     setArticleColumn('')
     setPriceColumn('')
     setImportResult(null)
+    setPreviewLoading(true)
     
     const formData = new FormData()
     formData.append('file', file)
@@ -115,11 +117,24 @@ function PurchasePricesPage() {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       setPreviewData(response.data)
+      
+      // Автоматически выбираем определённые столбцы
+      if (response.data.auto_detected) {
+        if (response.data.auto_detected.article_column) {
+          setArticleColumn(response.data.auto_detected.article_column)
+        }
+        if (response.data.auto_detected.price_column) {
+          setPriceColumn(response.data.auto_detected.price_column)
+        }
+      }
+      
       toast.success(`Файл загружен: ${response.data.total_rows} строк`)
     } catch (error) {
+      console.error('Preview error:', error)
       toast.error('Ошибка загрузки: ' + (error.response?.data?.detail || error.message))
       setImportMode(false)
     }
+    setPreviewLoading(false)
     e.target.value = ''
   }
   
@@ -161,6 +176,7 @@ function PurchasePricesPage() {
     setArticleColumn('')
     setPriceColumn('')
     setImportResult(null)
+    setPreviewLoading(false)
   }
   
   const fmt = (n) => new Intl.NumberFormat('ru-RU', { 
@@ -175,7 +191,7 @@ function PurchasePricesPage() {
         <p className="comment">// Управление себестоимостью товаров (COGS)</p>
       </div>
       
-      {/* Режим импорта с выбором столбцов */}
+      {/* Режим импорта */}
       {importMode ? (
         <div className="card-neon p-6 space-y-6">
           <div className="flex items-center justify-between">
@@ -185,12 +201,24 @@ function PurchasePricesPage() {
             </button>
           </div>
           
+          {/* Загрузка */}
+          {previewLoading && (
+            <div className="flex items-center justify-center py-12">
+              <FiLoader className="animate-spin text-mm-cyan mr-3" size={24} />
+              <span className="text-mm-text-secondary">Загрузка файла...</span>
+            </div>
+          )}
+          
           {previewData && !importResult && (
             <>
               {/* Информация о файле */}
               <div className="bg-mm-gray/30 rounded p-4">
-                <div className="text-sm text-mm-text-secondary mb-2">Файл: <span className="text-mm-text">{previewData.filename}</span></div>
-                <div className="text-sm text-mm-text-secondary">Всего строк: <span className="text-mm-cyan font-mono">{previewData.total_rows}</span></div>
+                <div className="text-sm text-mm-text-secondary mb-2">
+                  Файл: <span className="text-mm-text">{previewData.filename}</span>
+                </div>
+                <div className="text-sm text-mm-text-secondary">
+                  Всего строк: <span className="text-mm-cyan font-mono">{previewData.total_rows}</span>
+                </div>
               </div>
               
               {/* Выбор столбцов */}
@@ -198,6 +226,9 @@ function PurchasePricesPage() {
                 <div>
                   <label className="block text-mm-text-secondary text-sm mb-2 font-mono">
                     СТОЛБЕЦ С АРТИКУЛОМ *
+                    {previewData.auto_detected?.article_column && (
+                      <span className="text-green-400 ml-2">(авто)</span>
+                    )}
                   </label>
                   <select 
                     value={articleColumn}
@@ -214,6 +245,9 @@ function PurchasePricesPage() {
                 <div>
                   <label className="block text-mm-text-secondary text-sm mb-2 font-mono">
                     СТОЛБЕЦ С ЗАКУПОЧНОЙ ЦЕНОЙ *
+                    {previewData.auto_detected?.price_column && (
+                      <span className="text-green-400 ml-2">(авто)</span>
+                    )}
                   </label>
                   <select 
                     value={priceColumn}
@@ -231,23 +265,33 @@ function PurchasePricesPage() {
               
               {/* Предпросмотр таблицы */}
               <div>
-                <h4 className="text-mm-text-secondary text-sm mb-3 font-mono">ПРЕДПРОСМОТР (первые 10 строк)</h4>
-                <div className="overflow-x-auto border border-mm-border rounded">
+                <h4 className="text-mm-text-secondary text-sm mb-3 font-mono">
+                  ПРЕДПРОСМОТР (первые 10 строк)
+                </h4>
+                <div className="overflow-x-auto border border-mm-border rounded max-h-96">
                   <table className="w-full text-sm">
-                    <thead>
+                    <thead className="sticky top-0">
                       <tr className="bg-mm-gray/50">
                         {previewData.columns.map(col => (
                           <th 
                             key={col} 
-                            className={`text-left py-3 px-4 font-mono text-sm whitespace-nowrap ${
-                              col === articleColumn ? 'bg-green-500/20 text-green-400' : 
-                              col === priceColumn ? 'bg-blue-500/20 text-blue-400' : 
-                              'text-mm-text-secondary'
+                            className={`text-left py-3 px-4 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors ${
+                              col === articleColumn ? 'bg-green-500/30 text-green-400 border-b-2 border-green-500' : 
+                              col === priceColumn ? 'bg-blue-500/30 text-blue-400 border-b-2 border-blue-500' : 
+                              'text-mm-text-secondary hover:bg-mm-gray/70'
                             }`}
+                            onClick={() => {
+                              // Быстрый выбор столбца кликом
+                              if (!articleColumn) {
+                                setArticleColumn(col)
+                              } else if (!priceColumn && col !== articleColumn) {
+                                setPriceColumn(col)
+                              }
+                            }}
                           >
                             {col}
-                            {col === articleColumn && <span className="ml-2 text-xs">(Артикул)</span>}
-                            {col === priceColumn && <span className="ml-2 text-xs">(Цена)</span>}
+                            {col === articleColumn && <span className="ml-2 text-xs bg-green-500 text-black px-1 rounded">Артикул</span>}
+                            {col === priceColumn && <span className="ml-2 text-xs bg-blue-500 text-black px-1 rounded">Цена</span>}
                           </th>
                         ))}
                       </tr>
@@ -259,8 +303,8 @@ function PurchasePricesPage() {
                             <td 
                               key={col} 
                               className={`py-2 px-4 text-mm-text whitespace-nowrap ${
-                                col === articleColumn ? 'bg-green-500/10' : 
-                                col === priceColumn ? 'bg-blue-500/10' : ''
+                                col === articleColumn ? 'bg-green-500/10 font-medium' : 
+                                col === priceColumn ? 'bg-blue-500/10 font-medium' : ''
                               }`}
                             >
                               {row[col] || '-'}
@@ -271,6 +315,9 @@ function PurchasePricesPage() {
                     </tbody>
                   </table>
                 </div>
+                <p className="text-xs text-mm-text-secondary mt-2">
+                  💡 Подсказка: кликните на заголовок столбца для быстрого выбора
+                </p>
               </div>
               
               {/* Кнопки действий */}
@@ -283,7 +330,7 @@ function PurchasePricesPage() {
                 >
                   {importing ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-mm-black"></div>
+                      <FiLoader className="animate-spin" size={16} />
                       ИМПОРТ...
                     </>
                   ) : (
@@ -377,7 +424,7 @@ function PurchasePricesPage() {
               <button onClick={exportTemplate} className="btn-secondary">
                 <FiDownload className="inline mr-2" />ЭКСПОРТ CSV
               </button>
-              <label className="btn-secondary cursor-pointer" data-testid="import-file-btn">
+              <label className="btn-primary cursor-pointer" data-testid="import-file-btn">
                 <FiUpload className="inline mr-2" />ИМПОРТ ИЗ EXCEL/CSV
                 <input
                   type="file"
