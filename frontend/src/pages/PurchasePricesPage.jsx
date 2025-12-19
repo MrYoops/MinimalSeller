@@ -13,6 +13,11 @@ function PurchasePricesPage() {
   const [changes, setChanges] = useState({})
   const [stats, setStats] = useState({ total: 0, with_price: 0 })
   
+  // Фильтры и сортировка
+  const [filter, setFilter] = useState('all') // 'all', 'with_price', 'without_price'
+  const [sortBy, setSortBy] = useState('name') // 'name', 'price_asc', 'price_desc', 'margin_asc', 'margin_desc'
+  const [searchQuery, setSearchQuery] = useState('')
+  
   // Состояние для импорта
   const [importMode, setImportMode] = useState(false)
   const [previewData, setPreviewData] = useState(null)
