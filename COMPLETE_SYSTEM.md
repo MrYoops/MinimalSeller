@@ -236,7 +236,7 @@
 
 ### 2. Откройте систему
 
-URL: https://product-tagging.preview.emergentagent.com/analytics-reports
+URL: https://marketplace-metrics.preview.emergentagent.com/analytics-reports
 
 Логин: seller@test.com
 Пароль: password123

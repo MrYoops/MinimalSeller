@@ -299,7 +299,7 @@ curl "http://localhost:8001/api/ozon-reports/calculate-profit?period_start=2025-
 
 ## 🚀 ГОТОВО К ИСПОЛЬЗОВАНИЮ
 
-**URL:** https://product-tagging.preview.emergentagent.com/analytics-reports
+**URL:** https://marketplace-metrics.preview.emergentagent.com/analytics-reports
 
 **Что работает:**
 1. Загрузка позаказного отчета Ozon

@@ -380,10 +380,10 @@ Wildberries (в планах):
 - Role: seller
 
 **URL:**
-https://product-tagging.preview.emergentagent.com/orders/fbs
+https://marketplace-metrics.preview.emergentagent.com/orders/fbs
 
 **API Endpoint:**
-GET https://product-tagging.preview.emergentagent.com/api/orders/fbs
+GET https://marketplace-metrics.preview.emergentagent.com/api/orders/fbs
 
 **Ozon Integration:**
 - Client ID: `2998978`
