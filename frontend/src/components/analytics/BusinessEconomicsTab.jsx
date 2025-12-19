@@ -970,6 +970,7 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
                   <tr className="text-mm-cyan">
                     <th className="text-left p-2 font-mono">Товар</th>
                     <th className="text-center p-2 font-mono">Прод.</th>
+                    <th className="text-center p-2 font-mono">Возвр.</th>
                     <th className="text-right p-2 font-mono">Закуп.</th>
                     <th className="text-right p-2 font-mono">Выручка</th>
                     <th className="text-right p-2 font-mono">Расх.МП</th>
@@ -977,7 +978,6 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
                     <th className="text-right p-2 font-mono">Налог</th>
                     <th className="text-right p-2 font-mono">Прибыль</th>
                     <th className="text-right p-2 font-mono">Маржа</th>
-                    <th className="text-right p-2 font-mono">₽/шт</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -985,11 +985,14 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
                     <tr 
                       key={idx} 
                       className={`border-t border-mm-border/30 hover:bg-mm-gray/20 ${
-                        p.profit < 0 ? 'bg-red-500/5' : p.profit > 0 ? 'bg-green-500/5' : ''
+                        p.is_returned ? 'bg-orange-500/10' :
+                        p.profit < 0 ? 'bg-red-500/5' : 
+                        p.profit > 0 ? 'bg-green-500/5' : ''
                       }`}
                     >
                       <td className="p-2">
                         <div className="max-w-[200px] truncate text-mm-text" title={p.name}>
+                          {p.is_returned && <span className="text-orange-400 mr-1">↩️</span>}
                           {p.name}
                         </div>
                         <div className="text-mm-text-secondary text-[10px]">
@@ -999,7 +1002,12 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
                           )}
                         </div>
                       </td>
-                      <td className="p-2 text-center text-mm-text">{p.sales_count}</td>
+                      <td className="p-2 text-center text-mm-text">
+                        {p.delivered || p.sales_count}
+                      </td>
+                      <td className={`p-2 text-center ${p.returned > 0 ? 'text-orange-400' : 'text-mm-text-tertiary'}`}>
+                        {p.returned || 0}
+                      </td>
                       <td className={`p-2 text-right font-mono ${p.has_purchase_price ? 'text-mm-text' : 'text-yellow-400'}`}>
                         {p.purchase_price > 0 ? formatCurrency(p.purchase_price) : '⚠️'}
                       </td>
@@ -1020,9 +1028,6 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
                       </td>
                       <td className={`p-2 text-right font-mono ${p.margin_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {p.margin_pct.toFixed(1)}%
-                      </td>
-                      <td className={`p-2 text-right font-mono ${p.profit_per_unit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {formatCurrency(p.profit_per_unit)}
                       </td>
                     </tr>
                   ))}
