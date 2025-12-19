@@ -122,28 +122,71 @@ function OrdersTab({ dateFrom, dateTo, api }) {
         </button>
       </div>
       
+      {/* Filter by delivery type (FBS/FBO) - только для Ozon */}
+      {marketplace === 'ozon' && summary && (
+        <div className="flex items-center gap-4">
+          <span className="text-mm-text-secondary text-sm">Тип доставки:</span>
+          <div className="flex bg-mm-gray rounded overflow-hidden">
+            <button
+              onClick={() => setDeliveryFilter('all')}
+              className={`px-4 py-2 text-sm font-mono transition-colors ${
+                deliveryFilter === 'all' ? 'bg-mm-cyan text-mm-black' : 'text-mm-text-secondary hover:text-mm-text'
+              }`}
+            >
+              Все ({summary.total_orders})
+            </button>
+            <button
+              onClick={() => setDeliveryFilter('FBS')}
+              className={`px-4 py-2 text-sm font-mono transition-colors ${
+                deliveryFilter === 'FBS' ? 'bg-blue-500 text-white' : 'text-mm-text-secondary hover:text-mm-text'
+              }`}
+            >
+              FBS ({summary.fbs_count || 0})
+            </button>
+            <button
+              onClick={() => setDeliveryFilter('FBO')}
+              className={`px-4 py-2 text-sm font-mono transition-colors ${
+                deliveryFilter === 'FBO' ? 'bg-purple-500 text-white' : 'text-mm-text-secondary hover:text-mm-text'
+              }`}
+            >
+              FBO ({summary.fbo_count || 0})
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* Summary for Ozon */}
       {marketplace === 'ozon' && summary && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="card-neon p-4 text-center">
-            <div className="text-2xl font-bold text-mm-cyan">{summary.total_orders}</div>
-            <div className="text-sm text-mm-text-secondary">Заказов</div>
+            <div className="text-2xl font-bold text-mm-cyan">{filteredOrders.length}</div>
+            <div className="text-sm text-mm-text-secondary">
+              Заказов {deliveryFilter !== 'all' && `(${deliveryFilter})`}
+            </div>
           </div>
           <div className="card-neon p-4 text-center">
-            <div className="text-2xl font-bold text-green-400">{summary.delivered}</div>
+            <div className="text-2xl font-bold text-green-400">
+              {filteredOrders.filter(o => o.status === 'DELIVERED').length}
+            </div>
             <div className="text-sm text-mm-text-secondary">Доставлено</div>
           </div>
           <div className="card-neon p-4 text-center">
-            <div className="text-2xl font-bold text-mm-text">{formatCurrency(summary.total_revenue)}</div>
+            <div className="text-2xl font-bold text-mm-text">
+              {formatCurrency(filteredOrders.reduce((sum, o) => sum + (o.revenue || 0), 0))}
+            </div>
             <div className="text-sm text-mm-text-secondary">Выручка</div>
           </div>
           <div className="card-neon p-4 text-center">
-            <div className="text-2xl font-bold text-red-400">{formatCurrency(summary.total_expenses)}</div>
+            <div className="text-2xl font-bold text-red-400">
+              {formatCurrency(filteredOrders.reduce((sum, o) => sum + (o.expenses || 0), 0))}
+            </div>
             <div className="text-sm text-mm-text-secondary">Расходы</div>
           </div>
           <div className="card-neon p-4 text-center">
-            <div className={`text-2xl font-bold ${summary.total_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {formatCurrency(summary.total_profit)}
+            <div className={`text-2xl font-bold ${
+              filteredOrders.reduce((sum, o) => sum + (o.profit || 0), 0) >= 0 ? 'text-green-400' : 'text-red-400'
+            }`}>
+              {formatCurrency(filteredOrders.reduce((sum, o) => sum + (o.profit || 0), 0))}
             </div>
             <div className="text-sm text-mm-text-secondary">Прибыль</div>
           </div>
