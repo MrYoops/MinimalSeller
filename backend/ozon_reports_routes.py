@@ -920,7 +920,8 @@ async def apply_price_import(
 ):
     """
     Применить импорт закупочных цен с указанными столбцами.
-    Пользователь указывает какой столбец содержит артикул, какой - цену.
+    ВАЖНО: Только обновляет существующие товары! Не создаёт новых!
+    Сопоставление артикулов без учёта регистра.
     """
     seller_id = str(current_user["_id"])
     
@@ -934,7 +935,10 @@ async def apply_price_import(
             try:
                 df = pd.read_csv(BytesIO(content), encoding='utf-8')
             except:
-                df = pd.read_csv(BytesIO(content), encoding='cp1251')
+                try:
+                    df = pd.read_csv(BytesIO(content), encoding='cp1251')
+                except:
+                    df = pd.read_csv(BytesIO(content), encoding='latin-1')
         else:
             df = pd.read_excel(BytesIO(content))
         
@@ -945,8 +949,22 @@ async def apply_price_import(
             raise HTTPException(status_code=400, detail=f"Столбец '{price_column}' не найден в файле")
         
         db = await get_database()
+        
+        # Загружаем ВСЕ артикулы продавца для сопоставления без учёта регистра
+        existing_products = await db.product_catalog.find(
+            {"seller_id": seller_id},
+            {"article": 1, "_id": 1}
+        ).to_list(10000)
+        
+        # Создаём словарь: нижний_регистр_артикула -> оригинальный_артикул
+        article_map = {}
+        for p in existing_products:
+            art = p.get("article", "")
+            if art:
+                article_map[art.lower().strip()] = art
+        
         updated_count = 0
-        created_count = 0
+        not_found_count = 0
         errors = []
         skipped = 0
         
@@ -976,28 +994,21 @@ async def apply_price_import(
                     errors.append(f"Строка {idx + 2}: отрицательная цена для '{article}'")
                     continue
                 
-                # Пробуем обновить существующий товар
-                result = await db.product_catalog.update_one(
-                    {"seller_id": seller_id, "article": article},
-                    {"$set": {"purchase_price": price, "updated_at": datetime.utcnow()}}
-                )
+                # Ищем артикул без учёта регистра
+                article_lower = article.lower().strip()
+                original_article = article_map.get(article_lower)
                 
-                if result.matched_count > 0:
-                    updated_count += 1
+                if original_article:
+                    # Товар найден - обновляем
+                    result = await db.product_catalog.update_one(
+                        {"seller_id": seller_id, "article": original_article},
+                        {"$set": {"purchase_price": price, "updated_at": datetime.utcnow()}}
+                    )
+                    if result.modified_count > 0 or result.matched_count > 0:
+                        updated_count += 1
                 else:
-                    # Товар не найден - создаём новую запись с минимальными данными
-                    # Это позволяет потом связать с реальным товаром
-                    await db.product_catalog.insert_one({
-                        "seller_id": seller_id,
-                        "article": article,
-                        "name": f"Товар {article}",
-                        "purchase_price": price,
-                        "price": 0,
-                        "marketplace": "unknown",
-                        "created_at": datetime.utcnow(),
-                        "updated_at": datetime.utcnow()
-                    })
-                    created_count += 1
+                    # Товар НЕ найден - просто пропускаем (НЕ создаём!)
+                    not_found_count += 1
                     
             except Exception as e:
                 errors.append(f"Строка {idx + 2}: {str(e)}")
@@ -1007,11 +1018,12 @@ async def apply_price_import(
             "statistics": {
                 "total_rows": len(df),
                 "updated": updated_count,
-                "created": created_count,
+                "not_found": not_found_count,
                 "skipped": skipped,
                 "errors_count": len(errors)
             },
-            "errors": errors[:20] if errors else None  # Показываем первые 20 ошибок
+            "message": f"Обновлено {updated_count} товаров. Не найдено в каталоге: {not_found_count}.",
+            "errors": errors[:20] if errors else None
         }
         
     except HTTPException:
