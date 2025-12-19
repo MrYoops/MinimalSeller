@@ -1189,7 +1189,7 @@ async def get_products_economics(
     # Рассчитываем финальные метрики для каждого товара
     products_result = []
     
-    for name_key, stats in product_stats.items():
+    for sku_key, stats in product_stats.items():
         # Фильтр по тегу
         if tag and tag not in stats["tags"]:
             continue
