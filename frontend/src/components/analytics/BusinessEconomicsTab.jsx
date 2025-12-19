@@ -516,7 +516,7 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <SummaryCard
           title="Доходы"
           value={formatCurrency(data.summary?.gross_income || 0)}
@@ -526,14 +526,24 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
           colorClass="text-green-500"
         />
         <SummaryCard
-          title="Расходы"
-          value={formatCurrency(data.summary?.total_expenses || 0)}
+          title="Расходы МП"
+          value={formatCurrency(data.summary?.mp_expenses || data.summary?.total_expenses || 0)}
           change={data.comparison?.changes?.expenses_change_pct}
-          subtitle="Все удержания МП"
+          subtitle="Комиссии, логистика..."
           icon={FiTrendingDown}
           colorClass="text-red-500"
           inverted={true}
         />
+        {/* COGS - Себестоимость */}
+        <div className="card-neon p-5 bg-purple-500/10 border-purple-500/30">
+          <div className="flex items-start justify-between mb-2">
+            <span className="text-mm-text-secondary text-sm font-mono uppercase">СЕБЕСТОИМОСТЬ</span>
+          </div>
+          <div className="text-2xl font-bold text-purple-400">{formatCurrency(data.summary?.cogs || 0)}</div>
+          <div className="text-mm-text-secondary text-xs">
+            {data.cogs_info ? `${data.cogs_info.items_with_cogs} из ${data.cogs_info.items_with_cogs + data.cogs_info.items_without_cogs} товаров` : 'COGS'}
+          </div>
+        </div>
         <div className="card-neon p-5 bg-orange-500/10 border-orange-500/30">
           <div className="flex items-start justify-between mb-2">
             <span className="text-mm-text-secondary text-sm font-mono uppercase">НАЛОГ</span>
