@@ -417,15 +417,21 @@ function PurchasePricesPage() {
                   <div className="text-2xl font-mono text-green-400">{importResult.statistics.updated}</div>
                   <div className="text-sm text-mm-text-secondary">Обновлено</div>
                 </div>
-                <div className="bg-blue-500/10 rounded p-4 text-center">
-                  <div className="text-2xl font-mono text-blue-400">{importResult.statistics.created}</div>
-                  <div className="text-sm text-mm-text-secondary">Создано</div>
+                <div className="bg-orange-500/10 rounded p-4 text-center">
+                  <div className="text-2xl font-mono text-orange-400">{importResult.statistics.not_found || 0}</div>
+                  <div className="text-sm text-mm-text-secondary">Не найдено</div>
                 </div>
                 <div className="bg-yellow-500/10 rounded p-4 text-center">
                   <div className="text-2xl font-mono text-yellow-400">{importResult.statistics.skipped}</div>
                   <div className="text-sm text-mm-text-secondary">Пропущено</div>
                 </div>
               </div>
+              
+              {importResult.message && (
+                <div className="text-mm-text-secondary text-sm">
+                  {importResult.message}
+                </div>
+              )}
               
               {importResult.errors && importResult.errors.length > 0 && (
                 <div className="bg-red-500/10 border border-red-500/30 rounded p-4">
