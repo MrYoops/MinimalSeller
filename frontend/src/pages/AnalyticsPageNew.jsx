@@ -155,41 +155,62 @@ function OrdersTab({ dateFrom, dateTo, api }) {
         </div>
       )}
       
-      {/* Summary for Ozon */}
+      {/* Summary for Ozon - ПОЛНАЯ АНАЛИТИКА */}
       {marketplace === 'ozon' && summary && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="card-neon p-4 text-center">
-            <div className="text-2xl font-bold text-mm-cyan">{filteredOrders.length}</div>
-            <div className="text-sm text-mm-text-secondary">
-              Заказов {deliveryFilter !== 'all' && `(${deliveryFilter})`}
+        <div className="space-y-4">
+          {/* Основные метрики */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            <div className="card-neon p-4 text-center">
+              <div className="text-xl font-bold text-mm-cyan">{filteredOrders.length}</div>
+              <div className="text-xs text-mm-text-secondary">
+                Заказов {deliveryFilter !== 'all' && `(${deliveryFilter})`}
+              </div>
+            </div>
+            <div className="card-neon p-4 text-center">
+              <div className="text-xl font-bold text-green-400">
+                {formatCurrency(filteredOrders.reduce((sum, o) => sum + (o.revenue || 0), 0))}
+              </div>
+              <div className="text-xs text-mm-text-secondary">Выручка</div>
+            </div>
+            <div className="card-neon p-4 text-center">
+              <div className="text-xl font-bold text-red-400">
+                {formatCurrency(filteredOrders.reduce((sum, o) => sum + (o.mp_expenses || 0), 0))}
+              </div>
+              <div className="text-xs text-mm-text-secondary">Расходы МП</div>
+            </div>
+            <div className="card-neon p-4 text-center bg-purple-500/10">
+              <div className="text-xl font-bold text-purple-400">
+                {formatCurrency(filteredOrders.reduce((sum, o) => sum + (o.cogs || 0), 0))}
+              </div>
+              <div className="text-xs text-mm-text-secondary">Себестоимость</div>
+            </div>
+            <div className="card-neon p-4 text-center bg-orange-500/10">
+              <div className="text-xl font-bold text-orange-400">
+                {formatCurrency(filteredOrders.reduce((sum, o) => sum + (o.tax || 0), 0))}
+              </div>
+              <div className="text-xs text-mm-text-secondary">
+                Налог ({summary.tax_info?.name || 'УСН 6%'})
+              </div>
+            </div>
+            <div className="card-neon p-4 text-center col-span-2">
+              <div className={`text-xl font-bold ${
+                filteredOrders.reduce((sum, o) => sum + (o.profit || 0), 0) >= 0 ? 'text-green-400' : 'text-red-400'
+              }`}>
+                {formatCurrency(filteredOrders.reduce((sum, o) => sum + (o.profit || 0), 0))}
+              </div>
+              <div className="text-xs text-mm-text-secondary">Чистая прибыль</div>
             </div>
           </div>
-          <div className="card-neon p-4 text-center">
-            <div className="text-2xl font-bold text-green-400">
-              {filteredOrders.filter(o => o.status === 'DELIVERED').length}
+          
+          {/* Предупреждение о заказах без себестоимости */}
+          {summary.orders_without_cogs > 0 && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-3 text-sm">
+              <span className="text-yellow-400">⚠️ {summary.orders_without_cogs} доставленных заказов без себестоимости.</span>
+              <span className="text-mm-text-secondary ml-2">
+                Добавьте закупочные цены в разделе "Товары → Закупочные цены"
+              </span>
             </div>
-            <div className="text-sm text-mm-text-secondary">Доставлено</div>
-          </div>
-          <div className="card-neon p-4 text-center">
-            <div className="text-2xl font-bold text-mm-text">
-              {formatCurrency(filteredOrders.reduce((sum, o) => sum + (o.revenue || 0), 0))}
-            </div>
-            <div className="text-sm text-mm-text-secondary">Выручка</div>
-          </div>
-          <div className="card-neon p-4 text-center">
-            <div className="text-2xl font-bold text-red-400">
-              {formatCurrency(filteredOrders.reduce((sum, o) => sum + (o.expenses || 0), 0))}
-            </div>
-            <div className="text-sm text-mm-text-secondary">Расходы</div>
-          </div>
-          <div className="card-neon p-4 text-center">
-            <div className={`text-2xl font-bold ${
-              filteredOrders.reduce((sum, o) => sum + (o.profit || 0), 0) >= 0 ? 'text-green-400' : 'text-red-400'
-            }`}>
-              {formatCurrency(filteredOrders.reduce((sum, o) => sum + (o.profit || 0), 0))}
-            </div>
-            <div className="text-sm text-mm-text-secondary">Прибыль</div>
-          </div>
+          )}
         </div>
       )}
 
