@@ -1851,6 +1851,14 @@ try:
 except Exception as e:
     logger.error(f"Failed to include business_analytics: {e}")
 
+try:
+    from yandex_analytics import router as yandex_analytics_router
+    app.include_router(yandex_analytics_router)
+    logger.info("Yandex analytics routes included")
+except Exception as e:
+    logger.error(f"Failed to include yandex_analytics: {e}")
+
+
 
 try:
     from ozon_bonuses_routes import router as ozon_bonuses_router
