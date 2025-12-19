@@ -1270,10 +1270,13 @@ async def get_products_economics(
     total_products = len(products_result)
     profitable = sum(1 for p in products_result if p["profit"] > 0)
     unprofitable = sum(1 for p in products_result if p["profit"] < 0)
+    returned_items = sum(1 for p in products_result if p.get("is_returned"))
     without_cogs = sum(1 for p in products_result if not p["has_purchase_price"] and p["sales_count"] > 0)
     
     total_revenue = sum(p["revenue"] for p in products_result)
     total_profit = sum(p["profit"] for p in products_result)
+    total_sales = sum(p["sales_count"] for p in products_result)
+    total_returns = sum(p["returned"] for p in products_result)
     
     # Собираем все теги для фильтра
     all_tags = set()
@@ -1286,7 +1289,10 @@ async def get_products_economics(
             "total_products": total_products,
             "profitable": profitable,
             "unprofitable": unprofitable,
+            "returned_items": returned_items,
             "without_cogs": without_cogs,
+            "total_sales": total_sales,
+            "total_returns": total_returns,
             "total_revenue": round(total_revenue, 2),
             "total_profit": round(total_profit, 2)
         },
