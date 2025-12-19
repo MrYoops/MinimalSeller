@@ -128,11 +128,13 @@ const ExpenseItem = ({ name, amount, total, color, expanded, onToggle }) => {
   )
 }
 
-export default function BusinessEconomicsTab({ dateFrom, dateTo, marketplace = 'ozon' }) {
+export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
   const { api } = useAuth()
+  const [activeMarketplace, setActiveMarketplace] = useState('ozon')
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [data, setData] = useState(null)
+  const [yandexData, setYandexData] = useState(null)
   const [compareEnabled, setCompareEnabled] = useState(true)
   const [showDetails, setShowDetails] = useState(false)
   const [detailedOperations, setDetailedOperations] = useState(null)
@@ -140,18 +142,34 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo, marketplace = '
   const loadEconomics = async () => {
     setLoading(true)
     try {
-      const response = await api.get('/api/business-analytics/economics', {
+      // Load Ozon data
+      const ozonResponse = await api.get('/api/business-analytics/economics', {
         params: {
           date_from: dateFrom,
           date_to: dateTo,
           compare_previous: compareEnabled
         }
       })
-      setData(response.data)
+      setData(ozonResponse.data)
+      
+      // Try to load Yandex data
+      try {
+        const yandexResponse = await api.get('/api/yandex-analytics/economics', {
+          params: {
+            date_from: dateFrom,
+            date_to: dateTo,
+            compare_previous: compareEnabled
+          }
+        })
+        setYandexData(yandexResponse.data)
+      } catch (yErr) {
+        console.log('Yandex data not available:', yErr.message)
+        setYandexData(null)
+      }
     } catch (error) {
       console.error('Error loading economics:', error)
       if (error.response?.status === 404) {
-        toast.error('API ключи не найдены. Добавьте ключи Ozon в настройках интеграций.')
+        toast.error('API ключи не найдены. Добавьте ключи в настройках интеграций.')
       } else {
         toast.error('Ошибка загрузки данных: ' + (error.response?.data?.detail || error.message))
       }
