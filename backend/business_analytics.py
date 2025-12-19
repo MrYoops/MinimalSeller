@@ -75,33 +75,52 @@ async def calculate_cogs(operations: List[Dict], seller_id: str) -> Dict[str, An
     """
     Рассчитывает себестоимость проданных товаров (COGS).
     
-    Анализирует операции продаж, извлекает SKU/offer_id,
-    находит закупочные цены в базе данных и считает общую себестоимость.
+    Стратегия поиска закупочной цены:
+    1. По SKU из таблицы маппинга ozon_sku_mapping
+    2. По артикулу/offer_id
+    3. По названию товара (частичное совпадение)
     """
     db = await get_database()
     
-    # Загружаем все закупочные цены продавца (по артикулу, без учёта регистра)
+    # Загружаем маппинг SKU -> article (если есть)
+    sku_mappings = await db.ozon_sku_mapping.find({"seller_id": seller_id}).to_list(10000)
+    sku_to_article = {str(m.get("sku")): m.get("article") for m in sku_mappings}
+    
+    # Загружаем все товары продавца с закупочными ценами
     products = await db.product_catalog.find(
         {"seller_id": seller_id, "purchase_price": {"$gt": 0}},
-        {"article": 1, "purchase_price": 1, "sku": 1, "offer_id": 1}
+        {"article": 1, "purchase_price": 1, "name": 1, "sku": 1, "offer_id": 1, "marketplace_data": 1}
     ).to_list(10000)
     
-    # Создаём словарь для быстрого поиска: нижний_регистр -> цена
-    price_map = {}
+    # Создаём различные словари для поиска
+    price_by_article = {}  # артикул -> цена
+    price_by_name = {}     # слова из названия -> цена
+    
     for p in products:
+        price = p.get("purchase_price", 0)
         article = p.get("article", "")
+        name = p.get("name", "")
+        
         if article:
-            price_map[article.lower().strip()] = p.get("purchase_price", 0)
-        # Также добавляем по SKU и offer_id если есть
-        if p.get("sku"):
-            price_map[str(p["sku"]).lower().strip()] = p.get("purchase_price", 0)
-        if p.get("offer_id"):
-            price_map[str(p["offer_id"]).lower().strip()] = p.get("purchase_price", 0)
+            price_by_article[article.lower().strip()] = price
+        
+        # Добавляем по ozon product_id если есть
+        ozon_data = p.get("marketplace_data", {}).get("ozon", {})
+        if ozon_data.get("id"):
+            price_by_article[str(ozon_data["id"]).lower()] = price
+        
+        # Индексируем по ключевым словам из названия (для fuzzy matching)
+        if name and price > 0:
+            # Берём первые 3 значимых слова из названия
+            words = [w.lower() for w in name.split() if len(w) > 3][:3]
+            key = " ".join(sorted(words))
+            if key:
+                price_by_name[key] = {"price": price, "article": article}
     
     total_cogs = 0
     items_with_cogs = 0
     items_without_cogs = 0
-    cogs_details = []
+    unmatched_items = []
     
     for op in operations:
         op_type = op.get("operation_type", "")
@@ -112,43 +131,51 @@ async def calculate_cogs(operations: List[Dict], seller_id: str) -> Dict[str, An
         
         items = op.get("items", [])
         for item in items:
-            sku = item.get("sku", "")
-            offer_id = item.get("offer_id", "")
+            sku = str(item.get("sku", ""))
             name = item.get("name", "")
             
-            # Ищем закупочную цену по SKU или offer_id
             purchase_price = 0
-            matched_key = None
+            match_method = None
             
-            if sku:
-                sku_lower = str(sku).lower().strip()
-                if sku_lower in price_map:
-                    purchase_price = price_map[sku_lower]
-                    matched_key = sku
+            # 1. Ищем по маппингу SKU -> article
+            if sku and sku in sku_to_article:
+                article = sku_to_article[sku]
+                if article.lower() in price_by_article:
+                    purchase_price = price_by_article[article.lower()]
+                    match_method = "sku_mapping"
             
-            if not purchase_price and offer_id:
-                offer_id_lower = str(offer_id).lower().strip()
-                if offer_id_lower in price_map:
-                    purchase_price = price_map[offer_id_lower]
-                    matched_key = offer_id
+            # 2. Ищем напрямую по SKU как артикулу
+            if not purchase_price and sku:
+                if sku.lower() in price_by_article:
+                    purchase_price = price_by_article[sku.lower()]
+                    match_method = "sku_as_article"
+            
+            # 3. Ищем по названию товара (fuzzy)
+            if not purchase_price and name:
+                words = [w.lower() for w in name.split() if len(w) > 3][:3]
+                key = " ".join(sorted(words))
+                if key in price_by_name:
+                    purchase_price = price_by_name[key]["price"]
+                    match_method = "name_match"
             
             if purchase_price > 0:
                 total_cogs += purchase_price
                 items_with_cogs += 1
-                cogs_details.append({
-                    "sku": sku or offer_id,
-                    "name": name[:50] if name else "",
-                    "purchase_price": purchase_price
-                })
             else:
                 items_without_cogs += 1
+                if len(unmatched_items) < 20:
+                    unmatched_items.append({
+                        "sku": sku,
+                        "name": name[:60] if name else ""
+                    })
     
     return {
         "total_cogs": round(total_cogs, 2),
         "items_with_cogs": items_with_cogs,
         "items_without_cogs": items_without_cogs,
         "coverage_pct": round(items_with_cogs / (items_with_cogs + items_without_cogs) * 100, 1) if (items_with_cogs + items_without_cogs) > 0 else 0,
-        "details": cogs_details[:50]  # Первые 50 для отладки
+        "unmatched_items": unmatched_items,
+        "note": "Для улучшения точности добавьте маппинг SKU -> артикул через синхронизацию товаров"
     }
 
 
