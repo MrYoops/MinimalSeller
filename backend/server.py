@@ -1845,6 +1845,14 @@ except Exception as e:
     logger.error(f"Failed to include profit_analytics_routes: {e}")
 
 try:
+    from business_analytics import router as business_analytics_router
+    app.include_router(business_analytics_router)
+    logger.info("Business analytics routes included")
+except Exception as e:
+    logger.error(f"Failed to include business_analytics: {e}")
+
+
+try:
     from ozon_bonuses_routes import router as ozon_bonuses_router
     app.include_router(ozon_bonuses_router)
     logger.info("Ozon bonuses routes included")
