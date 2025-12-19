@@ -181,7 +181,43 @@ function OrdersTab({ dateFrom, dateTo, api }) {
                     Нет заказов за выбранный период
                   </td>
                 </tr>
+              ) : marketplace === 'ozon' ? (
+                // Ozon orders
+                orders.map((order) => (
+                  <tr key={order.id} className="border-t border-mm-border/50 hover:bg-mm-gray/30">
+                    <td className="p-4 font-mono text-mm-text text-xs">{order.posting_number}</td>
+                    <td className="p-4">
+                      <span className={`px-2 py-1 rounded text-xs ${statusColors[order.status] || 'bg-gray-500/20'}`}>
+                        {statusNames[order.status] || order.status}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <div className="max-w-xs">
+                        {order.items?.slice(0, 2).map((item, i) => (
+                          <div key={i} className="text-mm-text text-xs truncate">
+                            {item.name}
+                          </div>
+                        ))}
+                        {order.items?.length > 2 && (
+                          <div className="text-mm-text-secondary text-xs">
+                            +{order.items.length - 2} ещё
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4 text-right font-mono text-green-400">
+                      {formatCurrency(order.revenue)}
+                    </td>
+                    <td className="p-4 text-right font-mono text-red-400">
+                      {formatCurrency(order.expenses)}
+                    </td>
+                    <td className={`p-4 text-right font-mono ${order.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {formatCurrency(order.profit)}
+                    </td>
+                  </tr>
+                ))
               ) : (
+                // Yandex orders
                 orders.map((order) => (
                   <tr key={order.id} className="border-t border-mm-border/50 hover:bg-mm-gray/30">
                     <td className="p-4 font-mono text-mm-text">{order.id}</td>
@@ -224,8 +260,8 @@ function OrdersTab({ dateFrom, dateTo, api }) {
         </div>
       </div>
 
-      {/* Summary */}
-      {orders.length > 0 && (
+      {/* Summary for Yandex only (Ozon summary is above) */}
+      {marketplace === 'yandex' && orders.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="card-neon p-4">
             <div className="text-mm-text-secondary text-sm">Всего заказов</div>
