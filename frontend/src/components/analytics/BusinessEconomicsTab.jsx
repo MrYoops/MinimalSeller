@@ -8,7 +8,7 @@ import {
 import { 
   FiTrendingUp, FiTrendingDown, FiDollarSign, FiAlertTriangle,
   FiRefreshCw, FiChevronDown, FiChevronUp, FiInfo, FiShoppingCart,
-  FiPackage, FiMapPin
+  FiPackage, FiMapPin, FiDownload
 } from 'react-icons/fi'
 
 // Marketplace logos/colors
