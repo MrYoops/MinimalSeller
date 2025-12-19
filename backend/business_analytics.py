@@ -298,8 +298,40 @@ async def get_business_economics(
     raw = current_data["raw_totals"]
     gross_income = raw["positive_sum"]       # Все поступления
     total_expenses = abs(raw["negative_sum"]) # Все списания (в abs)
-    net_profit = raw["net_total"]            # ТОЧНАЯ чистая прибыль из API
-    margin_pct = (net_profit / gross_income * 100) if gross_income > 0 else 0
+    net_profit_before_tax = raw["net_total"]  # Прибыль ДО налогов
+    margin_pct = (net_profit_before_tax / gross_income * 100) if gross_income > 0 else 0
+    
+    # Получаем настройки налогообложения из профиля продавца
+    db = await get_database()
+    from bson import ObjectId
+    profile = await db.seller_profiles.find_one({"user_id": seller_id})
+    if not profile:
+        try:
+            profile = await db.seller_profiles.find_one({"user_id": ObjectId(seller_id)})
+        except:
+            pass
+    
+    tax_system = profile.get("tax_system", "usn_6") if profile else "usn_6"
+    
+    # Расчёт налогов по системе налогообложения
+    tax_rates = {
+        "usn_6": {"name": "УСН 6% (доходы)", "rate": 0.06, "base": "income"},
+        "usn_15": {"name": "УСН 15% (доходы-расходы)", "rate": 0.15, "base": "profit"},
+        "osn": {"name": "ОСН (20% НДС + 13% прибыль)", "rate": 0.20, "base": "profit"},
+        "patent": {"name": "Патент", "rate": 0, "base": "fixed"},
+        "self_employed": {"name": "Самозанятый 6%", "rate": 0.06, "base": "income"}
+    }
+    
+    tax_info = tax_rates.get(tax_system, tax_rates["usn_6"])
+    
+    if tax_info["base"] == "income":
+        tax_amount = gross_income * tax_info["rate"]
+    elif tax_info["base"] == "profit":
+        tax_amount = max(0, net_profit_before_tax) * tax_info["rate"]
+    else:
+        tax_amount = 0  # Патент - фиксированный платёж
+    
+    net_profit = net_profit_before_tax - tax_amount  # Чистая прибыль ПОСЛЕ налогов
     
     result = {
         "period": {
