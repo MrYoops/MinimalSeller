@@ -1037,3 +1037,314 @@ async def get_ozon_orders(
         "note": "Прибыль = Выручка - Расходы МП - Себестоимость - Налог"
     }
 
+
+
+# ============================================================================
+# UNIT ECONOMICS ПО ТОВАРАМ
+# ============================================================================
+
+@router.get("/products-economics")
+async def get_products_economics(
+    date_from: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    date_to: str = Query(..., description="End date (YYYY-MM-DD)"),
+    tag: str = Query(None, description="Filter by tag"),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Unit Economics по каждому товару.
+    Показывает прибыльность/убыточность каждой позиции.
+    """
+    seller_id = str(current_user["_id"])
+    
+    try:
+        period_start = datetime.fromisoformat(f"{date_from}T00:00:00")
+        period_end = datetime.fromisoformat(f"{date_to}T23:59:59")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    # Get credentials
+    credentials = await get_ozon_credentials(seller_id)
+    
+    # Fetch operations
+    operations = await fetch_ozon_operations(
+        credentials["client_id"],
+        credentials["api_key"],
+        period_start,
+        period_end
+    )
+    
+    db = await get_database()
+    
+    # Загружаем товары с закупочными ценами и тегами
+    products_cursor = db.product_catalog.find(
+        {"seller_id": seller_id},
+        {"article": 1, "name": 1, "purchase_price": 1, "tags": 1, "price": 1}
+    )
+    products_list = await products_cursor.to_list(10000)
+    
+    # Индекс цен и тегов по ключевым словам названия
+    price_by_name = {}
+    tags_by_name = {}
+    article_by_name = {}
+    
+    for p in products_list:
+        name = p.get("name", "")
+        price = p.get("purchase_price", 0)
+        tags = p.get("tags", [])
+        article = p.get("article", "")
+        
+        if name:
+            words = [w.lower() for w in name.split() if len(w) > 3][:3]
+            key = " ".join(sorted(words))
+            if key:
+                price_by_name[key] = price
+                tags_by_name[key] = tags
+                article_by_name[key] = article
+    
+    # Получаем настройки налога
+    profile = await db.seller_profiles.find_one({"user_id": seller_id})
+    tax_system = "usn_6"
+    if profile and profile.get("tax_settings"):
+        tax_system = profile["tax_settings"].get("system", "usn_6")
+    tax_rate = TAX_SYSTEMS.get(tax_system, {}).get("rate", 0.06)
+    
+    # Собираем статистику по товарам
+    product_stats = {}  # name_key -> stats
+    
+    for op in operations:
+        op_type = op.get("operation_type", "")
+        amount = op.get("amount", 0)
+        items = op.get("items", [])
+        
+        # Обрабатываем только продажи и связанные операции
+        if not items:
+            continue
+        
+        for item in items:
+            item_name = item.get("name", "")
+            item_sku = item.get("sku", "")
+            
+            if not item_name:
+                continue
+            
+            # Создаём ключ для группировки
+            words = [w.lower() for w in item_name.split() if len(w) > 3][:3]
+            name_key = " ".join(sorted(words))
+            
+            if not name_key:
+                name_key = item_name[:50]
+            
+            if name_key not in product_stats:
+                product_stats[name_key] = {
+                    "name": item_name,
+                    "sku": item_sku,
+                    "article": article_by_name.get(name_key, ""),
+                    "tags": tags_by_name.get(name_key, []),
+                    "purchase_price": price_by_name.get(name_key, 0),
+                    "sales_count": 0,
+                    "returns_count": 0,
+                    "revenue": 0,
+                    "mp_expenses": 0,
+                    "operations": []
+                }
+            
+            stats = product_stats[name_key]
+            
+            # Категоризируем операцию
+            if op_type == "OperationAgentDeliveredToCustomer":
+                stats["sales_count"] += 1
+                if amount > 0:
+                    stats["revenue"] += amount
+            elif "Return" in op_type:
+                stats["returns_count"] += 1
+            
+            # Расходы (отрицательные суммы)
+            if amount < 0:
+                stats["mp_expenses"] += abs(amount)
+            
+            stats["operations"].append(op_type)
+    
+    # Рассчитываем финальные метрики для каждого товара
+    products_result = []
+    
+    for name_key, stats in product_stats.items():
+        # Фильтр по тегу
+        if tag and tag not in stats["tags"]:
+            continue
+        
+        revenue = stats["revenue"]
+        mp_expenses = stats["mp_expenses"]
+        sales_count = stats["sales_count"]
+        purchase_price = stats["purchase_price"]
+        
+        # Себестоимость = закупочная цена × количество продаж
+        cogs = purchase_price * sales_count
+        
+        # Налог
+        if tax_system == "usn_6":
+            tax = revenue * tax_rate
+        else:
+            profit_before_tax = revenue - mp_expenses - cogs
+            tax = max(0, profit_before_tax * tax_rate)
+        
+        # Чистая прибыль
+        profit = revenue - mp_expenses - cogs - tax
+        
+        # Маржинальность
+        margin_pct = (profit / revenue * 100) if revenue > 0 else 0
+        
+        # Прибыль на единицу
+        profit_per_unit = profit / sales_count if sales_count > 0 else 0
+        
+        products_result.append({
+            "name": stats["name"],
+            "sku": stats["sku"],
+            "article": stats["article"],
+            "tags": stats["tags"],
+            "sales_count": sales_count,
+            "returns_count": stats["returns_count"],
+            "purchase_price": round(purchase_price, 2),
+            "revenue": round(revenue, 2),
+            "mp_expenses": round(mp_expenses, 2),
+            "cogs": round(cogs, 2),
+            "tax": round(tax, 2),
+            "profit": round(profit, 2),
+            "margin_pct": round(margin_pct, 1),
+            "profit_per_unit": round(profit_per_unit, 2),
+            "has_purchase_price": purchase_price > 0
+        })
+    
+    # Сортируем по прибыли (убыточные сверху)
+    products_result.sort(key=lambda x: x["profit"])
+    
+    # Статистика
+    total_products = len(products_result)
+    profitable = sum(1 for p in products_result if p["profit"] > 0)
+    unprofitable = sum(1 for p in products_result if p["profit"] < 0)
+    without_cogs = sum(1 for p in products_result if not p["has_purchase_price"] and p["sales_count"] > 0)
+    
+    total_revenue = sum(p["revenue"] for p in products_result)
+    total_profit = sum(p["profit"] for p in products_result)
+    
+    # Собираем все теги для фильтра
+    all_tags = set()
+    for p in products_result:
+        all_tags.update(p["tags"])
+    
+    return {
+        "products": products_result,
+        "summary": {
+            "total_products": total_products,
+            "profitable": profitable,
+            "unprofitable": unprofitable,
+            "without_cogs": without_cogs,
+            "total_revenue": round(total_revenue, 2),
+            "total_profit": round(total_profit, 2)
+        },
+        "available_tags": sorted(list(all_tags)),
+        "tax_info": {
+            "system": tax_system,
+            "rate": tax_rate,
+            "name": TAX_SYSTEMS.get(tax_system, {}).get("name", "УСН 6%")
+        },
+        "period": {
+            "from": date_from,
+            "to": date_to
+        }
+    }
+
+
+@router.get("/products-economics/export")
+async def export_products_economics(
+    date_from: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    date_to: str = Query(..., description="End date (YYYY-MM-DD)"),
+    tag: str = Query(None, description="Filter by tag"),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Выгрузка Unit Economics в Excel
+    """
+    # Получаем данные
+    data = await get_products_economics(date_from, date_to, tag, current_user)
+    products = data["products"]
+    
+    # Создаём Excel файл
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+    
+    # Форматы
+    header_format = workbook.add_format({
+        'bold': True, 'bg_color': '#1a1a2e', 'font_color': '#00d4ff',
+        'border': 1, 'align': 'center'
+    })
+    money_format = workbook.add_format({'num_format': '#,##0.00 ₽', 'align': 'right'})
+    percent_format = workbook.add_format({'num_format': '0.0%', 'align': 'right'})
+    profit_format = workbook.add_format({'num_format': '#,##0.00 ₽', 'align': 'right', 'font_color': 'green'})
+    loss_format = workbook.add_format({'num_format': '#,##0.00 ₽', 'align': 'right', 'font_color': 'red'})
+    
+    # Лист с товарами
+    ws = workbook.add_worksheet('Unit Economics')
+    
+    # Заголовки
+    headers = [
+        'Товар', 'Артикул', 'SKU', 'Теги', 'Продаж', 'Возвратов',
+        'Закупочная цена', 'Выручка', 'Расходы МП', 'Себестоимость',
+        'Налог', 'Прибыль', 'Маржа %', 'Прибыль/шт'
+    ]
+    for col, header in enumerate(headers):
+        ws.write(0, col, header, header_format)
+    
+    # Данные
+    for row, p in enumerate(products, start=1):
+        ws.write(row, 0, p["name"])
+        ws.write(row, 1, p["article"])
+        ws.write(row, 2, p["sku"])
+        ws.write(row, 3, ", ".join(p["tags"]) if p["tags"] else "")
+        ws.write(row, 4, p["sales_count"])
+        ws.write(row, 5, p["returns_count"])
+        ws.write(row, 6, p["purchase_price"], money_format)
+        ws.write(row, 7, p["revenue"], money_format)
+        ws.write(row, 8, p["mp_expenses"], money_format)
+        ws.write(row, 9, p["cogs"], money_format)
+        ws.write(row, 10, p["tax"], money_format)
+        ws.write(row, 11, p["profit"], profit_format if p["profit"] >= 0 else loss_format)
+        ws.write(row, 12, p["margin_pct"] / 100, percent_format)
+        ws.write(row, 13, p["profit_per_unit"], money_format)
+    
+    # Автоширина колонок
+    ws.set_column(0, 0, 50)  # Название
+    ws.set_column(1, 3, 15)  # Артикул, SKU, Теги
+    ws.set_column(4, 5, 10)  # Продаж, Возвратов
+    ws.set_column(6, 13, 15)  # Финансы
+    
+    # Лист со сводкой
+    ws_summary = workbook.add_worksheet('Сводка')
+    ws_summary.write(0, 0, 'Период', header_format)
+    ws_summary.write(0, 1, f'{date_from} - {date_to}')
+    ws_summary.write(1, 0, 'Всего товаров', header_format)
+    ws_summary.write(1, 1, data["summary"]["total_products"])
+    ws_summary.write(2, 0, 'Прибыльных', header_format)
+    ws_summary.write(2, 1, data["summary"]["profitable"])
+    ws_summary.write(3, 0, 'Убыточных', header_format)
+    ws_summary.write(3, 1, data["summary"]["unprofitable"])
+    ws_summary.write(4, 0, 'Без себестоимости', header_format)
+    ws_summary.write(4, 1, data["summary"]["without_cogs"])
+    ws_summary.write(5, 0, 'Общая выручка', header_format)
+    ws_summary.write(5, 1, data["summary"]["total_revenue"], money_format)
+    ws_summary.write(6, 0, 'Общая прибыль', header_format)
+    ws_summary.write(6, 1, data["summary"]["total_profit"], profit_format if data["summary"]["total_profit"] >= 0 else loss_format)
+    
+    ws_summary.set_column(0, 0, 20)
+    ws_summary.set_column(1, 1, 25)
+    
+    workbook.close()
+    output.seek(0)
+    
+    filename = f"unit_economics_{date_from}_{date_to}.xlsx"
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
