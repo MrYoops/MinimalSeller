@@ -1858,6 +1858,14 @@ try:
 except Exception as e:
     logger.error(f"Failed to include yandex_analytics: {e}")
 
+try:
+    from export_routes import router as export_router
+    app.include_router(export_router)
+    logger.info("Export routes included")
+except Exception as e:
+    logger.error(f"Failed to include export_routes: {e}")
+
+
 
 
 try:
