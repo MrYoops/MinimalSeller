@@ -1085,17 +1085,31 @@ async def get_products_economics(
     )
     products_list = await products_cursor.to_list(10000)
     
-    # Индекс цен и тегов по ключевым словам названия
+    # Загружаем SKU маппинг
+    sku_mappings = await db.ozon_sku_mapping.find({"seller_id": seller_id}).to_list(10000)
+    sku_to_article = {str(m.get("sku")): m.get("article") for m in sku_mappings}
+    
+    # Индекс цен по артикулу (PRIMARY - самый надёжный)
+    price_by_article = {}
+    tags_by_article = {}
+    
+    # Индекс цен и тегов по ключевым словам названия (FALLBACK)
     price_by_name = {}
     tags_by_name = {}
     article_by_name = {}
     
     for p in products_list:
         name = p.get("name", "")
-        price = p.get("purchase_price", 0)
+        price = p.get("purchase_price", 0) or 0
         tags = p.get("tags", [])
         article = p.get("article", "")
         
+        # PRIMARY: Индекс по артикулу
+        if article:
+            price_by_article[article.lower().strip()] = price
+            tags_by_article[article.lower().strip()] = tags
+        
+        # FALLBACK: Индекс по названию
         if name:
             words = [w.lower() for w in name.split() if len(w) > 3][:3]
             key = " ".join(sorted(words))
