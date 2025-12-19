@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { FiUpload, FiFileText, FiTrendingUp, FiList, FiDownload, FiChevronDown, FiChevronUp, FiBarChart2 } from 'react-icons/fi'
+import { FiUpload, FiFileText, FiTrendingUp, FiList, FiDownload, FiChevronDown, FiChevronUp, FiBarChart2, FiPieChart } from 'react-icons/fi'
 import { toast } from 'sonner'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import BusinessEconomicsTab from '../components/analytics/BusinessEconomicsTab'
 
 
 const getDateString = (date) => {
