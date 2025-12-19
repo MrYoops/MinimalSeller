@@ -663,11 +663,8 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
         )}
       </div>
 
-      {/* Marketplace selector hint */}
-      <div className="text-center text-mm-text-secondary text-sm">
-        <FiInfo className="inline mr-2" />
-        Сейчас отображаются данные Ozon. Поддержка WB и Яндекс.Маркет — скоро.
-      </div>
+        </>
+      )}
     </div>
   )
 }
