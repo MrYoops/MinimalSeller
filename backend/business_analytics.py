@@ -1111,8 +1111,8 @@ async def get_products_economics(
         tax_system = profile["tax_settings"].get("system", "usn_6")
     tax_rate = TAX_SYSTEMS.get(tax_system, {}).get("rate", 0.06)
     
-    # Собираем статистику по товарам
-    product_stats = {}  # name_key -> stats
+    # Собираем статистику по товарам - ГРУППИРОВКА ПО SKU (точная)
+    product_stats = {}  # sku -> stats
     
     for op in operations:
         op_type = op.get("operation_type", "")
@@ -1126,20 +1126,20 @@ async def get_products_economics(
         
         for item in items:
             item_name = item.get("name", "")
-            item_sku = item.get("sku", "")
+            item_sku = str(item.get("sku", ""))
             
-            if not item_name:
+            if not item_name or not item_sku:
                 continue
             
-            # Создаём ключ для группировки
-            words = [w.lower() for w in item_name.split() if len(w) > 3][:3]
+            # Используем SKU как ключ (точная группировка!)
+            key = item_sku
+            
+            # Для поиска закупочной цены используем fuzzy по названию
+            words = [w.lower() for w in item_name.split() if len(w) > 3][:5]  # Берём больше слов
             name_key = " ".join(sorted(words))
             
-            if not name_key:
-                name_key = item_name[:50]
-            
-            if name_key not in product_stats:
-                product_stats[name_key] = {
+            if key not in product_stats:
+                product_stats[key] = {
                     "name": item_name,
                     "sku": item_sku,
                     "article": article_by_name.get(name_key, ""),
@@ -1156,7 +1156,7 @@ async def get_products_economics(
                     "postings": set()          # Уникальные заказы
                 }
             
-            stats = product_stats[name_key]
+            stats = product_stats[key]
             stats["postings"].add(posting_number)
             
             # Категоризируем операцию по типу
