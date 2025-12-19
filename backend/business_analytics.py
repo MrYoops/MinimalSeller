@@ -1148,17 +1148,35 @@ async def get_products_economics(
             # Используем SKU как ключ (точная группировка!)
             key = item_sku
             
-            # Для поиска закупочной цены используем fuzzy по названию
-            words = [w.lower() for w in item_name.split() if len(w) > 3][:5]  # Берём больше слов
-            name_key = " ".join(sorted(words))
+            # === ПОИСК ЗАКУПОЧНОЙ ЦЕНЫ (приоритетный порядок) ===
+            purchase_price = 0
+            found_article = ""
+            found_tags = []
+            
+            # 1. ПРИОРИТЕТ: SKU маппинг -> артикул -> цена
+            if item_sku in sku_to_article:
+                article = sku_to_article[item_sku]
+                if article.lower().strip() in price_by_article:
+                    purchase_price = price_by_article[article.lower().strip()]
+                    found_article = article
+                    found_tags = tags_by_article.get(article.lower().strip(), [])
+            
+            # 2. FALLBACK: Поиск по названию
+            if not purchase_price and item_name:
+                words = [w.lower() for w in item_name.split() if len(w) > 3][:3]  # 3 слова для совпадения
+                name_key = " ".join(sorted(words))
+                if name_key in price_by_name:
+                    purchase_price = price_by_name.get(name_key, 0)
+                    found_article = article_by_name.get(name_key, "")
+                    found_tags = tags_by_name.get(name_key, [])
             
             if key not in product_stats:
                 product_stats[key] = {
                     "name": item_name,
                     "sku": item_sku,
-                    "article": article_by_name.get(name_key, ""),
-                    "tags": tags_by_name.get(name_key, []),
-                    "purchase_price": price_by_name.get(name_key, 0),
+                    "article": found_article,
+                    "tags": found_tags,
+                    "purchase_price": purchase_price,
                     "delivered_count": 0,      # Доставлено
                     "returned_count": 0,       # Возвращено
                     "sales_revenue": 0,        # Выручка от продаж
