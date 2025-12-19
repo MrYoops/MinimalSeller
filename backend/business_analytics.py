@@ -1118,8 +1118,9 @@ async def get_products_economics(
         op_type = op.get("operation_type", "")
         amount = op.get("amount", 0)
         items = op.get("items", [])
+        posting_number = op.get("posting", {}).get("posting_number", "")
         
-        # Обрабатываем только продажи и связанные операции
+        # Обрабатываем только операции с товарами
         if not items:
             continue
         
@@ -1144,28 +1145,46 @@ async def get_products_economics(
                     "article": article_by_name.get(name_key, ""),
                     "tags": tags_by_name.get(name_key, []),
                     "purchase_price": price_by_name.get(name_key, 0),
-                    "sales_count": 0,
-                    "returns_count": 0,
-                    "revenue": 0,
-                    "mp_expenses": 0,
-                    "operations": []
+                    "delivered_count": 0,      # Доставлено
+                    "returned_count": 0,       # Возвращено
+                    "sales_revenue": 0,        # Выручка от продаж
+                    "return_costs": 0,         # Потери от возвратов
+                    "commission": 0,           # Комиссии
+                    "logistics": 0,            # Логистика
+                    "other_expenses": 0,       # Прочие расходы
+                    "compensations": 0,        # Компенсации
+                    "postings": set()          # Уникальные заказы
                 }
             
             stats = product_stats[name_key]
+            stats["postings"].add(posting_number)
             
-            # Категоризируем операцию
+            # Категоризируем операцию по типу
             if op_type == "OperationAgentDeliveredToCustomer":
-                stats["sales_count"] += 1
+                stats["delivered_count"] += 1
                 if amount > 0:
-                    stats["revenue"] += amount
-            elif "Return" in op_type:
-                stats["returns_count"] += 1
-            
-            # Расходы (отрицательные суммы)
-            if amount < 0:
-                stats["mp_expenses"] += abs(amount)
-            
-            stats["operations"].append(op_type)
+                    stats["sales_revenue"] += amount
+            elif "ClientReturnAgentOperation" in op_type or op_type == "OperationItemReturn":
+                stats["returned_count"] += 1
+                if amount < 0:
+                    stats["return_costs"] += abs(amount)
+            elif "Commission" in op_type or "Acquiring" in op_type:
+                if amount < 0:
+                    stats["commission"] += abs(amount)
+                else:
+                    stats["compensations"] += amount  # возврат комиссии
+            elif "Logistic" in op_type or "Delivery" in op_type:
+                if amount < 0:
+                    stats["logistics"] += abs(amount)
+                else:
+                    stats["compensations"] += amount
+            elif "Points" in op_type or "Cashback" in op_type:
+                if amount < 0:
+                    stats["other_expenses"] += abs(amount)
+            elif amount < 0:
+                stats["other_expenses"] += abs(amount)
+            elif amount > 0 and op_type != "OperationAgentDeliveredToCustomer":
+                stats["compensations"] += amount
     
     # Рассчитываем финальные метрики для каждого товара
     products_result = []
