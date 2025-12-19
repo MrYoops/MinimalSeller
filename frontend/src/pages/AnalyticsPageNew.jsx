@@ -146,15 +146,26 @@ function OrdersTab({ dateFrom, dateTo, api }) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-mm-gray/50">
-              <tr>
-                <th className="text-left p-4 font-mono text-mm-cyan">ID</th>
-                <th className="text-left p-4 font-mono text-mm-cyan">Статус</th>
-                <th className="text-left p-4 font-mono text-mm-cyan">Товары</th>
-                <th className="text-right p-4 font-mono text-mm-cyan">Сумма</th>
-                <th className="text-right p-4 font-mono text-mm-cyan">Скидка</th>
-                <th className="text-right p-4 font-mono text-mm-cyan">Субсидия ЯМ</th>
-                <th className="text-left p-4 font-mono text-mm-cyan">Регион</th>
-              </tr>
+              {marketplace === 'ozon' ? (
+                <tr>
+                  <th className="text-left p-4 font-mono text-mm-cyan">Номер отправления</th>
+                  <th className="text-left p-4 font-mono text-mm-cyan">Статус</th>
+                  <th className="text-left p-4 font-mono text-mm-cyan">Товары</th>
+                  <th className="text-right p-4 font-mono text-mm-cyan">Выручка</th>
+                  <th className="text-right p-4 font-mono text-mm-cyan">Расходы</th>
+                  <th className="text-right p-4 font-mono text-mm-cyan">Прибыль</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th className="text-left p-4 font-mono text-mm-cyan">ID</th>
+                  <th className="text-left p-4 font-mono text-mm-cyan">Статус</th>
+                  <th className="text-left p-4 font-mono text-mm-cyan">Товары</th>
+                  <th className="text-right p-4 font-mono text-mm-cyan">Сумма</th>
+                  <th className="text-right p-4 font-mono text-mm-cyan">Скидка</th>
+                  <th className="text-right p-4 font-mono text-mm-cyan">Субсидия ЯМ</th>
+                  <th className="text-left p-4 font-mono text-mm-cyan">Регион</th>
+                </tr>
+              )}
             </thead>
             <tbody>
               {loading ? (
