@@ -161,6 +161,9 @@ function AppRoutes() {
         <ProtectedRoute><WithLayout><TransactionsPage /></WithLayout></ProtectedRoute>
       } />
       <Route path="/analytics-reports" element={
+        <ProtectedRoute><WithLayout><AnalyticsPageNew /></WithLayout></ProtectedRoute>
+      } />
+      <Route path="/analytics-old" element={
         <ProtectedRoute><WithLayout><AnalyticsReportsPage /></WithLayout></ProtectedRoute>
       } />
       <Route path="/purchase-prices" element={
