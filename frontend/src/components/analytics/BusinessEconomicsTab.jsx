@@ -316,7 +316,7 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
           </label>
           <button 
             onClick={syncOperations}
-            disabled={syncing}
+            disabled={syncing || activeMarketplace !== 'ozon'}
             className="btn-secondary text-sm px-4 flex items-center gap-2"
             data-testid="sync-operations-btn"
           >
@@ -326,6 +326,140 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
         </div>
       </div>
 
+      {/* YANDEX MARKET SECTION */}
+      {activeMarketplace === 'yandex' && (
+        <>
+          {!yandexData ? (
+            <div className="card-neon p-8 text-center">
+              <FiAlertTriangle className="mx-auto text-yellow-500 mb-4" size={48} />
+              <h3 className="text-lg font-mono text-mm-text mb-2">Яндекс.Маркет не подключен</h3>
+              <p className="text-mm-text-secondary mb-4">
+                Добавьте API ключ Яндекс.Маркета в настройках интеграций
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Yandex Summary cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <SummaryCard
+                  title="Выручка"
+                  value={formatCurrency(yandexData.summary?.revenue || 0)}
+                  change={yandexData.comparison?.changes?.revenue_change_pct}
+                  subtitle="Доставленные заказы"
+                  icon={FiDollarSign}
+                  colorClass="text-green-500"
+                />
+                <SummaryCard
+                  title="До скидки"
+                  value={formatCurrency(yandexData.summary?.revenue_before_discount || 0)}
+                  subtitle={`Скидка: ${formatCurrency(yandexData.summary?.discount_given || 0)}`}
+                  icon={FiTrendingDown}
+                  colorClass="text-orange-500"
+                />
+                <SummaryCard
+                  title="Субсидии от ЯМ"
+                  value={formatCurrency(yandexData.summary?.subsidies_from_yandex || 0)}
+                  subtitle="Компенсации акций"
+                  icon={FiTrendingUp}
+                  colorClass="text-yellow-500"
+                />
+                <SummaryCard
+                  title="Заказы"
+                  value={yandexData.summary?.delivered_orders || 0}
+                  change={yandexData.comparison?.changes?.orders_change_pct}
+                  subtitle={`Всего: ${yandexData.summary?.total_orders || 0}, отменено: ${yandexData.summary?.cancelled_orders || 0}`}
+                  icon={FiShoppingCart}
+                  colorClass="text-blue-500"
+                />
+              </div>
+
+              {/* Orders by status */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="card-neon p-6">
+                  <h4 className="text-mm-cyan font-mono uppercase mb-4 flex items-center gap-2">
+                    <FiPackage size={16} />
+                    ЗАКАЗЫ ПО СТАТУСАМ
+                  </h4>
+                  <div className="space-y-3">
+                    {Object.entries(yandexData.by_status || {}).map(([status, info]) => (
+                      <div key={status} className="flex items-center justify-between p-3 bg-mm-gray/30 rounded">
+                        <div className="flex items-center gap-3">
+                          <span className={`w-2 h-2 rounded-full ${
+                            status === 'DELIVERED' ? 'bg-green-500' :
+                            status === 'PROCESSING' ? 'bg-blue-500' :
+                            status === 'PICKUP' ? 'bg-yellow-500' :
+                            status === 'CANCELLED' ? 'bg-red-500' : 'bg-gray-500'
+                          }`}></span>
+                          <span className="text-mm-text font-mono">
+                            {status === 'DELIVERED' ? 'Доставлено' :
+                             status === 'PROCESSING' ? 'В обработке' :
+                             status === 'PICKUP' ? 'В пункте выдачи' :
+                             status === 'CANCELLED' ? 'Отменено' : status}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-mm-text font-bold">{info.count} шт.</div>
+                          <div className="text-mm-text-secondary text-sm">{formatCurrency(info.revenue)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="card-neon p-6">
+                  <h4 className="text-mm-cyan font-mono uppercase mb-4 flex items-center gap-2">
+                    <FiMapPin size={16} />
+                    ТОП РЕГИОНЫ
+                  </h4>
+                  <div className="space-y-2">
+                    {Object.entries(yandexData.top_regions || {}).map(([region, count]) => (
+                      <div key={region} className="flex items-center justify-between py-2 border-b border-mm-border/50 last:border-0">
+                        <span className="text-mm-text">{region}</span>
+                        <span className="text-mm-cyan font-mono">{count} заказов</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Previous period comparison */}
+              {yandexData.comparison && (
+                <div className="card-neon p-6 bg-mm-gray/20">
+                  <h4 className="text-mm-text-secondary font-mono uppercase mb-3">
+                    Сравнение с периодом {yandexData.comparison.previous_period?.from} — {yandexData.comparison.previous_period?.to}
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <div className="text-mm-text-secondary text-sm">Выручка прошлого периода</div>
+                      <div className="text-xl font-bold text-mm-text">{formatCurrency(yandexData.comparison.changes?.prev_revenue || 0)}</div>
+                    </div>
+                    <div>
+                      <div className="text-mm-text-secondary text-sm">Заказов прошлого периода</div>
+                      <div className="text-xl font-bold text-mm-text">{yandexData.comparison.changes?.prev_orders || 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-mm-text-secondary text-sm">Изменение выручки</div>
+                      <div className={`text-xl font-bold ${yandexData.comparison.changes?.revenue_change_pct >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {formatPercent(yandexData.comparison.changes?.revenue_change_pct || 0)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-mm-text-secondary text-sm">Изменение заказов</div>
+                      <div className={`text-xl font-bold ${yandexData.comparison.changes?.orders_change_pct >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {formatPercent(yandexData.comparison.changes?.orders_change_pct || 0)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* OZON SECTION - Only show when Ozon is active */}
+      {activeMarketplace === 'ozon' && (
+        <>
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SummaryCard
