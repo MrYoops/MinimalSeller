@@ -842,8 +842,8 @@ async def get_ozon_orders(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Получить список заказов Ozon за период.
-    Извлекает заказы из операций продаж (OperationAgentDeliveredToCustomer).
+    Получить список заказов Ozon за период с полным расчётом прибыли.
+    Включает: выручку, расходы МП, себестоимость, налог.
     """
     seller_id = str(current_user["_id"])
     
@@ -864,7 +864,32 @@ async def get_ozon_orders(
         period_end
     )
     
-    # Извлекаем заказы из операций продаж
+    # Загружаем закупочные цены для расчёта себестоимости
+    db = await get_database()
+    products = await db.product_catalog.find(
+        {"seller_id": seller_id, "purchase_price": {"$gt": 0}},
+        {"article": 1, "purchase_price": 1, "name": 1}
+    ).to_list(10000)
+    
+    # Индекс цен по ключевым словам названия
+    price_by_name = {}
+    for p in products:
+        name = p.get("name", "")
+        price = p.get("purchase_price", 0)
+        if name and price > 0:
+            words = [w.lower() for w in name.split() if len(w) > 3][:3]
+            key = " ".join(sorted(words))
+            if key:
+                price_by_name[key] = price
+    
+    # Получаем настройки налога
+    profile = await db.seller_profiles.find_one({"user_id": seller_id})
+    tax_system = "usn_6"
+    if profile and profile.get("tax_settings"):
+        tax_system = profile["tax_settings"].get("system", "usn_6")
+    tax_rate = TAX_SYSTEMS.get(tax_system, {}).get("rate", 0.06)
+    
+    # Извлекаем заказы из операций
     orders = []
     order_map = {}  # posting_number -> order data
     
@@ -888,36 +913,129 @@ async def get_ozon_orders(
             order_map[posting_number] = {
                 "id": posting_number,
                 "posting_number": posting_number,
-                "delivery_type": delivery_schema,  # FBS или FBO
+                "delivery_type": delivery_schema,
                 "items": [],
                 "item_names": [],
-                "revenue": 0,
-                "expenses": 0,
-                "services": [],
+                "item_skus": [],
+                "revenue": 0,          # Выручка (что получили от покупателя)
+                "mp_expenses": 0,      # Расходы маркетплейса (комиссии, логистика)
+                "cogs": 0,             # Себестоимость
                 "status": "DELIVERED" if op_type == "OperationAgentDeliveredToCustomer" else "PROCESSING",
                 "operations": []
             }
         
         order = order_map[posting_number]
         
-        # Добавляем товары
+        # Добавляем товары и считаем себестоимость
         for item in items:
             item_name = item.get("name", "")
+            item_sku = item.get("sku", "")
+            
             if item_name and item_name not in order["item_names"]:
                 order["item_names"].append(item_name)
                 order["items"].append({
-                    "sku": item.get("sku", ""),
+                    "sku": item_sku,
                     "name": item_name
                 })
+                
+                # Ищем себестоимость по названию
+                words = [w.lower() for w in item_name.split() if len(w) > 3][:3]
+                key = " ".join(sorted(words))
+                if key in price_by_name:
+                    order["cogs"] += price_by_name[key]
         
         # Считаем финансы
         if amount > 0:
             order["revenue"] += amount
         else:
-            order["expenses"] += abs(amount)
+            order["mp_expenses"] += abs(amount)
         
         # Статус заказа
         if op_type == "OperationAgentDeliveredToCustomer":
+            order["status"] = "DELIVERED"
+        elif "Return" in op_type:
+            order["status"] = "RETURNED"
+        elif "Cancel" in op_type:
+            order["status"] = "CANCELLED"
+        
+        order["operations"].append({
+            "type": op_type,
+            "amount": amount
+        })
+    
+    # Финализируем заказы
+    for posting_number, order in order_map.items():
+        revenue = order["revenue"]
+        mp_expenses = order["mp_expenses"]
+        cogs = order["cogs"]
+        
+        # Налог считаем от выручки (УСН 6%) или от прибыли (УСН 15%)
+        if tax_system == "usn_6":
+            tax = revenue * tax_rate
+        else:
+            # УСН 15% - от прибыли до налога
+            profit_before_tax = revenue - mp_expenses - cogs
+            tax = max(0, profit_before_tax * tax_rate)
+        
+        # Чистая прибыль
+        net_profit = revenue - mp_expenses - cogs - tax
+        
+        order["tax"] = round(tax, 2)
+        order["profit"] = round(net_profit, 2)
+        order["revenue"] = round(revenue, 2)
+        order["mp_expenses"] = round(mp_expenses, 2)
+        order["cogs"] = round(cogs, 2)
+        order["items_count"] = len(order["items"])
+        
+        # Текст для отображения
+        order["items_text"] = ", ".join(order["item_names"][:2])
+        if len(order["item_names"]) > 2:
+            extra_count = len(order["item_names"]) - 2
+            order["items_text"] += f" (+{extra_count})"
+        
+        orders.append(order)
+    
+    # Сортируем по выручке
+    orders.sort(key=lambda x: x["revenue"], reverse=True)
+    
+    # Статистика
+    total_revenue = sum(o["revenue"] for o in orders)
+    total_mp_expenses = sum(o["mp_expenses"] for o in orders)
+    total_cogs = sum(o["cogs"] for o in orders)
+    total_tax = sum(o["tax"] for o in orders)
+    total_profit = sum(o["profit"] for o in orders)
+    delivered_count = sum(1 for o in orders if o["status"] == "DELIVERED")
+    fbs_count = sum(1 for o in orders if o.get("delivery_type") == "FBS")
+    fbo_count = sum(1 for o in orders if o.get("delivery_type") == "FBO")
+    
+    # Заказы без себестоимости
+    orders_without_cogs = sum(1 for o in orders if o["cogs"] == 0 and o["status"] == "DELIVERED")
+    
+    return {
+        "orders": orders,
+        "summary": {
+            "total_orders": len(orders),
+            "delivered": delivered_count,
+            "fbs_count": fbs_count,
+            "fbo_count": fbo_count,
+            "total_revenue": round(total_revenue, 2),
+            "total_mp_expenses": round(total_mp_expenses, 2),
+            "total_cogs": round(total_cogs, 2),
+            "total_tax": round(total_tax, 2),
+            "total_profit": round(total_profit, 2),
+            "orders_without_cogs": orders_without_cogs
+        },
+        "tax_info": {
+            "system": tax_system,
+            "rate": tax_rate,
+            "name": TAX_SYSTEMS.get(tax_system, {}).get("name", "УСН 6%")
+        },
+        "period": {
+            "from": date_from,
+            "to": date_to
+        },
+        "note": "Прибыль = Выручка - Расходы МП - Себестоимость - Налог"
+    }
             order["status"] = "DELIVERED"
         elif "Return" in op_type:
             order["status"] = "RETURNED"
