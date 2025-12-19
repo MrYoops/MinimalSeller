@@ -747,7 +747,296 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
         )}
       </div>
 
+      {/* Unit Economics по товарам */}
+      <ProductsEconomicsSection dateFrom={dateFrom} dateTo={dateTo} api={api} />
+
         </>
+      )}
+    </div>
+  )
+}
+
+// Компонент Unit Economics по товарам
+function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
+  const [products, setProducts] = useState([])
+  const [summary, setSummary] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const [selectedTag, setSelectedTag] = useState('')
+  const [availableTags, setAvailableTags] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState('profit_asc') // убыточные сверху
+  const [exporting, setExporting] = useState(false)
+
+  const loadProducts = async () => {
+    if (!dateFrom || !dateTo) return
+    setLoading(true)
+    try {
+      const params = { date_from: dateFrom, date_to: dateTo }
+      if (selectedTag) params.tag = selectedTag
+      
+      const response = await api.get('/api/business-analytics/products-economics', { params })
+      setProducts(response.data.products || [])
+      setSummary(response.data.summary || null)
+      setAvailableTags(response.data.available_tags || [])
+    } catch (error) {
+      toast.error('Ошибка загрузки unit economics')
+      console.error(error)
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    if (expanded && dateFrom && dateTo) {
+      loadProducts()
+    }
+  }, [expanded, dateFrom, dateTo, selectedTag])
+
+  // Фильтрация и сортировка
+  const filteredProducts = React.useMemo(() => {
+    let result = [...products]
+    
+    // Поиск
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(p => 
+        p.name?.toLowerCase().includes(query) ||
+        p.article?.toLowerCase().includes(query) ||
+        p.sku?.toLowerCase().includes(query)
+      )
+    }
+    
+    // Сортировка
+    switch (sortBy) {
+      case 'profit_asc':
+        result.sort((a, b) => a.profit - b.profit)
+        break
+      case 'profit_desc':
+        result.sort((a, b) => b.profit - a.profit)
+        break
+      case 'revenue_desc':
+        result.sort((a, b) => b.revenue - a.revenue)
+        break
+      case 'sales_desc':
+        result.sort((a, b) => b.sales_count - a.sales_count)
+        break
+      case 'margin_asc':
+        result.sort((a, b) => a.margin_pct - b.margin_pct)
+        break
+    }
+    
+    return result
+  }, [products, searchQuery, sortBy])
+
+  const exportToExcel = async () => {
+    setExporting(true)
+    try {
+      const params = { date_from: dateFrom, date_to: dateTo }
+      if (selectedTag) params.tag = selectedTag
+      
+      const response = await api.get('/api/business-analytics/products-economics/export', {
+        params,
+        responseType: 'blob'
+      })
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `unit_economics_${dateFrom}_${dateTo}.xlsx`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      toast.success('Отчёт экспортирован')
+    } catch (error) {
+      toast.error('Ошибка экспорта')
+    }
+    setExporting(false)
+  }
+
+  return (
+    <div className="card-neon overflow-hidden">
+      {/* Header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full p-4 flex items-center justify-between text-mm-text hover:bg-mm-gray/20 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <FiPackage size={20} className="text-mm-cyan" />
+          <span className="font-mono uppercase">UNIT ECONOMICS ПО ТОВАРАМ</span>
+          {summary && (
+            <span className="text-sm text-mm-text-secondary">
+              ({summary.total_products} товаров: {summary.profitable} прибыльных, {summary.unprofitable} убыточных)
+            </span>
+          )}
+        </div>
+        {expanded ? <FiChevronUp size={20} /> : <FiChevronDown size={20} />}
+      </button>
+      
+      {expanded && (
+        <div className="p-4 pt-0 border-t border-mm-border space-y-4">
+          {/* Фильтры */}
+          <div className="flex flex-wrap items-center gap-4 pt-4">
+            <input
+              type="text"
+              placeholder="Поиск по названию..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 min-w-[200px] bg-mm-black border border-mm-border rounded px-3 py-2 text-sm focus:border-mm-cyan outline-none"
+            />
+            
+            {availableTags.length > 0 && (
+              <select
+                value={selectedTag}
+                onChange={(e) => setSelectedTag(e.target.value)}
+                className="bg-mm-black border border-mm-border rounded px-3 py-2 text-sm focus:border-mm-cyan outline-none"
+              >
+                <option value="">Все теги</option>
+                {availableTags.map(tag => (
+                  <option key={tag} value={tag}>{tag}</option>
+                ))}
+              </select>
+            )}
+            
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-mm-black border border-mm-border rounded px-3 py-2 text-sm focus:border-mm-cyan outline-none"
+            >
+              <option value="profit_asc">Убыточные сначала</option>
+              <option value="profit_desc">Прибыльные сначала</option>
+              <option value="revenue_desc">По выручке ↓</option>
+              <option value="sales_desc">По продажам ↓</option>
+              <option value="margin_asc">Маржа ↑</option>
+            </select>
+            
+            <button
+              onClick={exportToExcel}
+              disabled={exporting || loading}
+              className="btn-secondary text-sm px-4"
+            >
+              {exporting ? 'Экспорт...' : '📥 Excel'}
+            </button>
+            
+            <button
+              onClick={loadProducts}
+              disabled={loading}
+              className="btn-secondary text-sm px-3"
+            >
+              <FiRefreshCw className={loading ? 'animate-spin' : ''} size={16} />
+            </button>
+          </div>
+          
+          {/* Сводка */}
+          {summary && (
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+              <div className="bg-mm-gray/30 rounded p-3 text-center">
+                <div className="text-lg font-bold text-mm-cyan">{summary.total_products}</div>
+                <div className="text-xs text-mm-text-secondary">Товаров</div>
+              </div>
+              <div className="bg-green-500/10 rounded p-3 text-center">
+                <div className="text-lg font-bold text-green-400">{summary.profitable}</div>
+                <div className="text-xs text-mm-text-secondary">Прибыльных</div>
+              </div>
+              <div className="bg-red-500/10 rounded p-3 text-center">
+                <div className="text-lg font-bold text-red-400">{summary.unprofitable}</div>
+                <div className="text-xs text-mm-text-secondary">Убыточных</div>
+              </div>
+              <div className="bg-yellow-500/10 rounded p-3 text-center">
+                <div className="text-lg font-bold text-yellow-400">{summary.without_cogs}</div>
+                <div className="text-xs text-mm-text-secondary">Без COGS</div>
+              </div>
+              <div className="bg-mm-gray/30 rounded p-3 text-center">
+                <div className="text-lg font-bold text-mm-text">{formatCurrency(summary.total_revenue)}</div>
+                <div className="text-xs text-mm-text-secondary">Выручка</div>
+              </div>
+              <div className={`rounded p-3 text-center ${summary.total_profit >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                <div className={`text-lg font-bold ${summary.total_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {formatCurrency(summary.total_profit)}
+                </div>
+                <div className="text-xs text-mm-text-secondary">Прибыль</div>
+              </div>
+            </div>
+          )}
+          
+          {/* Таблица товаров */}
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-mm-cyan mx-auto"></div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-mm-gray/80">
+                  <tr className="text-mm-cyan">
+                    <th className="text-left p-2 font-mono">Товар</th>
+                    <th className="text-center p-2 font-mono">Прод.</th>
+                    <th className="text-right p-2 font-mono">Закуп.</th>
+                    <th className="text-right p-2 font-mono">Выручка</th>
+                    <th className="text-right p-2 font-mono">Расх.МП</th>
+                    <th className="text-right p-2 font-mono">COGS</th>
+                    <th className="text-right p-2 font-mono">Налог</th>
+                    <th className="text-right p-2 font-mono">Прибыль</th>
+                    <th className="text-right p-2 font-mono">Маржа</th>
+                    <th className="text-right p-2 font-mono">₽/шт</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProducts.map((p, idx) => (
+                    <tr 
+                      key={idx} 
+                      className={`border-t border-mm-border/30 hover:bg-mm-gray/20 ${
+                        p.profit < 0 ? 'bg-red-500/5' : p.profit > 0 ? 'bg-green-500/5' : ''
+                      }`}
+                    >
+                      <td className="p-2">
+                        <div className="max-w-[200px] truncate text-mm-text" title={p.name}>
+                          {p.name}
+                        </div>
+                        <div className="text-mm-text-secondary text-[10px]">
+                          {p.article || p.sku}
+                          {p.tags?.length > 0 && (
+                            <span className="ml-2 text-purple-400">[{p.tags.join(', ')}]</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-2 text-center text-mm-text">{p.sales_count}</td>
+                      <td className={`p-2 text-right font-mono ${p.has_purchase_price ? 'text-mm-text' : 'text-yellow-400'}`}>
+                        {p.purchase_price > 0 ? formatCurrency(p.purchase_price) : '⚠️'}
+                      </td>
+                      <td className="p-2 text-right font-mono text-green-400">
+                        {formatCurrency(p.revenue)}
+                      </td>
+                      <td className="p-2 text-right font-mono text-red-400">
+                        {formatCurrency(p.mp_expenses)}
+                      </td>
+                      <td className="p-2 text-right font-mono text-purple-400">
+                        {formatCurrency(p.cogs)}
+                      </td>
+                      <td className="p-2 text-right font-mono text-orange-400">
+                        {formatCurrency(p.tax)}
+                      </td>
+                      <td className={`p-2 text-right font-mono font-bold ${p.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {formatCurrency(p.profit)}
+                      </td>
+                      <td className={`p-2 text-right font-mono ${p.margin_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {p.margin_pct.toFixed(1)}%
+                      </td>
+                      <td className={`p-2 text-right font-mono ${p.profit_per_unit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {formatCurrency(p.profit_per_unit)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              {filteredProducts.length === 0 && (
+                <div className="text-center py-8 text-mm-text-secondary">
+                  {products.length === 0 ? 'Нет данных о продажах' : 'Нет товаров по фильтру'}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
