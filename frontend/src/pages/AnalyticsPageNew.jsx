@@ -236,9 +236,18 @@ function OrdersTab({ dateFrom, dateTo, api }) {
                 </tr>
               ) : marketplace === 'ozon' ? (
                 // Ozon orders
-                orders.map((order) => (
+                filteredOrders.map((order) => (
                   <tr key={order.id} className="border-t border-mm-border/50 hover:bg-mm-gray/30">
                     <td className="p-4 font-mono text-mm-text text-xs">{order.posting_number}</td>
+                    <td className="p-4 text-center">
+                      <span className={`px-2 py-1 rounded text-xs font-mono ${
+                        order.delivery_type === 'FBO' 
+                          ? 'bg-purple-500/20 text-purple-400' 
+                          : 'bg-blue-500/20 text-blue-400'
+                      }`}>
+                        {order.delivery_type || 'FBS'}
+                      </span>
+                    </td>
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded text-xs ${statusColors[order.status] || 'bg-gray-500/20'}`}>
                         {statusNames[order.status] || order.status}
