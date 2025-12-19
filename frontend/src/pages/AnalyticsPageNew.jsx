@@ -261,8 +261,8 @@ function OrdersTab({ dateFrom, dateTo, api }) {
                 // Ozon orders
                 filteredOrders.map((order) => (
                   <tr key={order.id} className="border-t border-mm-border/50 hover:bg-mm-gray/30">
-                    <td className="p-4 font-mono text-mm-text text-xs">{order.posting_number}</td>
-                    <td className="p-4 text-center">
+                    <td className="p-3 font-mono text-mm-text text-xs">{order.posting_number}</td>
+                    <td className="p-3 text-center">
                       <span className={`px-2 py-1 rounded text-xs font-mono ${
                         order.delivery_type === 'FBO' 
                           ? 'bg-purple-500/20 text-purple-400' 
@@ -271,32 +271,38 @@ function OrdersTab({ dateFrom, dateTo, api }) {
                         {order.delivery_type || 'FBS'}
                       </span>
                     </td>
-                    <td className="p-4">
+                    <td className="p-3">
                       <span className={`px-2 py-1 rounded text-xs ${statusColors[order.status] || 'bg-gray-500/20'}`}>
                         {statusNames[order.status] || order.status}
                       </span>
                     </td>
-                    <td className="p-4">
-                      <div className="max-w-xs">
-                        {order.items?.slice(0, 2).map((item, i) => (
+                    <td className="p-3">
+                      <div className="max-w-[150px]">
+                        {order.items?.slice(0, 1).map((item, i) => (
                           <div key={i} className="text-mm-text text-xs truncate">
                             {item.name}
                           </div>
                         ))}
-                        {order.items?.length > 2 && (
+                        {order.items?.length > 1 && (
                           <div className="text-mm-text-secondary text-xs">
-                            +{order.items.length - 2} ещё
+                            +{order.items.length - 1} ещё
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="p-4 text-right font-mono text-green-400">
+                    <td className="p-3 text-right font-mono text-green-400 text-xs">
                       {formatCurrency(order.revenue)}
                     </td>
-                    <td className="p-4 text-right font-mono text-red-400">
-                      {formatCurrency(order.expenses)}
+                    <td className="p-3 text-right font-mono text-red-400 text-xs">
+                      {formatCurrency(order.mp_expenses)}
                     </td>
-                    <td className={`p-4 text-right font-mono ${order.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <td className={`p-3 text-right font-mono text-xs ${order.cogs > 0 ? 'text-purple-400' : 'text-mm-text-tertiary'}`}>
+                      {order.cogs > 0 ? formatCurrency(order.cogs) : '-'}
+                    </td>
+                    <td className="p-3 text-right font-mono text-orange-400 text-xs">
+                      {formatCurrency(order.tax)}
+                    </td>
+                    <td className={`p-3 text-right font-mono text-xs font-bold ${order.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {formatCurrency(order.profit)}
                     </td>
                   </tr>
