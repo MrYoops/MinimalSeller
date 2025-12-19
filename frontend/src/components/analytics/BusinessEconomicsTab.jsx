@@ -138,6 +138,37 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
   const [compareEnabled, setCompareEnabled] = useState(true)
   const [showDetails, setShowDetails] = useState(false)
   const [detailedOperations, setDetailedOperations] = useState(null)
+  const [showTaxSettings, setShowTaxSettings] = useState(false)
+  const [taxSystems, setTaxSystems] = useState([])
+  const [currentTaxSystem, setCurrentTaxSystem] = useState('usn_6')
+
+  // Load tax systems on mount
+  useEffect(() => {
+    const loadTaxSystems = async () => {
+      try {
+        const response = await api.get('/api/business-analytics/tax-systems')
+        setTaxSystems(response.data.systems || [])
+        
+        const settingsResponse = await api.get('/api/business-analytics/tax-settings')
+        setCurrentTaxSystem(settingsResponse.data.current_system || 'usn_6')
+      } catch (error) {
+        console.error('Error loading tax systems:', error)
+      }
+    }
+    loadTaxSystems()
+  }, [])
+
+  const updateTaxSystem = async (newSystem) => {
+    try {
+      await api.post(`/api/business-analytics/tax-settings?tax_system=${newSystem}`)
+      setCurrentTaxSystem(newSystem)
+      toast.success('Система налогообложения обновлена')
+      // Reload data with new tax
+      loadEconomics()
+    } catch (error) {
+      toast.error('Ошибка сохранения настроек')
+    }
+  }
 
   const loadEconomics = async () => {
     setLoading(true)
