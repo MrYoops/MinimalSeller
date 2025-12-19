@@ -103,7 +103,11 @@ async def fetch_ozon_operations(
     date_from: datetime,
     date_to: datetime
 ) -> List[Dict]:
-    """Fetch all operations from Ozon Finance API"""
+    """
+    Fetch all operations from Ozon Finance API.
+    ВАЖНО: Ozon API ограничивает запрос периодом в 1 месяц (31 день).
+    При необходимости разбиваем период на части.
+    """
     url = "https://api-seller.ozon.ru/v3/finance/transaction/list"
     headers = {
         "Client-Id": client_id,
@@ -112,39 +116,50 @@ async def fetch_ozon_operations(
     }
     
     all_operations = []
-    page = 1
+    
+    # Разбиваем период на части по 30 дней (Ozon ограничивает 1 месяцем)
+    MAX_DAYS = 30
+    current_start = date_from
     
     async with aiohttp.ClientSession() as session:
-        while True:
-            body = {
-                "filter": {
-                    "date": {
-                        "from": date_from.strftime("%Y-%m-%dT00:00:00.000Z"),
-                        "to": date_to.strftime("%Y-%m-%dT23:59:59.999Z")
-                    },
-                    "operation_type": [],
-                    "transaction_type": "all"
-                },
-                "page": page,
-                "page_size": 1000
-            }
+        while current_start < date_to:
+            # Определяем конец текущего периода (максимум 30 дней)
+            current_end = min(current_start + timedelta(days=MAX_DAYS - 1), date_to)
             
-            async with session.post(url, headers=headers, json=body) as resp:
-                if resp.status != 200:
-                    error_text = await resp.text()
-                    raise HTTPException(status_code=resp.status, detail=f"Ozon API error: {error_text}")
+            page = 1
+            while True:
+                body = {
+                    "filter": {
+                        "date": {
+                            "from": current_start.strftime("%Y-%m-%dT00:00:00.000Z"),
+                            "to": current_end.strftime("%Y-%m-%dT23:59:59.999Z")
+                        },
+                        "operation_type": [],
+                        "transaction_type": "all"
+                    },
+                    "page": page,
+                    "page_size": 1000
+                }
                 
-                data = await resp.json()
-                operations = data.get("result", {}).get("operations", [])
-                
-                if not operations:
-                    break
-                
-                all_operations.extend(operations)
-                page += 1
-                
-                if page > 100:
-                    break
+                async with session.post(url, headers=headers, json=body) as resp:
+                    if resp.status != 200:
+                        error_text = await resp.text()
+                        raise HTTPException(status_code=resp.status, detail=f"Ozon API error: {error_text}")
+                    
+                    data = await resp.json()
+                    operations = data.get("result", {}).get("operations", [])
+                    
+                    if not operations:
+                        break
+                    
+                    all_operations.extend(operations)
+                    page += 1
+                    
+                    if page > 100:
+                        break
+            
+            # Переходим к следующему периоду
+            current_start = current_end + timedelta(days=1)
     
     return all_operations
 
