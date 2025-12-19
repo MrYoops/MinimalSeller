@@ -166,7 +166,7 @@ function PurchasePricesPage() {
         { headers: { 'Content-Type': 'multipart/form-data' } }
       )
       setImportResult(response.data)
-      toast.success(`Импорт завершён: обновлено ${response.data.statistics.updated}, создано ${response.data.statistics.created}`)
+      toast.success(`Импорт завершён: обновлено ${response.data.statistics.updated}, не найдено ${response.data.statistics.not_found || 0}`)
       await loadProducts()
     } catch (error) {
       toast.error('Ошибка импорта: ' + (error.response?.data?.detail || error.message))
