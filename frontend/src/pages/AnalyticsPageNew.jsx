@@ -35,6 +35,15 @@ function OrdersTab({ dateFrom, dateTo, api }) {
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(false)
   const [marketplace, setMarketplace] = useState('ozon')
+  const [deliveryFilter, setDeliveryFilter] = useState('all') // 'all', 'FBS', 'FBO'
+
+  // Фильтрация заказов по типу доставки
+  const filteredOrders = React.useMemo(() => {
+    if (deliveryFilter === 'all' || marketplace !== 'ozon') {
+      return orders
+    }
+    return orders.filter(o => o.delivery_type === deliveryFilter)
+  }, [orders, deliveryFilter, marketplace])
 
   const loadOrders = async () => {
     setLoading(true)
