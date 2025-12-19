@@ -201,6 +201,7 @@ function OrdersTab({ dateFrom, dateTo, api }) {
               {marketplace === 'ozon' ? (
                 <tr>
                   <th className="text-left p-4 font-mono text-mm-cyan">Номер отправления</th>
+                  <th className="text-center p-4 font-mono text-mm-cyan">Тип</th>
                   <th className="text-left p-4 font-mono text-mm-cyan">Статус</th>
                   <th className="text-left p-4 font-mono text-mm-cyan">Товары</th>
                   <th className="text-right p-4 font-mono text-mm-cyan">Выручка</th>
