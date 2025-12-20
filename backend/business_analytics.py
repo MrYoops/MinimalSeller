@@ -1264,27 +1264,30 @@ async def get_products_economics(
         delivered = stats["delivered_count"]
         returned = stats["returned_count"]
         
-        # ЧИСТЫЕ ПРОДАЖИ = доставлено - возвращено
-        net_sales = max(0, delivered - returned)
+        # ЧИСТЫЕ ПРОДАЖИ = доставлено (только при положительном балансе)
+        net_sales = max(0, delivered)
         
         # Финансовые показатели
-        sales_revenue = stats["sales_revenue"]         # Выручка от продаж
-        return_costs = stats["return_costs"]           # Возвраты (деньги вернули клиенту)
-        commission = stats["commission"]               # Комиссии
-        logistics = stats["logistics"]                 # Логистика
-        other_expenses = stats["other_expenses"]       # Прочее (баллы и т.д.)
-        compensations = stats["compensations"]         # Компенсации от МП
+        sales_revenue = stats["sales_revenue"]           # Выручка от продаж
+        return_costs = stats["return_costs"]             # Возвраты (деньги вернули клиенту)
+        commission = stats["commission"]                 # Комиссии
+        logistics = stats["logistics"]                   # Логистика
+        defects_penalties = stats.get("defects_penalties", 0)  # Штрафы
+        advertising = stats.get("advertising", 0)        # Реклама
+        other_expenses = stats["other_expenses"]         # Прочее (баллы и т.д.)
+        compensations = stats["compensations"]           # Компенсации от МП
         
         # ЧИСТАЯ ВЫРУЧКА = продажи - возвраты + компенсации
         net_revenue = sales_revenue - return_costs + compensations
         
-        # РАСХОДЫ МП = комиссии + логистика + прочее
-        mp_expenses = commission + logistics + other_expenses
+        # РАСХОДЫ МП = комиссии + логистика + штрафы + реклама + прочее
+        mp_expenses = commission + logistics + defects_penalties + advertising + other_expenses
         
         purchase_price = stats["purchase_price"]
         
         # СЕБЕСТОИМОСТЬ = закупочная цена × ЧИСТЫЕ продажи
-        cogs = purchase_price * net_sales
+        # Применяем ТОЛЬКО к реальным продажам
+        cogs = purchase_price * net_sales if net_sales > 0 else 0
         
         # Налог (от чистой выручки)
         if tax_system == "usn_6":
@@ -1296,14 +1299,30 @@ async def get_products_economics(
         # ЧИСТАЯ ПРИБЫЛЬ = Чистая выручка - Расходы МП - COGS - Налог
         profit = net_revenue - mp_expenses - cogs - tax
         
-        # Маржинальность (от чистой выручки)
-        margin_pct = (profit / net_revenue * 100) if net_revenue > 0 else 0
+        # Маржинальность
+        # Если есть выручка - считаем от выручки
+        # Если нет выручки но есть расходы - показываем 0 или отрицательную
+        if net_revenue > 0:
+            margin_pct = (profit / net_revenue * 100)
+        elif mp_expenses > 0 or return_costs > 0:
+            # Есть расходы без выручки - показываем как убыток
+            margin_pct = -100 if profit < 0 else 0
+        else:
+            margin_pct = 0
+        
+        # Ограничиваем маржу разумными пределами для отображения
+        margin_pct = max(-999, min(999, margin_pct))
         
         # Прибыль на единицу
         profit_per_unit = profit / net_sales if net_sales > 0 else 0
         
-        # Пропускаем товары без активности
-        if delivered == 0 and returned == 0:
+        # ВКЛЮЧАЕМ товары если:
+        # - Были продажи (delivered > 0)
+        # - Были возвраты (returned > 0)
+        # - Были расходы (mp_expenses > 0 или return_costs > 0)
+        has_activity = delivered > 0 or returned > 0 or mp_expenses > 0 or return_costs > 0
+        
+        if not has_activity:
             continue
         
         products_result.append({
@@ -1321,13 +1340,17 @@ async def get_products_economics(
             "mp_expenses": round(mp_expenses, 2),
             "commission": round(commission, 2),
             "logistics": round(logistics, 2),
+            "defects_penalties": round(defects_penalties, 2),
+            "advertising": round(advertising, 2),
+            "other_expenses": round(other_expenses, 2),
+            "compensations": round(compensations, 2),
             "cogs": round(cogs, 2),
             "tax": round(tax, 2),
             "profit": round(profit, 2),
             "margin_pct": round(margin_pct, 1),
             "profit_per_unit": round(profit_per_unit, 2),
             "has_purchase_price": purchase_price > 0,
-            "is_returned": returned >= delivered  # Товар полностью возвращён
+            "is_returned": returned > 0 and delivered == 0  # Только возвраты, без продаж
         })
     
     # Сортируем по прибыли (убыточные сверху)
