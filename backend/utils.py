@@ -85,12 +85,25 @@ def get_quality_level(score: float) -> str:
 def prepare_product_response(product: Dict[str, Any]) -> Dict[str, Any]:
     """
     Подготавливает товар для ответа API.
+    Конвертирует все ObjectId в строки для JSON сериализации.
     """
-    product['id'] = str(product.pop('_id'))
-    product['seller_id'] = str(product['seller_id'])
-    if product.get('category_id'):
-        product['category_id'] = str(product['category_id'])
-    return product
+    from bson import ObjectId
+    from datetime import datetime
+    
+    result = {}
+    for key, value in product.items():
+        if key == '_id':
+            result['id'] = str(value)
+        elif isinstance(value, ObjectId):
+            result[key] = str(value)
+        elif isinstance(value, datetime):
+            result[key] = value.isoformat()
+        elif isinstance(value, dict):
+            # Рекурсивно обрабатываем вложенные словари
+            result[key] = {k: str(v) if isinstance(v, ObjectId) else v for k, v in value.items()}
+        else:
+            result[key] = value
+    return result
 
 def auto_match_products_by_sku(
     local_products: List[Dict[str, Any]], 
