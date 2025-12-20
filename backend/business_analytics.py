@@ -1198,8 +1198,10 @@ async def get_products_economics(
             
             # Категоризируем операцию по типу
             if op_type == "OperationAgentDeliveredToCustomer":
-                stats["delivered_count"] += 1
+                # Считаем доставку ТОЛЬКО при положительной сумме!
+                # Отрицательная сумма = отмена/возврат, не реальная продажа
                 if amount > 0:
+                    stats["delivered_count"] += 1
                     stats["sales_revenue"] += amount
             elif "ClientReturnAgentOperation" in op_type or op_type == "OperationItemReturn":
                 stats["returned_count"] += 1
