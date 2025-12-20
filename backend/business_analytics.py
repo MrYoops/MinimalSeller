@@ -1286,9 +1286,10 @@ async def get_products_economics(
         
         purchase_price = stats["purchase_price"]
         
-        # СЕБЕСТОИМОСТЬ = закупочная цена × ЧИСТЫЕ продажи
-        # Применяем ТОЛЬКО к реальным продажам
-        cogs = purchase_price * net_sales if net_sales > 0 else 0
+        # СЕБЕСТОИМОСТЬ = закупочная цена × количество ДОСТАВЛЕННЫХ
+        # COGS применяется к каждой отправке, независимо от возвратов
+        # (возвращённый товар возвращается на склад, но затраты на закупку уже были)
+        cogs = purchase_price * delivered if delivered > 0 and purchase_price > 0 else 0
         
         # Налог (от чистой выручки)
         if tax_system == "usn_6":
@@ -1300,19 +1301,17 @@ async def get_products_economics(
         # ЧИСТАЯ ПРИБЫЛЬ = Чистая выручка - Расходы МП - COGS - Налог
         profit = net_revenue - mp_expenses - cogs - tax
         
-        # Маржинальность
-        # Если есть выручка - считаем от выручки
-        # Если нет выручки но есть расходы - показываем 0 или отрицательную
-        if net_revenue > 0:
-            margin_pct = (profit / net_revenue * 100)
-        elif mp_expenses > 0 or return_costs > 0:
-            # Есть расходы без выручки - показываем как убыток
-            margin_pct = -100 if profit < 0 else 0
+        # Маржинальность (от выручки продаж, не от чистой выручки)
+        # Это показывает реальную маржу без учёта возвратов
+        if sales_revenue > 0:
+            margin_pct = ((sales_revenue - mp_expenses - cogs) / sales_revenue * 100)
+        elif net_revenue != 0:
+            margin_pct = (profit / abs(net_revenue) * 100) if net_revenue != 0 else 0
         else:
-            margin_pct = 0
+            margin_pct = -100 if profit < 0 else 0
         
-        # Ограничиваем маржу разумными пределами для отображения
-        margin_pct = max(-999, min(999, margin_pct))
+        # Ограничиваем маржу разумными пределами
+        margin_pct = max(-100, min(100, margin_pct))
         
         # Прибыль на единицу
         profit_per_unit = profit / net_sales if net_sales > 0 else 0
