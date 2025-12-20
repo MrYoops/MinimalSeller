@@ -970,7 +970,12 @@ async def get_ozon_orders(
     for posting_number, order in order_map.items():
         revenue = order["revenue"]
         mp_expenses = order["mp_expenses"]
-        cogs = order["cogs"]
+        
+        # COGS применяем ТОЛЬКО к доставленным заказам!
+        if order["status"] == "DELIVERED":
+            cogs = order["cogs"]
+        else:
+            cogs = 0  # Для возвратов, отмен и в обработке - COGS = 0
         
         # Налог считаем от выручки (УСН 6%) или от прибыли (УСН 15%)
         if tax_system == "usn_6":
