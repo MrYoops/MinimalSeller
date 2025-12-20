@@ -778,29 +778,32 @@ async def get_products(
     """Получить список товаров с фильтрацией"""
     query = {}
     
-    # Продавец видит только свои товары
+    # Продавец видит только свои товары (seller_id хранится как строка)
     if current_user['role'] == 'seller':
-        query['seller_id'] = current_user['_id']
+        query['seller_id'] = str(current_user['_id'])
     
-    # Поиск
+    # Поиск по артикулу или названию
     if search:
         query['$or'] = [
-            {'sku': {'$regex': search, '$options': 'i'}},
-            {'minimalmod.name': {'$regex': search, '$options': 'i'}}
+            {'article': {'$regex': search, '$options': 'i'}},
+            {'name': {'$regex': search, '$options': 'i'}},
+            {'sku': {'$regex': search, '$options': 'i'}}
         ]
     
     # Фильтры
     if category_id:
-        query['category_id'] = ObjectId(category_id)
+        query['category_id'] = category_id
     
     if tags:
         tag_list = [t.strip() for t in tags.split(',')]
-        query['minimalmod.tags'] = {'$in': tag_list}
+        query['tags'] = {'$in': tag_list}
     
     if status:
         query['status'] = status
     
-    products = await db.products.find(query).skip(skip).limit(limit).to_list(length=limit)
+    # Используем коллекцию product_catalog (не products!)
+    total = await db.product_catalog.count_documents(query)
+    products = await db.product_catalog.find(query).skip(skip).limit(limit).to_list(length=limit)
     
     # Фильтр по качеству
     if quality:
@@ -815,7 +818,12 @@ async def get_products(
                 filtered.append(p)
         products = filtered
     
-    return [prepare_product_response(p) for p in products]
+    return {
+        "products": [prepare_product_response(p) for p in products],
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 @app.get("/api/products/{product_id}")
 async def get_product(
