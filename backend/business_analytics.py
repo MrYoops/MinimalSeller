@@ -1182,48 +1182,76 @@ async def get_products_economics(
                     "article": found_article,
                     "tags": found_tags,
                     "purchase_price": purchase_price,
-                    "delivered_count": 0,      # Доставлено
+                    "delivered_count": 0,      # Доставлено (реальные продажи)
                     "returned_count": 0,       # Возвращено
                     "sales_revenue": 0,        # Выручка от продаж
                     "return_costs": 0,         # Потери от возвратов
-                    "commission": 0,           # Комиссии
-                    "logistics": 0,            # Логистика
-                    "other_expenses": 0,       # Прочие расходы
-                    "compensations": 0,        # Компенсации
+                    "commission": 0,           # Комиссии (Acquiring, Commission, AgencyFee)
+                    "logistics": 0,            # Логистика (Delivery, Redistribution, Storage, Crossdocking)
+                    "defects_penalties": 0,    # Штрафы (DefectRate, Cancellation, ShipmentDelay)
+                    "advertising": 0,          # Реклама (CostPerClick, Promotion)
+                    "other_expenses": 0,       # Прочие расходы (Cashback, Points, Premium, Stencil)
+                    "compensations": 0,        # Компенсации (положительные суммы кроме продаж)
                     "postings": set()          # Уникальные заказы
                 }
             
             stats = product_stats[key]
             stats["postings"].add(posting_number)
             
-            # Категоризируем операцию по типу
+            # === КАТЕГОРИЗАЦИЯ ОПЕРАЦИЙ ===
+            
+            # 1. ПРОДАЖИ (только положительные суммы)
             if op_type == "OperationAgentDeliveredToCustomer":
-                # Считаем доставку ТОЛЬКО при положительной сумме!
-                # Отрицательная сумма = отмена/возврат, не реальная продажа
                 if amount > 0:
                     stats["delivered_count"] += 1
                     stats["sales_revenue"] += amount
-            elif "ClientReturnAgentOperation" in op_type or op_type == "OperationItemReturn":
-                stats["returned_count"] += 1
+                # Отрицательные суммы - это отмены, не учитываем как продажи
+            
+            # 2. ВОЗВРАТЫ
+            elif "ClientReturnAgentOperation" in op_type or "Return" in op_type:
                 if amount < 0:
+                    stats["returned_count"] += 1
                     stats["return_costs"] += abs(amount)
-            elif "Commission" in op_type or "Acquiring" in op_type:
+                elif amount > 0:
+                    stats["compensations"] += amount  # компенсация за возврат
+            
+            # 3. КОМИССИИ (Acquiring, Commission, AgencyFee, BrandCommission)
+            elif any(x in op_type for x in ["Acquiring", "Commission", "AgencyFee", "BrandCommission"]):
                 if amount < 0:
                     stats["commission"] += abs(amount)
                 else:
                     stats["compensations"] += amount  # возврат комиссии
-            elif "Logistic" in op_type or "Delivery" in op_type:
+            
+            # 4. ЛОГИСТИКА (Delivery, Redistribution, Storage, Crossdocking, Logistic)
+            elif any(x in op_type for x in ["Delivery", "Redistribution", "Storage", "Crossdocking", "Logistic"]):
                 if amount < 0:
                     stats["logistics"] += abs(amount)
                 else:
                     stats["compensations"] += amount
-            elif "Points" in op_type or "Cashback" in op_type:
+            
+            # 5. ШТРАФЫ И ДЕФЕКТЫ (DefectRate, Cancellation, ShipmentDelay)
+            elif any(x in op_type for x in ["DefectRate", "Cancellation", "ShipmentDelay"]):
+                if amount < 0:
+                    stats["defects_penalties"] += abs(amount)
+                else:
+                    stats["compensations"] += amount
+            
+            # 6. РЕКЛАМА (CostPerClick, Promotion)
+            elif any(x in op_type for x in ["CostPerClick", "Promotion"]):
+                if amount < 0:
+                    stats["advertising"] += abs(amount)
+            
+            # 7. ПРОЧИЕ РАСХОДЫ (Cashback, Points, Premium, Stencil, Installment, FlexiblePayment)
+            elif any(x in op_type for x in ["Cashback", "Points", "Premium", "Stencil", "Installment", "FlexiblePayment", "PartialCompensation", "EarlyPayment"]):
                 if amount < 0:
                     stats["other_expenses"] += abs(amount)
-            elif amount < 0:
-                stats["other_expenses"] += abs(amount)
-            elif amount > 0 and op_type != "OperationAgentDeliveredToCustomer":
-                stats["compensations"] += amount
+            
+            # 8. ПРОЧЕЕ (неизвестные типы)
+            else:
+                if amount < 0:
+                    stats["other_expenses"] += abs(amount)
+                elif amount > 0:
+                    stats["compensations"] += amount
     
     # Рассчитываем финальные метрики для каждого товара
     products_result = []
