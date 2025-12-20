@@ -1264,8 +1264,9 @@ async def get_products_economics(
         delivered = stats["delivered_count"]
         returned = stats["returned_count"]
         
-        # ЧИСТЫЕ ПРОДАЖИ = доставлено (только при положительном балансе)
-        net_sales = max(0, delivered)
+        # ЧИСТЫЕ ПРОДАЖИ = delivered - returned (не может быть меньше 0)
+        # Если возвратов больше чем продаж - чистые продажи = 0
+        net_sales = max(0, delivered - returned)
         
         # Финансовые показатели
         sales_revenue = stats["sales_revenue"]           # Выручка от продаж
