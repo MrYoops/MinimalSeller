@@ -971,10 +971,9 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
                     <th className="text-left p-2 font-mono">Товар</th>
                     <th className="text-center p-2 font-mono">Прод.</th>
                     <th className="text-center p-2 font-mono">Возвр.</th>
-                    <th className="text-right p-2 font-mono">Закуп.</th>
                     <th className="text-right p-2 font-mono">Выручка</th>
                     <th className="text-right p-2 font-mono">Расх.МП</th>
-                    <th className="text-right p-2 font-mono">COGS</th>
+                    <th className="text-right p-2 font-mono">Себест.</th>
                     <th className="text-right p-2 font-mono">Налог</th>
                     <th className="text-right p-2 font-mono">Прибыль</th>
                     <th className="text-right p-2 font-mono">Маржа</th>
