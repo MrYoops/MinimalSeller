@@ -1007,17 +1007,14 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
                       <td className={`p-2 text-center ${p.returned > 0 ? 'text-orange-400' : 'text-mm-text-tertiary'}`}>
                         {p.returned || 0}
                       </td>
-                      <td className={`p-2 text-right font-mono ${p.has_purchase_price ? 'text-mm-text' : 'text-yellow-400'}`}>
-                        {p.purchase_price > 0 ? formatCurrency(p.purchase_price) : '⚠️'}
-                      </td>
                       <td className="p-2 text-right font-mono text-green-400">
                         {formatCurrency(p.revenue)}
                       </td>
                       <td className="p-2 text-right font-mono text-red-400">
                         {formatCurrency(p.mp_expenses)}
                       </td>
-                      <td className="p-2 text-right font-mono text-purple-400">
-                        {formatCurrency(p.cogs)}
+                      <td className={`p-2 text-right font-mono ${p.cogs > 0 ? 'text-purple-400' : 'text-mm-text-tertiary'}`}>
+                        {p.cogs > 0 ? formatCurrency(p.cogs) : (p.has_purchase_price ? '—' : '⚠️')}
                       </td>
                       <td className="p-2 text-right font-mono text-orange-400">
                         {formatCurrency(p.tax)}
