@@ -492,12 +492,12 @@ class ProductCatalogResponse(BaseModel):
     label_name: Optional[str] = None
     
     # Цены (на уровне товара, как в SelSup)
-    price_with_discount: int = 0
-    price_without_discount: int = 0
+    price_with_discount: float = 0
+    price_without_discount: float = 0
     price_coefficient: float = 1.0
-    purchase_price: int = 0
-    additional_expenses: int = 0
-    cost_price: int = 0
+    purchase_price: float = 0
+    additional_expenses: float = 0
+    cost_price: float = 0
     vat: int = 0
     
     # Коммерческие атрибуты (старые поля для совместимости)
