@@ -1301,16 +1301,16 @@ async def get_products_economics(
         # ЧИСТАЯ ПРИБЫЛЬ = Чистая выручка - Расходы МП - COGS - Налог
         profit = net_revenue - mp_expenses - cogs - tax
         
-        # Маржинальность (от выручки продаж, не от чистой выручки)
-        # Это показывает реальную маржу без учёта возвратов
+        # Маржинальность = Прибыль / (Выручка продаж) × 100
+        # Показывает какой процент от продаж остаётся после всех расходов
         if sales_revenue > 0:
-            margin_pct = ((sales_revenue - mp_expenses - cogs) / sales_revenue * 100)
+            margin_pct = (profit / sales_revenue * 100)
         elif net_revenue != 0:
-            margin_pct = (profit / abs(net_revenue) * 100) if net_revenue != 0 else 0
+            margin_pct = (profit / abs(net_revenue) * 100)
         else:
             margin_pct = -100 if profit < 0 else 0
         
-        # Ограничиваем маржу разумными пределами
+        # Ограничиваем маржу разумными пределами (-100% ... +100%)
         margin_pct = max(-100, min(100, margin_pct))
         
         # Прибыль на единицу
