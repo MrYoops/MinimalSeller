@@ -1439,14 +1439,23 @@ async def get_products_economics(
     
     db = await get_database()
     
-    # Определяем период для отчёта о реализации
-    report_period = f"{period_start.year}-{period_start.month:02d}"
+    # Определяем все месяцы в периоде
+    report_periods = []
+    current = period_start.replace(day=1)
+    while current <= period_end:
+        report_periods.append(f"{current.year}-{current.month:02d}")
+        # Переходим к следующему месяцу
+        if current.month == 12:
+            current = current.replace(year=current.year + 1, month=1)
+        else:
+            current = current.replace(month=current.month + 1)
     
     # ПРИОРИТЕТ 1: Данные из отчёта о реализации (самые точные!)
+    # Загружаем данные за ВСЕ месяцы периода
     sales_report_data = await db.sales_report.find({
         "seller_id": seller_id,
-        "report_period": report_period
-    }).to_list(10000)
+        "report_period": {"$in": report_periods}
+    }).to_list(50000)
     
     if sales_report_data:
         # Используем данные из отчёта о реализации
