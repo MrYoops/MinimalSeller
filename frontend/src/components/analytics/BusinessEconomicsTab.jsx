@@ -760,6 +760,7 @@ export default function BusinessEconomicsTab({ dateFrom, dateTo }) {
 function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
   const [products, setProducts] = useState([])
   const [summary, setSummary] = useState(null)
+  const [generalExpenses, setGeneralExpenses] = useState(null)
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [selectedTag, setSelectedTag] = useState('')
@@ -778,6 +779,7 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
       const response = await api.get('/api/business-analytics/products-economics', { params })
       setProducts(response.data.products || [])
       setSummary(response.data.summary || null)
+      setGeneralExpenses(response.data.general_expenses || null)
       setAvailableTags(response.data.available_tags || [])
     } catch (error) {
       toast.error('Ошибка загрузки unit economics')
