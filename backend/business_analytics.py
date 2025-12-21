@@ -1199,6 +1199,7 @@ async def get_products_economics(
             stats["postings"].add(posting_number)
             
             # === КАТЕГОРИЗАЦИЯ ОПЕРАЦИЙ ===
+            # ВАЖНО: Правильное разделение типов возвратов!
             
             # 1. ПРОДАЖИ (только положительные суммы)
             if op_type == "OperationAgentDeliveredToCustomer":
@@ -1207,46 +1208,57 @@ async def get_products_economics(
                     stats["sales_revenue"] += amount
                 # Отрицательные суммы - это отмены, не учитываем как продажи
             
-            # 2. ВОЗВРАТЫ
-            elif "ClientReturnAgentOperation" in op_type or "Return" in op_type:
+            # 2. РЕАЛЬНЫЕ ВОЗВРАТЫ ТОВАРА (когда клиент вернул товар и получил деньги)
+            # ClientReturnAgentOperation = возврат денег клиенту за товар
+            # OperationItemReturn = возврат товара (когда товар не был выкуплен)
+            elif op_type in ("ClientReturnAgentOperation", "OperationItemReturn"):
                 if amount < 0:
                     stats["returned_count"] += 1
                     stats["return_costs"] += abs(amount)
                 elif amount > 0:
                     stats["compensations"] += amount  # компенсация за возврат
             
-            # 3. КОМИССИИ (Acquiring, Commission, AgencyFee, BrandCommission)
+            # 3. ЛОГИСТИКА ВОЗВРАТА (НЕ СЧИТАЕТСЯ КАК ВОЗВРАТ ТОВАРА!)
+            # OperationReturnGoodsFBSofRMS = расходы на логистику возврата FBS
+            # MarketplaceServiceItemReturnFlowLogistic = логистика возврата
+            elif op_type == "OperationReturnGoodsFBSofRMS" or "ReturnFlow" in op_type or "ReturnLogistic" in op_type:
+                if amount < 0:
+                    stats["logistics"] += abs(amount)  # Это ЛОГИСТИКА, не возврат товара!
+                elif amount > 0:
+                    stats["compensations"] += amount
+            
+            # 4. КОМИССИИ (Acquiring, Commission, AgencyFee, BrandCommission)
             elif any(x in op_type for x in ["Acquiring", "Commission", "AgencyFee", "BrandCommission"]):
                 if amount < 0:
                     stats["commission"] += abs(amount)
                 else:
                     stats["compensations"] += amount  # возврат комиссии
             
-            # 4. ЛОГИСТИКА (Delivery, Redistribution, Storage, Crossdocking, Logistic)
+            # 5. ЛОГИСТИКА (Delivery, Redistribution, Storage, Crossdocking, Logistic)
             elif any(x in op_type for x in ["Delivery", "Redistribution", "Storage", "Crossdocking", "Logistic"]):
                 if amount < 0:
                     stats["logistics"] += abs(amount)
                 else:
                     stats["compensations"] += amount
             
-            # 5. ШТРАФЫ И ДЕФЕКТЫ (DefectRate, Cancellation, ShipmentDelay)
+            # 6. ШТРАФЫ И ДЕФЕКТЫ (DefectRate, Cancellation, ShipmentDelay)
             elif any(x in op_type for x in ["DefectRate", "Cancellation", "ShipmentDelay"]):
                 if amount < 0:
                     stats["defects_penalties"] += abs(amount)
                 else:
                     stats["compensations"] += amount
             
-            # 6. РЕКЛАМА (CostPerClick, Promotion)
+            # 7. РЕКЛАМА (CostPerClick, Promotion)
             elif any(x in op_type for x in ["CostPerClick", "Promotion"]):
                 if amount < 0:
                     stats["advertising"] += abs(amount)
             
-            # 7. ПРОЧИЕ РАСХОДЫ (Cashback, Points, Premium, Stencil, Installment, FlexiblePayment)
+            # 8. ПРОЧИЕ РАСХОДЫ (Cashback, Points, Premium, Stencil, Installment, FlexiblePayment)
             elif any(x in op_type for x in ["Cashback", "Points", "Premium", "Stencil", "Installment", "FlexiblePayment", "PartialCompensation", "EarlyPayment"]):
                 if amount < 0:
                     stats["other_expenses"] += abs(amount)
             
-            # 8. ПРОЧЕЕ (неизвестные типы)
+            # 9. ПРОЧЕЕ (неизвестные типы)
             else:
                 if amount < 0:
                     stats["other_expenses"] += abs(amount)
