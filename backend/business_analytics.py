@@ -1298,10 +1298,11 @@ async def get_products_economics(
         
         purchase_price = stats["purchase_price"]
         
-        # СЕБЕСТОИМОСТЬ = закупочная цена × количество ДОСТАВЛЕННЫХ
-        # COGS применяется к каждой отправке, независимо от возвратов
-        # (возвращённый товар возвращается на склад, но затраты на закупку уже были)
-        cogs = purchase_price * delivered if delivered > 0 and purchase_price > 0 else 0
+        # СЕБЕСТОИМОСТЬ = закупочная цена × ЧИСТЫЕ ПРОДАЖИ (delivered - returned)
+        # Логика: возвращённый товар возвращается на склад, его себестоимость не теряется
+        # COGS применяется только к товарам, которые реально остались у клиента
+        actual_sold = max(0, delivered - returned)  # Чистые продажи (не может быть отрицательным)
+        cogs = purchase_price * actual_sold if actual_sold > 0 and purchase_price > 0 else 0
         
         # Налог (от чистой выручки)
         if tax_system == "usn_6":
