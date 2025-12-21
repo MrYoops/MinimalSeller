@@ -376,6 +376,9 @@ async def sync_realization(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка синхронизации: {str(e)}")
+
+
+async def fetch_ozon_operations(
     client_id: str,
     api_key: str,
     date_from: datetime,
