@@ -236,7 +236,7 @@
 
 ### 2. Откройте систему
 
-URL: https://sellermetrics-2.preview.emergentagent.com/analytics-reports
+URL: https://uniteco-report.preview.emergentagent.com/analytics-reports
 
 Логин: seller@test.com
 Пароль: password123
