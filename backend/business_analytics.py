@@ -397,6 +397,8 @@ async def get_business_economics(
     """
     Get complete business economics report with proper categorization.
     Shows income, expenses breakdown, and optionally comparison with previous period.
+    
+    Использует кэшированные данные из базы для стабильной работы.
     """
     seller_id = str(current_user["_id"])
     
@@ -406,16 +408,32 @@ async def get_business_economics(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format")
     
-    # Get credentials
-    credentials = await get_ozon_credentials(seller_id)
+    db = await get_database()
     
-    # Fetch current period data
-    operations = await fetch_ozon_operations(
-        credentials["client_id"],
-        credentials["api_key"],
-        period_start,
-        period_end
-    )
+    # Получаем данные из КЭША (база данных)
+    operations = await db.ozon_operations.find({
+        "seller_id": seller_id,
+        "operation_date": {
+            "$gte": period_start,
+            "$lte": period_end
+        }
+    }).to_list(50000)
+    
+    # Если в кэше нет данных, пробуем загрузить из API
+    if not operations:
+        try:
+            credentials = await get_ozon_credentials(seller_id)
+            operations = await fetch_ozon_operations(
+                credentials["client_id"],
+                credentials["api_key"],
+                period_start,
+                period_end
+            )
+        except Exception:
+            # Если API недоступен, используем все данные из кэша
+            operations = await db.ozon_operations.find({
+                "seller_id": seller_id
+            }).to_list(50000)
     
     # Categorize
     current_data = categorize_operations(operations)
