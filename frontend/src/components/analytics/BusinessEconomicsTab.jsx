@@ -781,6 +781,7 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
       setProducts(response.data.products || [])
       setSummary(response.data.summary || null)
       setGeneralExpenses(response.data.general_expenses || null)
+      setProductsEconomics(response.data)
       setAvailableTags(response.data.available_tags || [])
     } catch (error) {
       toast.error('Ошибка загрузки unit economics')
