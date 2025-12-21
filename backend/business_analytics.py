@@ -1123,8 +1123,21 @@ async def get_products_economics(
     
     db = await get_database()
     
+    # Определяем период для отчёта о реализации
+    report_period = f"{period_start.year}-{period_start.month:02d}"
+    
+    # ПРИОРИТЕТ 1: Данные из отчёта о реализации (самые точные!)
+    sales_report_data = await db.sales_report.find({
+        "seller_id": seller_id,
+        "report_period": report_period
+    }).to_list(10000)
+    
+    if sales_report_data:
+        # Используем данные из отчёта о реализации
+        return await _calculate_from_sales_report(db, seller_id, sales_report_data, tag, period_start, period_end, date_from, date_to)
+    
+    # ПРИОРИТЕТ 2: Данные из Finance API (менее точные)
     # Получаем операции из КЭША (база данных), а не напрямую из API
-    # Это обеспечивает стабильную работу даже когда Ozon API недоступен
     operations = await db.ozon_operations.find({
         "seller_id": seller_id,
         "operation_date": {
