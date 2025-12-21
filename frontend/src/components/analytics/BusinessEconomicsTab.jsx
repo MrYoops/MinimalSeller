@@ -761,6 +761,7 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
   const [products, setProducts] = useState([])
   const [summary, setSummary] = useState(null)
   const [generalExpenses, setGeneralExpenses] = useState(null)
+  const [productsEconomics, setProductsEconomics] = useState(null)
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [selectedTag, setSelectedTag] = useState('')
