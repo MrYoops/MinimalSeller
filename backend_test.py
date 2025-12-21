@@ -10,7 +10,7 @@ import sys
 from typing import Dict, Any, Optional
 
 # Backend URL from frontend .env
-BACKEND_URL = "https://uniteco-report.preview.emergentagent.com/api"
+BACKEND_URL = "https://profit-tracker-fix.preview.emergentagent.com/api"
 
 # Test credentials from review request
 TEST_SELLER_EMAIL = "seller@test.com"

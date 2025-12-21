@@ -217,7 +217,7 @@
   ],
   
   "testing_notes": {
-    "environment": "Production (https://uniteco-report.preview.emergentagent.com)",
+    "environment": "Production (https://profit-tracker-fix.preview.emergentagent.com)",
     "test_user": "seller@test.com",
     "test_data": "10 Ozon FBS orders imported from real Ozon API",
     "browser": "Chromium (Playwright)",

@@ -236,7 +236,7 @@
 
 ### 2. Откройте систему
 
-URL: https://uniteco-report.preview.emergentagent.com/analytics-reports
+URL: https://profit-tracker-fix.preview.emergentagent.com/analytics-reports
 
 Логин: seller@test.com
 Пароль: password123
