@@ -568,7 +568,8 @@ async def get_business_economics(
     Get complete business economics report with proper categorization.
     Shows income, expenses breakdown, and optionally comparison with previous period.
     
-    Использует кэшированные данные из базы для стабильной работы.
+    ТЕПЕРЬ ИСПОЛЬЗУЕТ ТУ ЖЕ ГИБРИДНУЮ МОДЕЛЬ что и /products-economics!
+    Источник данных: Sales Report (Отчёт о реализации) + Finance API
     """
     seller_id = str(current_user["_id"])
     
@@ -580,209 +581,283 @@ async def get_business_economics(
     
     db = await get_database()
     
-    # Получаем данные из КЭША (база данных)
-    operations = await db.ozon_operations.find({
+    # Определяем все месяцы в периоде (для загрузки Sales Reports)
+    report_periods = []
+    current = period_start.replace(day=1)
+    while current <= period_end:
+        report_periods.append(f"{current.year}-{current.month:02d}")
+        # Переходим к следующему месяцу
+        if current.month == 12:
+            current = current.replace(year=current.year + 1, month=1)
+        else:
+            current = current.replace(month=current.month + 1)
+    
+    # ПРИОРИТЕТ 1: Данные из отчёта о реализации (самые точные!)
+    sales_data = await db.sales_report.find({
         "seller_id": seller_id,
-        "operation_date": {
-            "$gte": period_start,
-            "$lte": period_end
-        }
+        "report_period": {"$in": report_periods}
     }).to_list(50000)
     
-    # Если в кэше нет данных, пробуем загрузить из API
-    if not operations:
-        try:
-            credentials = await get_ozon_credentials(seller_id)
-            operations = await fetch_ozon_operations(
-                credentials["client_id"],
-                credentials["api_key"],
-                period_start,
-                period_end
-            )
-        except Exception:
-            # Если API недоступен, используем все данные из кэша
-            operations = await db.ozon_operations.find({
-                "seller_id": seller_id
-            }).to_list(50000)
-    
-    # Categorize
-    current_data = categorize_operations(operations)
-    
-    # Рассчитываем себестоимость проданных товаров (COGS)
-    cogs_data = await calculate_cogs(operations, seller_id)
-    total_cogs = cogs_data["total_cogs"]
-    
-    # Calculate key metrics using RAW totals (точные данные из API)
-    raw = current_data["raw_totals"]
-    gross_income = raw["positive_sum"]       # Все поступления
-    total_mp_expenses = abs(raw["negative_sum"]) # Расходы маркетплейса (в abs)
-    total_expenses = total_mp_expenses + total_cogs  # Общие расходы = МП + COGS
-    net_profit_before_tax = raw["net_total"] - total_cogs  # Прибыль ДО налогов (минус COGS!)
-    margin_pct = (net_profit_before_tax / gross_income * 100) if gross_income > 0 else 0
-    
-    # Получаем настройки налогообложения из профиля продавца
-    db = await get_database()
-    from bson import ObjectId
-    profile = await db.seller_profiles.find_one({"user_id": seller_id})
-    if not profile:
-        try:
-            profile = await db.seller_profiles.find_one({"user_id": ObjectId(seller_id)})
-        except:
-            pass
-    
-    tax_system = profile.get("tax_system", "usn_6") if profile else "usn_6"
-    
-    # Расчёт налогов по системе налогообложения
-    tax_rates = {
-        "usn_6": {"name": "УСН 6% (доходы)", "rate": 0.06, "base": "income"},
-        "usn_15": {"name": "УСН 15% (доходы-расходы)", "rate": 0.15, "base": "profit"},
-        "osn": {"name": "ОСН (20% НДС + 13% прибыль)", "rate": 0.20, "base": "profit"},
-        "patent": {"name": "Патент", "rate": 0, "base": "fixed"},
-        "self_employed": {"name": "Самозанятый 6%", "rate": 0.06, "base": "income"}
-    }
-    
-    tax_info = tax_rates.get(tax_system, tax_rates["usn_6"])
-    
-    if tax_info["base"] == "income":
-        tax_amount = gross_income * tax_info["rate"]
-    elif tax_info["base"] == "profit":
-        tax_amount = max(0, net_profit_before_tax) * tax_info["rate"]
-    else:
-        tax_amount = 0  # Патент - фиксированный платёж
-    
-    net_profit = net_profit_before_tax - tax_amount  # Чистая прибыль ПОСЛЕ налогов
-    
-    result = {
-        "period": {
-            "from": date_from,
-            "to": date_to,
-            "days": (period_end - period_start).days + 1
-        },
-        "summary": {
-            "gross_income": round(gross_income, 2),
-            "total_expenses": round(total_expenses, 2),
-            "cogs": round(total_cogs, 2),  # Себестоимость проданных товаров
-            "mp_expenses": round(total_mp_expenses, 2),  # Расходы маркетплейса
-            "profit_before_tax": round(net_profit_before_tax, 2),
-            "tax_amount": round(tax_amount, 2),
-            "net_profit": round(net_profit, 2),
-            "margin_pct": round(margin_pct, 2)
-        },
-        "cogs_info": {
-            "total": round(total_cogs, 2),
-            "items_with_cogs": cogs_data["items_with_cogs"],
-            "items_without_cogs": cogs_data["items_without_cogs"],
-            "coverage_pct": cogs_data["coverage_pct"],
-            "note": "Себестоимость рассчитана по закупочным ценам из каталога"
-        },
-        "tax_info": {
-            "system": tax_system,
-            "name": tax_info["name"],
-            "rate": tax_info["rate"],
-            "tax_amount": round(tax_amount, 2)
-        },
-        # Также добавим сырые данные для проверки
-        "raw_data_check": {
-            "positive_operations": round(raw["positive_sum"], 2),
-            "negative_operations": round(raw["negative_sum"], 2),
-            "mp_profit_before_cogs": round(raw["net_total"], 2),
-            "cogs_total": round(total_cogs, 2),
-            "calculated_profit": round(raw["net_total"] - total_cogs, 2),
-            "note": "Прибыль = Доходы - Расходы МП - Себестоимость"
-        },
-        "income_breakdown": {
-            "sales": round(current_data["income"]["sales"], 2),
-            "compensations": round(current_data["income"]["compensations"], 2),
-            "other": round(current_data["income"]["other"], 2)
-        },
-        "expense_breakdown": {
-            "returns": {
-                "amount": round(current_data["expense"]["returns"], 2),
-                "name": "Возвраты средств"
-            },
-            "penalties": {
-                "amount": round(current_data["expense"]["penalties"], 2),
-                "name": "Штрафы (дефект-рейт)"
-            },
-            "loyalty_points": {
-                "amount": round(current_data["expense"]["loyalty_points"], 2),
-                "name": "Баллы и кэшбэк"
-            },
-            "subscription": {
-                "amount": round(current_data["expense"]["subscription"], 2),
-                "name": "Подписка Premium"
-            },
-            "storage": {
-                "amount": round(current_data["expense"]["storage"], 2),
-                "name": "Хранение"
-            },
-            "acquiring": {
-                "amount": round(current_data["expense"]["acquiring"], 2),
-                "name": "Эквайринг"
-            },
-            "early_payment": {
-                "amount": round(current_data["expense"]["early_payment"], 2),
-                "name": "Комиссия за раннюю выплату"
-            },
-            "logistics": {
-                "amount": round(current_data["expense"]["logistics"], 2),
-                "name": "Логистика"
-            },
-            "client_compensation": {
-                "amount": round(current_data["expense"]["client_compensation"], 2),
-                "name": "Компенсации клиентам"
-            },
-            "other": {
-                "amount": round(current_data["expense"]["other"], 2),
-                "name": "Прочие расходы"
-            }
-        },
-        "operations_count": len(operations)
-    }
-    
-    # Add comparison with previous period if requested
-    if compare_previous:
-        period_days = (period_end - period_start).days + 1
-        prev_start = period_start - timedelta(days=period_days)
-        prev_end = period_start - timedelta(days=1)
+    # Если есть Sales Report - используем гибридную модель
+    if sales_data:
+        # Вызываем ту же функцию что используется в /products-economics
+        products_data = await _calculate_from_sales_report(
+            db, seller_id, sales_data, tag=None,  # без фильтра по тегу
+            period_start=period_start, period_end=period_end,
+            date_from=date_from, date_to=date_to
+        )
         
-        try:
-            prev_operations = await fetch_ozon_operations(
-                credentials["client_id"],
-                credentials["api_key"],
-                prev_start,
-                prev_end
-            )
-            prev_data = categorize_operations(prev_operations)
-            
-            prev_income = prev_data["income"]["total"]
-            prev_expenses = prev_data["expense"]["total"]
-            prev_profit = prev_income - prev_expenses
-            
-            # Calculate changes
-            def calc_change(current, previous):
-                if previous == 0:
-                    return 100 if current > 0 else 0
-                return round((current - previous) / abs(previous) * 100, 1)
-            
-            result["comparison"] = {
-                "previous_period": {
-                    "from": prev_start.strftime("%Y-%m-%d"),
-                    "to": prev_end.strftime("%Y-%m-%d")
+        # Извлекаем итоги из расчёта по товарам
+        summary = products_data["summary"]
+        general_exp = products_data["general_expenses"]
+        tax_info = products_data["tax_info"]
+        
+        # Формируем результат в формате /economics
+        result = {
+            "period": {
+                "from": date_from,
+                "to": date_to,
+                "days": (period_end - period_start).days + 1
+            },
+            "summary": {
+                "gross_income": summary["total_revenue"],  # Чистая выручка по товарам
+                "total_expenses": round(summary["total_revenue"] - summary["total_profit"], 2),  # Все расходы
+                "cogs": round(sum(p["cogs"] for p in products_data["products"]), 2),
+                "mp_expenses": round(sum(p["mp_expenses"] for p in products_data["products"]), 2),
+                "profit_before_tax": round(summary["total_profit"] + sum(p["tax"] for p in products_data["products"]), 2),
+                "tax_amount": round(sum(p["tax"] for p in products_data["products"]), 2),
+                "net_profit": summary["net_profit"],  # С учётом общих расходов
+                "margin_pct": round((summary["total_profit"] / summary["total_revenue"] * 100) if summary["total_revenue"] > 0 else 0, 2)
+            },
+            "cogs_info": {
+                "total": round(sum(p["cogs"] for p in products_data["products"]), 2),
+                "items_with_cogs": summary.get("total_sales", 0) - summary.get("without_cogs", 0),
+                "items_without_cogs": summary.get("without_cogs", 0),
+                "coverage_pct": 100 if summary.get("without_cogs", 0) == 0 else round((1 - summary.get("without_cogs", 0) / summary.get("total_sales", 1)) * 100, 1),
+                "note": "Себестоимость рассчитана по закупочным ценам из каталога"
+            },
+            "tax_info": {
+                "system": tax_info["system"],
+                "name": tax_info["name"],
+                "rate": tax_info["rate"],
+                "tax_amount": round(sum(p["tax"] for p in products_data["products"]), 2)
+            },
+            "income_breakdown": {
+                "sales": summary["total_revenue"],
+                "compensations": round(sum(p.get("compensations", 0) for p in products_data["products"]), 2),
+                "other": 0
+            },
+            "expense_breakdown": {
+                "returns": {
+                    "amount": round(sum(p["return_costs"] for p in products_data["products"]), 2),
+                    "name": "Возвраты средств"
                 },
-                "changes": {
-                    "income_change_pct": calc_change(gross_income, prev_income),
-                    "expenses_change_pct": calc_change(total_expenses, prev_expenses),
-                    "profit_change_pct": calc_change(net_profit, prev_profit),
-                    "prev_income": round(prev_income, 2),
-                    "prev_expenses": round(prev_expenses, 2),
-                    "prev_profit": round(prev_profit, 2)
+                "penalties": {
+                    "amount": round(summary.get("total_penalties", 0) + general_exp.get("penalties", 0), 2),
+                    "name": "Штрафы (дефект-рейт)"
+                },
+                "loyalty_points": {
+                    "amount": general_exp.get("points", 0),
+                    "name": "Баллы и кэшбэк"
+                },
+                "subscription": {
+                    "amount": general_exp.get("subscription", 0),
+                    "name": "Подписка Premium"
+                },
+                "storage": {
+                    "amount": general_exp.get("storage", 0),
+                    "name": "Хранение"
+                },
+                "acquiring": {
+                    "amount": 0,
+                    "name": "Эквайринг"
+                },
+                "early_payment": {
+                    "amount": general_exp.get("early_payment", 0),
+                    "name": "Комиссия за раннюю выплату"
+                },
+                "logistics": {
+                    "amount": round(sum(p.get("logistics", 0) for p in products_data["products"]), 2),
+                    "name": "Логистика"
+                },
+                "advertising": {
+                    "amount": round(summary.get("total_advertising", 0) + general_exp.get("advertising", 0), 2),
+                    "name": "Реклама"
+                },
+                "client_compensation": {
+                    "amount": 0,
+                    "name": "Компенсации клиентам"
+                },
+                "other": {
+                    "amount": general_exp.get("other", 0),
+                    "name": "Прочие расходы"
                 }
-            }
-        except Exception as e:
-            result["comparison"] = {"error": str(e)}
+            },
+            "general_expenses": {
+                "subscription": general_exp.get("subscription", 0),
+                "penalties": general_exp.get("penalties", 0),
+                "advertising": general_exp.get("advertising", 0),
+                "storage": general_exp.get("storage", 0),
+                "early_payment": general_exp.get("early_payment", 0),
+                "points": general_exp.get("points", 0),
+                "other": general_exp.get("other", 0),
+                "total": general_exp.get("total", 0)
+            },
+            "data_source": "sales_report_hybrid",
+            "note": "Данные из отчёта о реализации Ozon + дополнительные расходы из Finance API"
+        }
+        
+        return result
     
-    return result
+    # FALLBACK: Если Sales Report недоступен - используем старую логику Finance API
+    else:
+        operations = await db.ozon_operations.find({
+            "seller_id": seller_id,
+            "operation_date": {
+                "$gte": period_start,
+                "$lte": period_end
+            }
+        }).to_list(50000)
+        
+        # Если в кэше нет данных, пробуем загрузить из API
+        if not operations:
+            try:
+                credentials = await get_ozon_credentials(seller_id)
+                operations = await fetch_ozon_operations(
+                    credentials["client_id"],
+                    credentials["api_key"],
+                    period_start,
+                    period_end
+                )
+            except Exception:
+                operations = []
+        
+        # Categorize
+        current_data = categorize_operations(operations)
+        
+        # Рассчитываем себестоимость проданных товаров (COGS)
+        cogs_data = await calculate_cogs(operations, seller_id)
+        total_cogs = cogs_data["total_cogs"]
+        
+        # Calculate key metrics using RAW totals
+        raw = current_data["raw_totals"]
+        gross_income = raw["positive_sum"]
+        total_mp_expenses = abs(raw["negative_sum"])
+        total_expenses = total_mp_expenses + total_cogs
+        net_profit_before_tax = raw["net_total"] - total_cogs
+        margin_pct = (net_profit_before_tax / gross_income * 100) if gross_income > 0 else 0
+        
+        # Получаем настройки налогообложения
+        from bson import ObjectId
+        profile = await db.seller_profiles.find_one({"user_id": seller_id})
+        if not profile:
+            try:
+                profile = await db.seller_profiles.find_one({"user_id": ObjectId(seller_id)})
+            except:
+                pass
+        
+        tax_system = profile.get("tax_system", "usn_6") if profile else "usn_6"
+        tax_rates = {
+            "usn_6": {"name": "УСН 6% (доходы)", "rate": 0.06, "base": "income"},
+            "usn_15": {"name": "УСН 15% (доходы-расходы)", "rate": 0.15, "base": "profit"},
+            "osn": {"name": "ОСН (20% НДС + 13% прибыль)", "rate": 0.20, "base": "profit"},
+            "patent": {"name": "Патент", "rate": 0, "base": "fixed"},
+            "self_employed": {"name": "Самозанятый 6%", "rate": 0.06, "base": "income"}
+        }
+        
+        tax_info = tax_rates.get(tax_system, tax_rates["usn_6"])
+        
+        if tax_info["base"] == "income":
+            tax_amount = gross_income * tax_info["rate"]
+        elif tax_info["base"] == "profit":
+            tax_amount = max(0, net_profit_before_tax) * tax_info["rate"]
+        else:
+            tax_amount = 0
+        
+        net_profit = net_profit_before_tax - tax_amount
+        
+        result = {
+            "period": {
+                "from": date_from,
+                "to": date_to,
+                "days": (period_end - period_start).days + 1
+            },
+            "summary": {
+                "gross_income": round(gross_income, 2),
+                "total_expenses": round(total_expenses, 2),
+                "cogs": round(total_cogs, 2),
+                "mp_expenses": round(total_mp_expenses, 2),
+                "profit_before_tax": round(net_profit_before_tax, 2),
+                "tax_amount": round(tax_amount, 2),
+                "net_profit": round(net_profit, 2),
+                "margin_pct": round(margin_pct, 2)
+            },
+            "cogs_info": {
+                "total": round(total_cogs, 2),
+                "items_with_cogs": cogs_data["items_with_cogs"],
+                "items_without_cogs": cogs_data["items_without_cogs"],
+                "coverage_pct": cogs_data["coverage_pct"],
+                "note": "Себестоимость рассчитана по закупочным ценам из каталога"
+            },
+            "tax_info": {
+                "system": tax_system,
+                "name": tax_info["name"],
+                "rate": tax_info["rate"],
+                "tax_amount": round(tax_amount, 2)
+            },
+            "income_breakdown": {
+                "sales": round(current_data["income"]["sales"], 2),
+                "compensations": round(current_data["income"]["compensations"], 2),
+                "other": round(current_data["income"]["other"], 2)
+            },
+            "expense_breakdown": {
+                "returns": {
+                    "amount": round(current_data["expense"]["returns"], 2),
+                    "name": "Возвраты средств"
+                },
+                "penalties": {
+                    "amount": round(current_data["expense"]["penalties"], 2),
+                    "name": "Штрафы (дефект-рейт)"
+                },
+                "loyalty_points": {
+                    "amount": round(current_data["expense"]["loyalty_points"], 2),
+                    "name": "Баллы и кэшбэк"
+                },
+                "subscription": {
+                    "amount": round(current_data["expense"]["subscription"], 2),
+                    "name": "Подписка Premium"
+                },
+                "storage": {
+                    "amount": round(current_data["expense"]["storage"], 2),
+                    "name": "Хранение"
+                },
+                "acquiring": {
+                    "amount": round(current_data["expense"]["acquiring"], 2),
+                    "name": "Эквайринг"
+                },
+                "early_payment": {
+                    "amount": round(current_data["expense"]["early_payment"], 2),
+                    "name": "Комиссия за раннюю выплату"
+                },
+                "logistics": {
+                    "amount": round(current_data["expense"]["logistics"], 2),
+                    "name": "Логистика"
+                },
+                "client_compensation": {
+                    "amount": round(current_data["expense"]["client_compensation"], 2),
+                    "name": "Компенсации клиентам"
+                },
+                "other": {
+                    "amount": round(current_data["expense"]["other"], 2),
+                    "name": "Прочие расходы"
+                }
+            },
+            "operations_count": len(operations),
+            "data_source": "finance_api_fallback",
+            "note": "ВНИМАНИЕ: Отчёт о реализации недоступен. Данные из Finance API (менее точные)"
+        }
+        
+        return result
 
 
 @router.get("/detailed-operations")
