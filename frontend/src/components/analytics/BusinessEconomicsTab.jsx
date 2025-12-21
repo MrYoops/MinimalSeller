@@ -830,6 +830,31 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
     return result
   }, [products, searchQuery, sortBy])
 
+  const [syncing, setSyncing] = useState(false)
+
+  const syncRealization = async () => {
+    setSyncing(true)
+    try {
+      // Определяем год и месяц из dateFrom
+      const date = new Date(dateFrom)
+      const year = date.getFullYear()
+      const month = date.getMonth() + 1
+      
+      const response = await api.post(`/api/business-analytics/sync-realization?year=${year}&month=${month}`)
+      
+      if (response.data.success) {
+        toast.success(response.data.message)
+        // Перезагружаем данные
+        loadProducts()
+      } else {
+        toast.error(response.data.message || 'Нет данных за выбранный период')
+      }
+    } catch (error) {
+      toast.error('Ошибка синхронизации: ' + (error.response?.data?.detail || error.message))
+    }
+    setSyncing(false)
+  }
+
   const exportToExcel = async () => {
     setExporting(true)
     try {
