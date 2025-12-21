@@ -1247,6 +1247,8 @@ async def _calculate_from_sales_report(db, seller_id: str, sales_data: List[Dict
     - Реальную цену реализации (после всех скидок)
     - Полное вознаграждение Ozon (комиссия + логистика)
     - Точное количество продаж и возвратов
+    
+    Агрегирует данные по товарам если период охватывает несколько месяцев.
     """
     
     # Загружаем закупочные цены и теги
@@ -1272,10 +1274,46 @@ async def _calculate_from_sales_report(db, seller_id: str, sales_data: List[Dict
     tax_system = profile.get("tax_system", "usn_6") if profile else "usn_6"
     tax_rate = TAX_SYSTEMS.get(tax_system, {}).get("rate", 0.06)
     
+    # Агрегируем данные по артикулу (один товар может быть в нескольких месяцах)
+    aggregated = {}
+    
+    for item in sales_data:
+        article = item.get("article", "")
+        sku = item.get("sku", "")
+        name = item.get("name", "")
+        
+        # Используем артикул как ключ (или SKU если артикула нет)
+        key = article.lower().strip() if article else sku
+        
+        if not key:
+            continue
+        
+        if key not in aggregated:
+            aggregated[key] = {
+                "article": article,
+                "sku": sku,
+                "name": name,
+                "qty_sold": 0,
+                "qty_returned": 0,
+                "sale_amount": 0,
+                "total_accrued": 0,
+                "ozon_commission": 0,
+                "total_returned": 0,
+                "sale_price": item.get("sale_price", 0),  # Берём цену из первой записи
+            }
+        
+        agg = aggregated[key]
+        agg["qty_sold"] += item.get("qty_sold", 0)
+        agg["qty_returned"] += item.get("qty_returned", 0)
+        agg["sale_amount"] += item.get("sale_amount", 0)
+        agg["total_accrued"] += item.get("total_accrued", 0)
+        agg["ozon_commission"] += item.get("ozon_commission", 0)
+        agg["total_returned"] += abs(item.get("total_returned", 0))
+    
     products_result = []
     all_tags = set()
     
-    for item in sales_data:
+    for key, item in aggregated.items():
         article = item.get("article", "")
         sku = item.get("sku", "")
         name = item.get("name", "")
