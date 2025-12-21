@@ -920,6 +920,15 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
             </button>
             
             <button
+              onClick={syncRealization}
+              disabled={syncing || loading}
+              className="btn-primary text-sm px-4"
+              title="Синхронизировать отчёт о реализации из Ozon"
+            >
+              {syncing ? '🔄 Синхронизация...' : '🔄 Синхронизировать'}
+            </button>
+            
+            <button
               onClick={loadProducts}
               disabled={loading}
               className="btn-secondary text-sm px-3"
