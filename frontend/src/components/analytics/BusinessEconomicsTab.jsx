@@ -895,6 +895,11 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
               ({summary.total_products} товаров: {summary.profitable} прибыльных, {summary.unprofitable} убыточных)
             </span>
           )}
+          {productsEconomics?.data_source === 'sales_report' && (
+            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-mono">
+              ИЗ ОТЧЁТА OZON
+            </span>
+          )}
         </div>
         {expanded ? <FiChevronUp size={20} /> : <FiChevronDown size={20} />}
       </button>
