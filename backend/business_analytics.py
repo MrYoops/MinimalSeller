@@ -78,6 +78,9 @@ async def calculate_cogs(operations: List[Dict], seller_id: str) -> Dict[str, An
     """
     Рассчитывает себестоимость проданных товаров (COGS).
     
+    ВАЖНО: COGS считается только для ЧИСТЫХ продаж (delivered - returned)!
+    Возвращённый товар возвращается на склад, его себестоимость не теряется.
+    
     Стратегия поиска закупочной цены:
     1. По SKU из таблицы маппинга ozon_sku_mapping
     2. По артикулу/offer_id
@@ -120,56 +123,78 @@ async def calculate_cogs(operations: List[Dict], seller_id: str) -> Dict[str, An
             if key:
                 price_by_name[key] = {"price": price, "article": article}
     
+    # Считаем доставки и возвраты по каждому SKU
+    sku_stats = {}  # sku -> {delivered: int, returned: int, price: float}
+    
+    for op in operations:
+        op_type = op.get("operation_type", "")
+        items = op.get("items", [])
+        
+        for item in items:
+            sku = str(item.get("sku", ""))
+            name = item.get("name", "")
+            
+            if not sku:
+                continue
+            
+            # Находим цену для SKU
+            if sku not in sku_stats:
+                purchase_price = 0
+                
+                # 1. Ищем по маппингу SKU -> article
+                if sku in sku_to_article:
+                    article = sku_to_article[sku]
+                    if article.lower() in price_by_article:
+                        purchase_price = price_by_article[article.lower()]
+                
+                # 2. Ищем напрямую по SKU как артикулу
+                if not purchase_price:
+                    if sku.lower() in price_by_article:
+                        purchase_price = price_by_article[sku.lower()]
+                
+                # 3. Ищем по названию товара (fuzzy)
+                if not purchase_price and name:
+                    words = [w.lower() for w in name.split() if len(w) > 3][:3]
+                    key = " ".join(sorted(words))
+                    if key in price_by_name:
+                        purchase_price = price_by_name[key]["price"]
+                
+                sku_stats[sku] = {"delivered": 0, "returned": 0, "price": purchase_price, "name": name}
+            
+            # Считаем доставки
+            if op_type == "OperationAgentDeliveredToCustomer":
+                if op.get("amount", 0) > 0:
+                    sku_stats[sku]["delivered"] += 1
+            
+            # Считаем возвраты
+            elif op_type in ("ClientReturnAgentOperation", "OperationItemReturn"):
+                if op.get("amount", 0) < 0:
+                    sku_stats[sku]["returned"] += 1
+    
+    # Считаем итоговый COGS только для чистых продаж
     total_cogs = 0
     items_with_cogs = 0
     items_without_cogs = 0
     unmatched_items = []
     
-    for op in operations:
-        op_type = op.get("operation_type", "")
+    for sku, stats in sku_stats.items():
+        delivered = stats["delivered"]
+        returned = stats["returned"]
+        price = stats["price"]
         
-        # Считаем COGS только для продаж (доставленных клиенту)
-        if op_type != "OperationAgentDeliveredToCustomer":
-            continue
+        # Чистые продажи = доставлено - возвращено
+        net_sold = max(0, delivered - returned)
         
-        items = op.get("items", [])
-        for item in items:
-            sku = str(item.get("sku", ""))
-            name = item.get("name", "")
-            
-            purchase_price = 0
-            match_method = None
-            
-            # 1. Ищем по маппингу SKU -> article
-            if sku and sku in sku_to_article:
-                article = sku_to_article[sku]
-                if article.lower() in price_by_article:
-                    purchase_price = price_by_article[article.lower()]
-                    match_method = "sku_mapping"
-            
-            # 2. Ищем напрямую по SKU как артикулу
-            if not purchase_price and sku:
-                if sku.lower() in price_by_article:
-                    purchase_price = price_by_article[sku.lower()]
-                    match_method = "sku_as_article"
-            
-            # 3. Ищем по названию товара (fuzzy)
-            if not purchase_price and name:
-                words = [w.lower() for w in name.split() if len(w) > 3][:3]
-                key = " ".join(sorted(words))
-                if key in price_by_name:
-                    purchase_price = price_by_name[key]["price"]
-                    match_method = "name_match"
-            
-            if purchase_price > 0:
-                total_cogs += purchase_price
-                items_with_cogs += 1
+        if net_sold > 0:
+            if price > 0:
+                total_cogs += price * net_sold
+                items_with_cogs += net_sold
             else:
-                items_without_cogs += 1
+                items_without_cogs += net_sold
                 if len(unmatched_items) < 20:
                     unmatched_items.append({
                         "sku": sku,
-                        "name": name[:60] if name else ""
+                        "name": stats["name"][:60] if stats["name"] else ""
                     })
     
     return {
@@ -178,7 +203,7 @@ async def calculate_cogs(operations: List[Dict], seller_id: str) -> Dict[str, An
         "items_without_cogs": items_without_cogs,
         "coverage_pct": round(items_with_cogs / (items_with_cogs + items_without_cogs) * 100, 1) if (items_with_cogs + items_without_cogs) > 0 else 0,
         "unmatched_items": unmatched_items,
-        "note": "Для улучшения точности добавьте маппинг SKU -> артикул через синхронизацию товаров"
+        "note": "COGS рассчитан для ЧИСТЫХ продаж (delivered - returned). Для улучшения точности добавьте маппинг SKU."
     }
 
 
