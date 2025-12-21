@@ -1248,6 +1248,12 @@ async def _calculate_from_sales_report(db, seller_id: str, sales_data: List[Dict
     - Полное вознаграждение Ozon (комиссия + логистика)
     - Точное количество продаж и возвратов
     
+    ДОПОЛНИТЕЛЬНО загружает операции из Finance API для учёта:
+    - Штрафов (DefectRate)
+    - Рекламы (CostPerClick)
+    - Компенсаций
+    - Других расходов привязанных к заказам
+    
     Агрегирует данные по товарам если период охватывает несколько месяцев.
     """
     
@@ -1273,6 +1279,107 @@ async def _calculate_from_sales_report(db, seller_id: str, sales_data: List[Dict
     
     tax_system = profile.get("tax_system", "usn_6") if profile else "usn_6"
     tax_rate = TAX_SYSTEMS.get(tax_system, {}).get("rate", 0.06)
+    
+    # === ЗАГРУЖАЕМ ДОПОЛНИТЕЛЬНЫЕ ОПЕРАЦИИ ИЗ FINANCE API ===
+    # Это штрафы, реклама, компенсации и прочее
+    finance_ops = await db.ozon_operations.find({
+        "seller_id": seller_id,
+        "operation_date": {
+            "$gte": period_start,
+            "$lte": period_end
+        }
+    }).to_list(50000)
+    
+    # Строим маппинг posting_number -> article (из операций с товарами)
+    posting_to_article = {}
+    for op in finance_ops:
+        items = op.get("items", [])
+        if items:
+            posting = op.get("posting_number") or op.get("raw_data", {}).get("posting", {}).get("posting_number")
+            if posting:
+                # Ищем артикул через SKU маппинг
+                sku = str(items[0].get("sku", ""))
+                if sku:
+                    # Пытаемся найти артикул в sales_data
+                    for item in sales_data:
+                        if item.get("sku") == sku:
+                            posting_to_article[posting] = item.get("article", "")
+                            break
+    
+    # Собираем дополнительные расходы по артикулам
+    extra_expenses_by_article = defaultdict(lambda: {
+        "penalties": 0,      # Штрафы (DefectRate)
+        "advertising": 0,    # Реклама
+        "compensations": 0,  # Компенсации  
+        "logistics_extra": 0,# Дополнительная логистика (не из отчёта)
+        "other": 0           # Прочее
+    })
+    
+    general_expenses = {
+        "subscription": 0,      # Подписка Premium
+        "penalties": 0,         # Штрафы без привязки
+        "advertising": 0,       # Реклама
+        "storage": 0,           # Хранение
+        "early_payment": 0,     # Ранняя выплата
+        "points": 0,            # Баллы за отзывы
+        "other": 0,             # Прочее
+    }
+    
+    for op in finance_ops:
+        op_type = op.get("operation_type", "")
+        amount = op.get("amount", 0)
+        items = op.get("items", [])
+        posting = op.get("posting_number") or op.get("raw_data", {}).get("posting", {}).get("posting_number")
+        
+        # Пропускаем основные операции (они уже в отчёте о реализации)
+        if op_type in ("OperationAgentDeliveredToCustomer", "ClientReturnAgentOperation", "OperationItemReturn"):
+            continue
+        
+        # Определяем артикул
+        article = None
+        if items:
+            # Из операции напрямую
+            sku = str(items[0].get("sku", ""))
+            for item in sales_data:
+                if item.get("sku") == sku:
+                    article = item.get("article", "")
+                    break
+        elif posting and posting in posting_to_article:
+            article = posting_to_article[posting]
+        
+        # Распределяем расходы
+        if article and amount < 0:
+            abs_amount = abs(amount)
+            if "DefectRate" in op_type or "Cancellation" in op_type or "ShipmentDelay" in op_type:
+                extra_expenses_by_article[article.lower()]["penalties"] += abs_amount
+            elif "CostPerClick" in op_type or "Promotion" in op_type:
+                extra_expenses_by_article[article.lower()]["advertising"] += abs_amount
+            elif any(x in op_type for x in ["Delivery", "Redistribution", "Logistic", "AgencyFee", "3pl"]):
+                extra_expenses_by_article[article.lower()]["logistics_extra"] += abs_amount
+            else:
+                extra_expenses_by_article[article.lower()]["other"] += abs_amount
+        elif article and amount > 0:
+            if "Reexposure" in op_type or "Compensation" in op_type:
+                extra_expenses_by_article[article.lower()]["compensations"] += amount
+        elif not article and amount < 0:
+            # Общие расходы (без привязки к товару)
+            abs_amount = abs(amount)
+            if "Subscription" in op_type or "Premium" in op_type:
+                general_expenses["subscription"] += abs_amount
+            elif "DefectRate" in op_type:
+                general_expenses["penalties"] += abs_amount
+            elif "CostPerClick" in op_type or "Promotion" in op_type:
+                general_expenses["advertising"] += abs_amount
+            elif "Storage" in op_type:
+                general_expenses["storage"] += abs_amount
+            elif "EarlyPayment" in op_type or "FlexiblePayment" in op_type:
+                general_expenses["early_payment"] += abs_amount
+            elif "Points" in op_type or "Reviews" in op_type:
+                general_expenses["points"] += abs_amount
+            else:
+                general_expenses["other"] += abs_amount
+    
+    general_expenses_total = sum(general_expenses.values())
     
     # Агрегируем данные по артикулу (один товар может быть в нескольких месяцах)
     aggregated = {}
@@ -1329,18 +1436,25 @@ async def _calculate_from_sales_report(db, seller_id: str, sales_data: List[Dict
         qty_returned = item.get("qty_returned", 0)
         net_sold = max(0, qty_sold - qty_returned)
         
-        # Финансы из отчёта
-        sale_price = item.get("sale_price", 0)  # Цена реализации
-        total_accrued = item.get("total_accrued", 0)  # К начислению (уже за вычетом комиссии Ozon!)
-        ozon_commission = item.get("ozon_commission", 0)  # Вознаграждение Ozon (комиссия+логистика)
-        total_returned = abs(item.get("total_returned", 0))  # Возвращено
+        # Финансы из отчёта о реализации
+        sale_price = item.get("sale_price", 0)
+        total_accrued = item.get("total_accrued", 0)
+        ozon_commission = item.get("ozon_commission", 0)
+        total_returned = abs(item.get("total_returned", 0))
         
-        # Чистая выручка = К начислению - Возвращено
-        net_revenue = total_accrued - total_returned
+        # Дополнительные расходы из Finance API
+        extra = extra_expenses_by_article.get(key, {})
+        penalties = extra.get("penalties", 0)
+        advertising = extra.get("advertising", 0)
+        compensations_extra = extra.get("compensations", 0)
+        logistics_extra = extra.get("logistics_extra", 0)
+        other_extra = extra.get("other", 0)
         
-        # Расходы МП уже ВКЛЮЧЕНЫ в ozon_commission и вычтены из total_accrued
-        # Поэтому mp_expenses = 0 для расчёта прибыли (они уже учтены)
-        mp_expenses = ozon_commission  # Показываем для информации
+        # Чистая выручка = К начислению - Возвращено + Дополнительные компенсации
+        net_revenue = total_accrued - total_returned + compensations_extra
+        
+        # Дополнительные расходы МП (сверх того что уже в отчёте)
+        extra_mp_expenses = penalties + advertising + logistics_extra + other_extra
         
         # Закупочная цена
         purchase_price = price_by_article.get(article.lower().strip(), 0)
@@ -1350,14 +1464,13 @@ async def _calculate_from_sales_report(db, seller_id: str, sales_data: List[Dict
         
         # Налог
         if tax_system == "usn_6":
-            tax = max(0, total_accrued) * tax_rate
+            tax = max(0, total_accrued + compensations_extra) * tax_rate
         else:
-            profit_before_tax = net_revenue - cogs
+            profit_before_tax = net_revenue - extra_mp_expenses - cogs
             tax = max(0, profit_before_tax) * tax_rate
         
-        # Чистая прибыль = Чистая выручка - COGS - Налог
-        # (mp_expenses уже вычтены из выручки!)
-        profit = net_revenue - cogs - tax
+        # Чистая прибыль = Чистая выручка - Дополнительные расходы - COGS - Налог
+        profit = net_revenue - extra_mp_expenses - cogs - tax
         
         # Маржинальность
         if sale_price > 0:
@@ -1377,12 +1490,15 @@ async def _calculate_from_sales_report(db, seller_id: str, sales_data: List[Dict
             "sales_count": net_sold,
             "purchase_price": round(purchase_price, 2),
             "revenue": round(net_revenue, 2),
-            "sales_revenue": round(total_accrued, 2),  # К начислению
+            "sales_revenue": round(total_accrued, 2),
             "return_costs": round(total_returned, 2),
-            "mp_expenses": round(ozon_commission, 2),  # Показываем вознаграждение Ozon
-            "logistics": 0,  # Включено в ozon_commission
-            "other_expenses": 0,  # Включено в ozon_commission
-            "compensations": 0,
+            "mp_expenses": round(ozon_commission + extra_mp_expenses, 2),  # Вознаграждение Ozon + дополнительные расходы
+            "ozon_commission": round(ozon_commission, 2),
+            "penalties": round(penalties, 2),
+            "advertising": round(advertising, 2),
+            "logistics": round(logistics_extra, 2),
+            "other_expenses": round(other_extra, 2),
+            "compensations": round(compensations_extra, 2),
             "cogs": round(cogs, 2),
             "tax": round(tax, 2),
             "profit": round(profit, 2),
