@@ -233,7 +233,149 @@ async def get_ozon_credentials(seller_id: str) -> Dict[str, str]:
     raise HTTPException(status_code=404, detail="Ozon API ключ не найден")
 
 
-async def fetch_ozon_operations(
+async def fetch_realization_report(client_id: str, api_key: str, year: int, month: int) -> List[Dict]:
+    """
+    Загружает отчёт о реализации товаров из Ozon API.
+    
+    Это самый точный источник данных для Unit Economics!
+    Содержит: цену реализации, вознаграждение Ozon, комиссии, возвраты.
+    
+    API: POST /v2/finance/realization
+    """
+    url = "https://api-seller.ozon.ru/v2/finance/realization"
+    headers = {
+        "Client-Id": client_id,
+        "Api-Key": api_key,
+        "Content-Type": "application/json"
+    }
+    
+    body = {
+        "year": year,
+        "month": month
+    }
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, json=body) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                return data.get("result", {}).get("rows", [])
+            else:
+                error_text = await resp.text()
+                print(f"[REALIZATION API ERROR] Status: {resp.status}, Error: {error_text[:200]}")
+                return []
+
+
+async def sync_realization_report(seller_id: str, year: int, month: int) -> Dict[str, Any]:
+    """
+    Синхронизирует отчёт о реализации из Ozon API в базу данных.
+    
+    Returns:
+        Dict с информацией о синхронизации
+    """
+    db = await get_database()
+    
+    # Получаем API ключи
+    credentials = await get_ozon_credentials(seller_id)
+    
+    # Загружаем данные из API
+    rows = await fetch_realization_report(
+        credentials["client_id"],
+        credentials["api_key"],
+        year,
+        month
+    )
+    
+    if not rows:
+        return {"success": False, "message": "Нет данных за выбранный период", "count": 0}
+    
+    report_period = f"{year}-{month:02d}"
+    
+    # Удаляем старые данные за этот период
+    await db.sales_report.delete_many({
+        "seller_id": seller_id,
+        "report_period": report_period
+    })
+    
+    # Преобразуем данные в формат для базы
+    items = []
+    for row in rows:
+        item = row.get("item", {})
+        delivery = row.get("delivery_commission", {}) or {}
+        return_data = row.get("return_commission", {}) or {}
+        
+        items.append({
+            "seller_id": seller_id,
+            "report_type": "sales_report",
+            "report_period": report_period,
+            "article": item.get("offer_id", ""),
+            "sku": str(item.get("sku", "")),
+            "name": item.get("name", ""),
+            "barcode": item.get("barcode", ""),
+            
+            # Реализация
+            "sale_amount": delivery.get("amount", 0),
+            "loyalty_payments": delivery.get("bank_coinvestment", 0),
+            "points_discounts": delivery.get("bonus", 0),
+            "qty_sold": delivery.get("quantity", 0),
+            "sale_price": delivery.get("price_per_instance", 0),
+            "commission_rate": row.get("commission_ratio", 0),
+            "price_before_discount": row.get("seller_price_per_instance", 0),
+            "ozon_commission": delivery.get("standard_fee", 0),
+            "total_accrued": delivery.get("total", 0),
+            "stars": delivery.get("stars", 0),
+            "compensation": delivery.get("compensation", 0),
+            
+            # Возврат
+            "return_amount": return_data.get("amount", 0) if return_data else 0,
+            "return_loyalty": return_data.get("bank_coinvestment", 0) if return_data else 0,
+            "return_points": return_data.get("bonus", 0) if return_data else 0,
+            "qty_returned": return_data.get("quantity", 0) if return_data else 0,
+            "return_price": return_data.get("price_per_instance", 0) if return_data else 0,
+            "return_commission": return_data.get("standard_fee", 0) if return_data else 0,
+            "total_returned": return_data.get("total", 0) if return_data else 0,
+            
+            "imported_at": datetime.utcnow(),
+            "source": "api"
+        })
+    
+    # Сохраняем в базу
+    if items:
+        await db.sales_report.insert_many(items)
+    
+    return {
+        "success": True,
+        "message": f"Синхронизировано {len(items)} товаров за {report_period}",
+        "count": len(items),
+        "period": report_period
+    }
+
+
+@router.post("/sync-realization")
+async def sync_realization(
+    year: int = Query(..., description="Год (например, 2025)"),
+    month: int = Query(..., ge=1, le=12, description="Месяц (1-12)"),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Синхронизирует отчёт о реализации из Ozon API.
+    
+    Это позволяет получить ТОЧНЫЕ данные для Unit Economics:
+    - Реальную цену реализации
+    - Точное вознаграждение Ozon (комиссия + логистика)
+    - Количество продаж и возвратов
+    
+    Рекомендуется вызывать после 5-го числа каждого месяца
+    (когда Ozon формирует отчёт за предыдущий месяц).
+    """
+    seller_id = str(current_user["_id"])
+    
+    try:
+        result = await sync_realization_report(seller_id, year, month)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка синхронизации: {str(e)}")
     client_id: str,
     api_key: str,
     date_from: datetime,
