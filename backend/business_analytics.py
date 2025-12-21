@@ -1060,7 +1060,15 @@ async def get_products_economics(
 ):
     """
     Unit Economics по каждому товару.
-    Показывает прибыльность/убыточность каждой позиции.
+    
+    ПРАВИЛЬНАЯ ЛОГИКА РАСЧЁТА:
+    1. amount в OperationAgentDeliveredToCustomer УЖЕ содержит выручку за вычетом комиссии Ozon
+    2. Расходы МП = логистика + эквайринг + прочие услуги (комиссия уже вычтена!)
+    3. COGS = закупочная × чистые продажи (delivered - returned)
+    4. Прибыль = Чистая выручка - Расходы МП - COGS - Налог
+    
+    Также показывает:
+    - Общие расходы (не привязанные к товарам): подписка, штрафы, хранение и т.д.
     """
     seller_id = str(current_user["_id"])
     
@@ -1070,18 +1078,33 @@ async def get_products_economics(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format")
     
-    # Get credentials
-    credentials = await get_ozon_credentials(seller_id)
-    
-    # Fetch operations
-    operations = await fetch_ozon_operations(
-        credentials["client_id"],
-        credentials["api_key"],
-        period_start,
-        period_end
-    )
-    
     db = await get_database()
+    
+    # Получаем операции из КЭША (база данных), а не напрямую из API
+    # Это обеспечивает стабильную работу даже когда Ozon API недоступен
+    operations = await db.ozon_operations.find({
+        "seller_id": seller_id,
+        "operation_date": {
+            "$gte": period_start,
+            "$lte": period_end
+        }
+    }).to_list(50000)
+    
+    # Если в кэше нет данных за период, пробуем загрузить из API
+    if not operations:
+        try:
+            credentials = await get_ozon_credentials(seller_id)
+            operations = await fetch_ozon_operations(
+                credentials["client_id"],
+                credentials["api_key"],
+                period_start,
+                period_end
+            )
+        except Exception as e:
+            # Если API недоступен, используем все данные из кэша
+            operations = await db.ozon_operations.find({
+                "seller_id": seller_id
+            }).to_list(50000)
     
     # Загружаем товары с закупочными ценами и тегами
     products_cursor = db.product_catalog.find(
