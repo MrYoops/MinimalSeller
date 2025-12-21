@@ -1523,6 +1523,10 @@ async def _calculate_from_sales_report(db, seller_id: str, sales_data: List[Dict
     total_revenue = sum(p["revenue"] for p in products_result)
     total_profit = sum(p["profit"] for p in products_result)
     
+    # Сумма штрафов/рекламы по товарам
+    total_penalties = sum(p["penalties"] for p in products_result)
+    total_advertising = sum(p["advertising"] for p in products_result)
+    
     return {
         "products": products_result,
         "summary": {
@@ -1535,18 +1539,20 @@ async def _calculate_from_sales_report(db, seller_id: str, sales_data: List[Dict
             "total_returns": total_returns,
             "total_revenue": round(total_revenue, 2),
             "total_profit": round(total_profit, 2),
-            "general_expenses_total": 0,  # Уже включены в ozon_commission
-            "net_profit": round(total_profit, 2)
+            "general_expenses_total": round(general_expenses_total, 2),
+            "net_profit": round(total_profit - general_expenses_total, 2),
+            "total_penalties": round(total_penalties, 2),
+            "total_advertising": round(total_advertising, 2)
         },
         "general_expenses": {
-            "subscription": 0,
-            "penalties": 0,
-            "advertising": 0,
-            "storage": 0,
-            "early_payment": 0,
-            "points": 0,
-            "other": 0,
-            "total": 0
+            "subscription": round(general_expenses["subscription"], 2),
+            "penalties": round(general_expenses["penalties"], 2),
+            "advertising": round(general_expenses["advertising"], 2),
+            "storage": round(general_expenses["storage"], 2),
+            "early_payment": round(general_expenses["early_payment"], 2),
+            "points": round(general_expenses["points"], 2),
+            "other": round(general_expenses["other"], 2),
+            "total": round(general_expenses_total, 2)
         },
         "available_tags": sorted(list(all_tags)),
         "tax_info": {
