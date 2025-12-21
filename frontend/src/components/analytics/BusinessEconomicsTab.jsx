@@ -1037,6 +1037,80 @@ function ProductsEconomicsSection({ dateFrom, dateTo, api }) {
               )}
             </div>
           )}
+          
+          {/* Общие расходы (не привязаны к товарам) */}
+          {summary.general_expenses_total > 0 && (
+            <div className="mt-6 p-4 bg-mm-gray/20 rounded-lg border border-mm-border">
+              <div className="flex items-center gap-2 mb-4">
+                <FiAlertTriangle className="text-orange-400" />
+                <span className="font-mono text-sm text-orange-400">ОБЩИЕ РАСХОДЫ (НЕ ПРИВЯЗАНЫ К ТОВАРАМ)</span>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mb-4">
+                {productsEconomics?.general_expenses?.subscription > 0 && (
+                  <div className="bg-purple-500/10 rounded p-2">
+                    <div className="text-purple-400 font-mono">Подписка</div>
+                    <div className="text-mm-text font-bold">{formatCurrency(productsEconomics.general_expenses.subscription)}</div>
+                  </div>
+                )}
+                {productsEconomics?.general_expenses?.penalties > 0 && (
+                  <div className="bg-red-500/10 rounded p-2">
+                    <div className="text-red-400 font-mono">Штрафы</div>
+                    <div className="text-mm-text font-bold">{formatCurrency(productsEconomics.general_expenses.penalties)}</div>
+                  </div>
+                )}
+                {productsEconomics?.general_expenses?.advertising > 0 && (
+                  <div className="bg-blue-500/10 rounded p-2">
+                    <div className="text-blue-400 font-mono">Реклама</div>
+                    <div className="text-mm-text font-bold">{formatCurrency(productsEconomics.general_expenses.advertising)}</div>
+                  </div>
+                )}
+                {productsEconomics?.general_expenses?.early_payment > 0 && (
+                  <div className="bg-cyan-500/10 rounded p-2">
+                    <div className="text-cyan-400 font-mono">Ранняя выплата</div>
+                    <div className="text-mm-text font-bold">{formatCurrency(productsEconomics.general_expenses.early_payment)}</div>
+                  </div>
+                )}
+                {productsEconomics?.general_expenses?.storage > 0 && (
+                  <div className="bg-gray-500/10 rounded p-2">
+                    <div className="text-gray-400 font-mono">Хранение</div>
+                    <div className="text-mm-text font-bold">{formatCurrency(productsEconomics.general_expenses.storage)}</div>
+                  </div>
+                )}
+                {productsEconomics?.general_expenses?.points > 0 && (
+                  <div className="bg-yellow-500/10 rounded p-2">
+                    <div className="text-yellow-400 font-mono">Баллы/Отзывы</div>
+                    <div className="text-mm-text font-bold">{formatCurrency(productsEconomics.general_expenses.points)}</div>
+                  </div>
+                )}
+                {productsEconomics?.general_expenses?.other > 0 && (
+                  <div className="bg-gray-500/10 rounded p-2">
+                    <div className="text-gray-400 font-mono">Прочее</div>
+                    <div className="text-mm-text font-bold">{formatCurrency(productsEconomics.general_expenses.other)}</div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-between items-center pt-3 border-t border-mm-border">
+                <div>
+                  <span className="text-mm-text-secondary text-xs">Прибыль по товарам:</span>
+                  <span className={`ml-2 font-bold ${summary.total_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {formatCurrency(summary.total_profit)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-mm-text-secondary text-xs">Общие расходы:</span>
+                  <span className="ml-2 font-bold text-red-400">-{formatCurrency(summary.general_expenses_total)}</span>
+                </div>
+                <div>
+                  <span className="text-mm-text-secondary text-xs">ИТОГО:</span>
+                  <span className={`ml-2 font-bold text-lg ${summary.net_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {formatCurrency(summary.net_profit)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
