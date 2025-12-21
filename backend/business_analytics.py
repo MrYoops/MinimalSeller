@@ -1429,9 +1429,11 @@ async def _calculate_from_sales_report(db, seller_id: str, sales_data: List[Dict
                 extra_expenses_by_article[article.lower()]["penalties"] += abs_amount
             elif "CostPerClick" in op_type or "Promotion" in op_type:
                 extra_expenses_by_article[article.lower()]["advertising"] += abs_amount
-            elif any(x in op_type for x in ["Delivery", "Redistribution", "Logistic", "AgencyFee", "3pl"]):
-                extra_expenses_by_article[article.lower()]["logistics_extra"] += abs_amount
-            else:
+            # ЛОГИСТИКУ НЕ ДОБАВЛЯЕМ! Она уже в "Базовом вознаграждении Ozon" из Sales Report
+            # elif any(x in op_type for x in ["Delivery", "Redistribution", "Logistic", "AgencyFee", "3pl"]):
+            #     extra_expenses_by_article[article.lower()]["logistics_extra"] += abs_amount
+            elif not any(x in op_type for x in ["Delivery", "Redistribution", "Logistic", "AgencyFee", "3pl"]):
+                # Добавляем только НЕ-логистические расходы
                 extra_expenses_by_article[article.lower()]["other"] += abs_amount
         elif article and amount > 0:
             if "Reexposure" in op_type or "Compensation" in op_type:
