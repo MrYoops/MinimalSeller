@@ -1094,6 +1094,177 @@ async def get_ozon_orders(
 # UNIT ECONOMICS ПО ТОВАРАМ
 # ============================================================================
 
+async def _calculate_from_sales_report(db, seller_id: str, sales_data: List[Dict], tag: str, period_start, period_end, date_from: str, date_to: str):
+    """
+    Рассчитывает Unit Economics из отчёта о реализации Ozon.
+    
+    Это САМЫЙ ТОЧНЫЙ источник данных, т.к. отчёт содержит:
+    - Реальную цену реализации (после всех скидок)
+    - Полное вознаграждение Ozon (комиссия + логистика)
+    - Точное количество продаж и возвратов
+    """
+    
+    # Загружаем закупочные цены и теги
+    products = await db.product_catalog.find(
+        {"seller_id": seller_id},
+        {"article": 1, "purchase_price": 1, "tags": 1}
+    ).to_list(10000)
+    
+    price_by_article = {}
+    tags_by_article = {}
+    for p in products:
+        article = p.get("article", "")
+        if article:
+            price_by_article[article.lower().strip()] = p.get("purchase_price", 0) or 0
+            tags_by_article[article.lower().strip()] = p.get("tags", [])
+    
+    # Получаем настройки налога
+    profile = await db.seller_profiles.find_one({"user_id": seller_id})
+    if not profile:
+        from bson import ObjectId
+        profile = await db.seller_profiles.find_one({"user_id": ObjectId(seller_id)})
+    
+    tax_system = profile.get("tax_system", "usn_6") if profile else "usn_6"
+    tax_rate = TAX_SYSTEMS.get(tax_system, {}).get("rate", 0.06)
+    
+    products_result = []
+    all_tags = set()
+    
+    for item in sales_data:
+        article = item.get("article", "")
+        sku = item.get("sku", "")
+        name = item.get("name", "")
+        
+        item_tags = tags_by_article.get(article.lower().strip(), [])
+        all_tags.update(item_tags)
+        
+        # Фильтр по тегу
+        if tag and tag not in item_tags:
+            continue
+        
+        qty_sold = item.get("qty_sold", 0)
+        qty_returned = item.get("qty_returned", 0)
+        net_sold = max(0, qty_sold - qty_returned)
+        
+        # Финансы из отчёта
+        sale_price = item.get("sale_price", 0)  # Цена реализации
+        total_accrued = item.get("total_accrued", 0)  # К начислению (уже за вычетом комиссии Ozon!)
+        ozon_commission = item.get("ozon_commission", 0)  # Вознаграждение Ozon (комиссия+логистика)
+        total_returned = abs(item.get("total_returned", 0))  # Возвращено
+        
+        # Чистая выручка = К начислению - Возвращено
+        net_revenue = total_accrued - total_returned
+        
+        # Расходы МП уже ВКЛЮЧЕНЫ в ozon_commission и вычтены из total_accrued
+        # Поэтому mp_expenses = 0 для расчёта прибыли (они уже учтены)
+        mp_expenses = ozon_commission  # Показываем для информации
+        
+        # Закупочная цена
+        purchase_price = price_by_article.get(article.lower().strip(), 0)
+        
+        # COGS = закупочная × чистые продажи
+        cogs = purchase_price * net_sold if net_sold > 0 and purchase_price > 0 else 0
+        
+        # Налог
+        if tax_system == "usn_6":
+            tax = max(0, total_accrued) * tax_rate
+        else:
+            profit_before_tax = net_revenue - cogs
+            tax = max(0, profit_before_tax) * tax_rate
+        
+        # Чистая прибыль = Чистая выручка - COGS - Налог
+        # (mp_expenses уже вычтены из выручки!)
+        profit = net_revenue - cogs - tax
+        
+        # Маржинальность
+        if sale_price > 0:
+            margin_pct = (profit / (sale_price * qty_sold) * 100) if qty_sold > 0 else 0
+        else:
+            margin_pct = 0
+        
+        margin_pct = max(-100, min(100, margin_pct))
+        
+        products_result.append({
+            "name": name,
+            "sku": sku,
+            "article": article,
+            "tags": item_tags,
+            "delivered": qty_sold,
+            "returned": qty_returned,
+            "sales_count": net_sold,
+            "purchase_price": round(purchase_price, 2),
+            "revenue": round(net_revenue, 2),
+            "sales_revenue": round(total_accrued, 2),  # К начислению
+            "return_costs": round(total_returned, 2),
+            "mp_expenses": round(ozon_commission, 2),  # Показываем вознаграждение Ozon
+            "logistics": 0,  # Включено в ozon_commission
+            "other_expenses": 0,  # Включено в ozon_commission
+            "compensations": 0,
+            "cogs": round(cogs, 2),
+            "tax": round(tax, 2),
+            "profit": round(profit, 2),
+            "margin_pct": round(margin_pct, 1),
+            "profit_per_unit": round(profit / net_sold, 2) if net_sold > 0 else 0,
+            "has_purchase_price": purchase_price > 0,
+            "is_returned": qty_returned > 0 and qty_sold == 0
+        })
+    
+    # Сортируем по прибыли
+    products_result.sort(key=lambda x: x["profit"])
+    
+    # Итоги
+    total_products = len(products_result)
+    profitable = sum(1 for p in products_result if p["profit"] > 0)
+    unprofitable = sum(1 for p in products_result if p["profit"] < 0)
+    returned_items = sum(1 for p in products_result if p["is_returned"])
+    without_cogs = sum(1 for p in products_result if not p["has_purchase_price"])
+    
+    total_sales = sum(p["delivered"] for p in products_result)
+    total_returns = sum(p["returned"] for p in products_result)
+    total_revenue = sum(p["revenue"] for p in products_result)
+    total_profit = sum(p["profit"] for p in products_result)
+    
+    return {
+        "products": products_result,
+        "summary": {
+            "total_products": total_products,
+            "profitable": profitable,
+            "unprofitable": unprofitable,
+            "returned_items": returned_items,
+            "without_cogs": without_cogs,
+            "total_sales": total_sales,
+            "total_returns": total_returns,
+            "total_revenue": round(total_revenue, 2),
+            "total_profit": round(total_profit, 2),
+            "general_expenses_total": 0,  # Уже включены в ozon_commission
+            "net_profit": round(total_profit, 2)
+        },
+        "general_expenses": {
+            "subscription": 0,
+            "penalties": 0,
+            "advertising": 0,
+            "storage": 0,
+            "early_payment": 0,
+            "points": 0,
+            "other": 0,
+            "total": 0
+        },
+        "available_tags": sorted(list(all_tags)),
+        "tax_info": {
+            "system": tax_system,
+            "rate": tax_rate,
+            "name": TAX_SYSTEMS.get(tax_system, {}).get("name", "УСН 6%")
+        },
+        "period": {
+            "from": date_from,
+            "to": date_to
+        },
+        "data_source": "sales_report",
+        "note": "Данные из отчёта о реализации Ozon. Расходы МП уже вычтены из выручки."
+    }
+
+
+
 @router.get("/products-economics")
 async def get_products_economics(
     date_from: str = Query(..., description="Start date (YYYY-MM-DD)"),
