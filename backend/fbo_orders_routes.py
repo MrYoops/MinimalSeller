@@ -179,6 +179,17 @@ async def import_fbo_orders(
                 external_id = mp_order_data.get("posting_number")
                 products = mp_order_data.get("products", [])
                 
+                # Извлечь реальную дату создания заказа от Ozon
+                order_created_at_str = mp_order_data.get("created_at") or mp_order_data.get("in_process_at")
+                if order_created_at_str:
+                    try:
+                        from dateutil import parser as date_parser
+                        order_created_at = date_parser.parse(order_created_at_str)
+                    except:
+                        order_created_at = datetime.utcnow()
+                else:
+                    order_created_at = datetime.utcnow()
+                
                 items = []
                 total_sum = 0
                 
