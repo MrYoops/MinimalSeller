@@ -255,9 +255,10 @@ async def import_fbo_orders(
         errors.append({"marketplace": marketplace, "error": str(e)})
     
     return {
-        "message": f"Загружено {imported_count} FBO заказов (без обновления остатков)",
+        "message": f"Загружено {imported_count} новых FBO заказов, пропущено {updated_count + skipped_count} дубликатов (без обновления остатков)",
         "imported": imported_count,
         "updated": updated_count,
+        "skipped": skipped_count,
         "errors": errors
     }
 
