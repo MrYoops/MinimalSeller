@@ -380,10 +380,10 @@ Wildberries (в планах):
 - Role: seller
 
 **URL:**
-https://profit-tracker-fix.preview.emergentagent.com/orders/fbs
+https://account-clarity.preview.emergentagent.com/orders/fbs
 
 **API Endpoint:**
-GET https://profit-tracker-fix.preview.emergentagent.com/api/orders/fbs
+GET https://account-clarity.preview.emergentagent.com/api/orders/fbs
 
 **Ozon Integration:**
 - Client ID: `2998978`
