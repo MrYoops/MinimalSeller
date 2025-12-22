@@ -472,9 +472,10 @@ async def import_fbs_orders(
         elif marketplace in ["wb", "wildberries"]:
             mp_orders = await connector.get_orders(date_from, date_to)
         elif marketplace == "yandex":
-            campaign_id = selected_integration.get("metadata", {}).get("campaign_id")
+            # Для Yandex campaign_id это и есть client_id
+            campaign_id = selected_integration.get("client_id")
             if not campaign_id:
-                raise HTTPException(status_code=400, detail="campaign_id не найден для Yandex")
+                raise HTTPException(status_code=400, detail="client_id (campaign_id) не найден для Yandex")
             mp_orders = await connector.get_orders(date_from, date_to, campaign_id)
         else:
             raise HTTPException(status_code=400, detail=f"Неизвестный маркетплейс: {marketplace}")
