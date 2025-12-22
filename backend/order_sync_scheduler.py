@@ -121,7 +121,11 @@ class OrderSyncScheduler:
             date_from = datetime.utcnow() - timedelta(days=1)
             date_to = datetime.utcnow()
             
-            mp_orders = await connector.get_fbs_orders(date_from, date_to)
+            # Для Yandex используем отдельный метод get_orders
+            if marketplace == "yandex":
+                mp_orders = await connector.get_orders(date_from, date_to, client_id)
+            else:
+                mp_orders = await connector.get_fbs_orders(date_from, date_to)
             
             logger.info(f"[OrderSync FBS] {marketplace}: получено {len(mp_orders)} заказов")
             
