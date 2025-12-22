@@ -700,9 +700,10 @@ async def import_fbs_orders(
         errors.append({"marketplace": marketplace, "error": str(e)})
     
     return {
-        "message": f"Загружено {imported_count} заказов",
+        "message": f"Загружено {imported_count} новых заказов, пропущено {updated_count + skipped_count} дубликатов",
         "imported": imported_count,
         "updated": updated_count,
+        "skipped": skipped_count,
         "stock_updated": stock_updated_count if update_stock else 0,
         "errors": errors
     }
