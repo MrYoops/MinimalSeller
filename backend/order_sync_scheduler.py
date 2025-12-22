@@ -408,9 +408,20 @@ class OrderSyncScheduler:
             temp_connector = OzonConnector("", "")
             internal_status = temp_connector.map_ozon_status_to_internal(mp_status)
             
+            # Извлечь реальную дату создания заказа от Ozon
+            order_created_at_str = mp_order_data.get("created_at") or mp_order_data.get("in_process_at")
+            if order_created_at_str:
+                try:
+                    from dateutil import parser as date_parser
+                    order_created_at = date_parser.parse(order_created_at_str)
+                except:
+                    order_created_at = datetime.utcnow()
+            else:
+                order_created_at = datetime.utcnow()
+            
             # Создать заказ
             new_order = {
-                "order_number": f"FBS-OZON-{posting_number[-8:]}",
+                "order_number": posting_number,  # Используем настоящий номер заказа с маркетплейса
                 "external_order_id": posting_number,
                 "marketplace": "ozon",
                 "seller_id": seller_id,
@@ -424,7 +435,7 @@ class OrderSyncScheduler:
                     "commission": 0,
                     "total": total_sum
                 },
-                "created_at": datetime.utcnow(),
+                "created_at": order_created_at,  # Реальная дата от МП
                 "updated_at": datetime.utcnow(),
                 "imported_at": datetime.utcnow()
             }
