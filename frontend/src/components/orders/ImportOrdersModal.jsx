@@ -68,10 +68,16 @@ function ImportOrdersModal({ type = 'fbs', onClose, onSuccess }) {
       const response = await api.post(endpoint, payload)
       
       const msg = type === 'fbs' && settings.update_stock
-        ? `Загружено ${response.data.imported} заказов, списано ${response.data.stock_updated} товаров`
-        : `Загружено ${response.data.imported} заказов (без обновления остатков)`
+        ? `Загружено ${response.data.imported} новых заказов, пропущено ${response.data.updated + response.data.skipped} дубликатов. Списано ${response.data.stock_updated} товаров`
+        : `Загружено ${response.data.imported} новых заказов, пропущено ${response.data.updated + response.data.skipped} дубликатов (без обновления остатков)`
       
-      toast.success(msg)
+      if (response.data.imported > 0) {
+        toast.success(msg)
+      } else if (response.data.updated + response.data.skipped > 0) {
+        toast.info(`Все заказы уже были загружены ранее (дубликатов: ${response.data.updated + response.data.skipped})`)
+      } else {
+        toast.warning('Нет заказов для загрузки за выбранный период')
+      }
       onSuccess()
       onClose()
       
