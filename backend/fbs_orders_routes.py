@@ -699,7 +699,7 @@ async def import_fbs_orders(
                         "seller_payout": total_sum,
                         "total": total_sum
                     },
-                    "created_at": order_created_at if marketplace == "ozon" else datetime.utcnow(),  # Реальная дата от МП
+                    "created_at": order_created_at if marketplace in ["ozon", "yandex"] else datetime.utcnow(),  # Реальная дата от МП
                     "updated_at": datetime.utcnow()
                 }
                 
