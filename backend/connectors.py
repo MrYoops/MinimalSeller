@@ -1933,11 +1933,7 @@ class YandexMarketConnector(BaseConnector):
         NOTE: campaign_id можно получить из seller_profile.api_keys[].metadata.campaign_id
         """
         if not campaign_id:
-            raise MarketplaceError(
-                marketplace="YandexMarket",
-                status_code=400,
-                message="campaign_id обязателен для Yandex Market"
-            )
+            campaign_id = self.campaign_id
         
         url = f"{self.base_url}/campaigns/{campaign_id}/orders"
         headers = self._get_headers()
@@ -1983,11 +1979,7 @@ class YandexMarketConnector(BaseConnector):
         Docs: https://yandex.ru/dev/market/partner-api/doc/ru/reference/orders/getOrder
         """
         if not campaign_id:
-            raise MarketplaceError(
-                marketplace="YandexMarket",
-                status_code=400,
-                message="campaign_id обязателен для Yandex Market"
-            )
+            campaign_id = self.campaign_id
         
         url = f"{self.base_url}/campaigns/{campaign_id}/orders/{order_id}"
         headers = self._get_headers()
@@ -2019,7 +2011,7 @@ class YandexMarketConnector(BaseConnector):
         status_map = {
             "RESERVED": "new",
             "PROCESSING": "awaiting_shipment",
-            "DELIVERY": "delivering",  # ← КЛЮЧЕВОЙ СТАТУС ДЛЯ СПИСАНИЯ!
+            "DELIVERY": "delivering",
             "PICKUP": "delivering",
             "DELIVERED": "delivered",
             "CANCELLED": "cancelled",
@@ -2029,10 +2021,7 @@ class YandexMarketConnector(BaseConnector):
         return status_map.get(yandex_status, "new")
 
 
-    connectors = {
-        "ozon": OzonConnector,
-        "wb": WildberriesConnector,
-        "yandex": YandexMarketConnector
+def get_connector(marketplace: str, client_id: str, api_key: str) -> BaseConnector:
     }
     
     connector_class = connectors.get(marketplace)
