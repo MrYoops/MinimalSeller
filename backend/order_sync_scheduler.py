@@ -482,7 +482,132 @@ class OrderSyncScheduler:
     
     async def _create_yandex_order(self, db, seller_id: str, mp_order_data: dict):
         """Создать заказ Yandex в БД"""
-        logger.warning("[OrderSync FBS] Создание Yandex заказов пока не реализовано")
+        try:
+            order_id = str(mp_order_data.get("id"))
+            yandex_status = mp_order_data.get("status")
+            
+            # Извлечь реальную дату создания заказа
+            created_date_str = mp_order_data.get("creationDate")
+            if created_date_str:
+                try:
+                    order_created_at = datetime.strptime(created_date_str, "%d-%m-%Y")
+                except:
+                    order_created_at = datetime.utcnow()
+            else:
+                order_created_at = datetime.utcnow()
+            
+            # Парсинг товаров
+            items = []
+            total_sum = 0
+            
+            for item in mp_order_data.get("items", []):
+                offer_id = item.get("offerId")
+                quantity = int(item.get("count", 1))
+                price = float(item.get("price", 0))
+                
+                # Найти товар в каталоге
+                product = await db.product_catalog.find_one({
+                    "article": offer_id,
+                    "seller_id": seller_id
+                })
+                
+                items.append({
+                    "product_id": str(product["_id"]) if product else "",
+                    "article": offer_id,
+                    "name": item.get("offerName", product.get("name", "") if product else ""),
+                    "price": price,
+                    "quantity": quantity,
+                    "total": price * quantity
+                })
+                total_sum += price * quantity
+            
+            # Парсинг покупателя
+            buyer = mp_order_data.get("buyer", {})
+            delivery = mp_order_data.get("delivery", {})
+            address_obj = delivery.get("address", {})
+            
+            address_parts = []
+            if address_obj.get("city"):
+                address_parts.append(address_obj["city"])
+            if address_obj.get("street"):
+                address_parts.append(f"ул. {address_obj['street']}")
+            if address_obj.get("house"):
+                address_parts.append(f"д. {address_obj['house']}")
+            if address_obj.get("apartment"):
+                address_parts.append(f"кв. {address_obj['apartment']}")
+            
+            customer_data = {
+                "full_name": f"{buyer.get('lastName', '')} {buyer.get('firstName', '')} {buyer.get('middleName', '')}".strip(),
+                "phone": buyer.get("phone", ""),
+                "address": ", ".join(address_parts) if address_parts else ""
+            }
+            
+            # Найти склад
+            warehouse = await db.warehouses.find_one({
+                "seller_id": seller_id,
+                "use_for_orders": True
+            })
+            
+            warehouse_id = warehouse.get("id") if warehouse else None
+            
+            # Маппинг статуса
+            from connectors import YandexMarketConnector
+            temp_connector = YandexMarketConnector("", "")
+            internal_status = temp_connector.map_yandex_status_to_internal(yandex_status)
+            
+            # Создать заказ
+            new_order = {
+                "order_number": order_id,
+                "external_order_id": order_id,
+                "marketplace": "yandex",
+                "seller_id": seller_id,
+                "warehouse_id": warehouse_id,
+                "status": internal_status,
+                "items": items,
+                "customer": customer_data,
+                "totals": {
+                    "subtotal": total_sum,
+                    "shipping": 0,
+                    "commission": 0,
+                    "total": total_sum
+                },
+                "created_at": order_created_at,
+                "updated_at": datetime.utcnow(),
+                "imported_at": datetime.utcnow()
+            }
+            
+            await db.orders_fbs.insert_one(new_order)
+            logger.info(f"[OrderSync FBS] ✅ Заказ Yandex {order_id} создан в БД")
+            
+            # Резервировать товары если нужно
+            if internal_status in ["new", "awaiting_packaging", "awaiting_deliver", "awaiting_shipment"]:
+                reserved_count = 0
+                for item in items:
+                    if item["product_id"]:
+                        try:
+                            prod_id = ObjectId(item["product_id"]) if isinstance(item["product_id"], str) else item["product_id"]
+                            
+                            result = await db.inventory.update_one(
+                                {"product_id": prod_id},
+                                {
+                                    "$inc": {"reserved": item["quantity"], "available": -item["quantity"]}
+                                }
+                            )
+                            
+                            if result.modified_count > 0:
+                                reserved_count += 1
+                                logger.info(f"[OrderSync FBS] ✅ Зарезервирован товар {item['article']}: {item['quantity']} шт")
+                            else:
+                                logger.warning(f"[OrderSync FBS] ⚠️ Не удалось зарезервировать {item['article']}")
+                        except Exception as e:
+                            logger.error(f"[OrderSync FBS] ❌ Ошибка резерва товара {item['article']}: {e}")
+                
+                if reserved_count > 0:
+                    logger.info(f"[OrderSync FBS] ✅ Зарезервировано {reserved_count}/{len(items)} товаров для Yandex {order_id}")
+        
+        except Exception as e:
+            logger.error(f"[OrderSync FBS] Ошибка создания Yandex заказа: {e}")
+
 
 
 # Глобальный экземпляр
