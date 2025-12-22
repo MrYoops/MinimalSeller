@@ -596,6 +596,7 @@ async def import_fbs_orders(
                 
                 if existing:
                     updated_count += 1
+                    logger.info(f"[FBS Import] Заказ {external_id} уже существует (пропускаем)")
                     continue
                 
                 # Найти склад с use_for_orders=True
