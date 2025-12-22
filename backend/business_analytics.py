@@ -1540,9 +1540,12 @@ async def _calculate_from_sales_report(db, seller_id: str, sales_data: List[Dict
         cogs = purchase_price * net_sold if net_sold > 0 and purchase_price > 0 else 0
         
         # Налог
+        # ВАЖНО: При возврате налоговая база уменьшается!
         if tax_system == "usn_6":
-            tax = max(0, total_accrued + compensations_extra) * tax_rate
+            # УСН 6%: налог от чистой выручки (с учётом возвратов)
+            tax = max(0, net_revenue) * tax_rate
         else:
+            # УСН 15%: налог от прибыли (с учётом возвратов)
             profit_before_tax = net_revenue - extra_mp_expenses - cogs
             tax = max(0, profit_before_tax) * tax_rate
         
