@@ -627,7 +627,7 @@ async def import_fbs_orders(
                     "warehouse_id": warehouse["id"],
                     "marketplace": marketplace,
                     "external_order_id": external_id,
-                    "order_number": f"FBS-{marketplace.upper()}-{external_id[:8]}",
+                    "order_number": external_id,  # Используем настоящий номер заказа с маркетплейса
                     "status": "imported",
                     "stock_updated": update_stock,
                     "customer": customer_data,
@@ -639,7 +639,7 @@ async def import_fbs_orders(
                         "seller_payout": total_sum,
                         "total": total_sum
                     },
-                    "created_at": datetime.utcnow(),
+                    "created_at": order_created_at if marketplace == "ozon" else datetime.utcnow(),  # Реальная дата от МП
                     "updated_at": datetime.utcnow()
                 }
                 
