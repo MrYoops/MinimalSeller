@@ -229,7 +229,7 @@ async def import_fbo_orders(
                     "seller_id": str(current_user["_id"]),
                     "marketplace": marketplace,
                     "external_order_id": external_id,
-                    "order_number": f"FBO-{marketplace.upper()}-{external_id[:8]}",
+                    "order_number": external_id,  # Используем настоящий номер заказа с маркетплейса
                     "warehouse_name": (mp_order_data.get("warehouse") or {}).get("name", "Склад Ozon"),
                     "status": "imported",
                     "customer": customer_data,
@@ -241,7 +241,7 @@ async def import_fbo_orders(
                         "seller_payout": total_sum,
                         "total": total_sum
                     },
-                    "created_at": datetime.utcnow(),
+                    "created_at": order_created_at,  # Реальная дата от МП
                     "updated_at": datetime.utcnow()
                 }
                 
