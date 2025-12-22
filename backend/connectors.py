@@ -2022,6 +2022,12 @@ class YandexMarketConnector(BaseConnector):
 
 
 def get_connector(marketplace: str, client_id: str, api_key: str) -> BaseConnector:
+    """Factory function to get appropriate connector"""
+    
+    connectors = {
+        "ozon": OzonConnector,
+        "wb": WildberriesConnector,
+        "yandex": YandexMarketConnector
     }
     
     connector_class = connectors.get(marketplace)
@@ -2029,4 +2035,5 @@ def get_connector(marketplace: str, client_id: str, api_key: str) -> BaseConnect
         raise ValueError(f"Unknown marketplace: {marketplace}")
     
     return connector_class(client_id, api_key)
+
 
