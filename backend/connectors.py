@@ -1922,11 +1922,6 @@ class YandexMarketConnector(BaseConnector):
         except MarketplaceError as e:
             logger.error(f"[Yandex] Failed to get stocks: {e.message}")
             raise
-
-def get_connector(marketplace: str, client_id: str, api_key: str) -> BaseConnector:
-    """Factory function to get appropriate connector"""
-    
-    # ========== МЕТОДЫ ДЛЯ РАБОТЫ С ЗАКАЗАМИ ==========
     
     async def get_orders(self, date_from: datetime, date_to: datetime, campaign_id: str = None) -> List[Dict[str, Any]]:
         """
