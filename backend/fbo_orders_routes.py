@@ -210,9 +210,10 @@ async def import_fbo_orders(
                 
                 if existing:
                     updated_count += 1
+                    logger.info(f"[FBO Import] Заказ {external_id} уже существует (пропускаем)")
                     continue
                 
-                # СОЗДАТЬ ЗАКАЗ (БЕЗ обновления остатков!)
+                # СОЗДАТЬ ЗАКАЗ (БЕЗ обновления остатков!) с защитой от дубликатов
                 order_doc = {
                     "seller_id": str(current_user["_id"]),
                     "marketplace": marketplace,
@@ -233,10 +234,21 @@ async def import_fbo_orders(
                     "updated_at": datetime.utcnow()
                 }
                 
-                await db.orders_fbo.insert_one(order_doc)
-                imported_count += 1
-                
-                logger.info(f"[FBO Import] Создан заказ {order_doc['order_number']} (БЕЗ обновления остатков)")
+                try:
+                    await db.orders_fbo.insert_one(order_doc)
+                    imported_count += 1
+                    logger.info(f"[FBO Import] ✅ Создан заказ {order_doc['order_number']} (БЕЗ обновления остатков)")
+                except Exception as insert_error:
+                    # Обработка ошибки дублирования
+                    error_msg = str(insert_error)
+                    if "duplicate key error" in error_msg.lower() or "E11000" in error_msg:
+                        skipped_count += 1
+                        logger.warning(f"[FBO Import] ⚠️ Заказ {external_id} уже существует (защита индекса)")
+                        continue
+                    else:
+                        logger.error(f"[FBO Import] ❌ Ошибка создания заказа {external_id}: {insert_error}")
+                        errors.append({"order": external_id, "error": str(insert_error)})
+                        continue
     
     except Exception as e:
         logger.error(f"[FBO Import] Ошибка {marketplace}: {e}")
