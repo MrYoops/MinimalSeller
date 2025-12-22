@@ -584,10 +584,70 @@ async def import_fbs_orders(
                     external_id = str(mp_order_data.get("id"))
                     mp_status = mp_order_data.get("status")
                     
-                    # TODO: парсинг Yandex заказов
+                    # Извлечь реальную дату создания заказа
+                    created_date_str = mp_order_data.get("creationDate")
+                    if created_date_str:
+                        try:
+                            # Yandex формат: "02-02-2023"
+                            order_created_at = datetime.strptime(created_date_str, "%d-%m-%Y")
+                        except:
+                            order_created_at = datetime.utcnow()
+                    else:
+                        order_created_at = datetime.utcnow()
+                    
+                    # Парсинг товаров
                     items = []
                     total_sum = 0
-                    customer_data = {"full_name": "", "phone": ""}
+                    
+                    for item in mp_order_data.get("items", []):
+                        offer_id = item.get("offerId")  # Артикул продавца
+                        quantity = int(item.get("count", 1))
+                        price = float(item.get("price", 0))
+                        
+                        # Найти товар в системе
+                        product = await db.product_catalog.find_one({
+                            "article": offer_id,
+                            "seller_id": str(current_user["_id"])
+                        })
+                        
+                        items.append({
+                            "product_id": str(product["_id"]) if product else "",
+                            "article": offer_id,
+                            "name": item.get("offerName", product.get("name", "") if product else ""),
+                            "price": price,
+                            "quantity": quantity,
+                            "total": price * quantity
+                        })
+                        total_sum += price * quantity
+                        
+                        if not product:
+                            logger.warning(f"[FBS Import] Товар {offer_id} не найден в каталоге, но добавлен в заказ")
+                    
+                    # Парсинг покупателя
+                    buyer = mp_order_data.get("buyer", {})
+                    
+                    # Парсинг адреса доставки
+                    delivery = mp_order_data.get("delivery", {})
+                    address_obj = delivery.get("address", {})
+                    
+                    # Формируем полный адрес
+                    address_parts = []
+                    if address_obj.get("city"):
+                        address_parts.append(address_obj["city"])
+                    if address_obj.get("street"):
+                        address_parts.append(f"ул. {address_obj['street']}")
+                    if address_obj.get("house"):
+                        address_parts.append(f"д. {address_obj['house']}")
+                    if address_obj.get("apartment"):
+                        address_parts.append(f"кв. {address_obj['apartment']}")
+                    
+                    full_address = ", ".join(address_parts) if address_parts else ""
+                    
+                    customer_data = {
+                        "full_name": f"{buyer.get('lastName', '')} {buyer.get('firstName', '')} {buyer.get('middleName', '')}".strip(),
+                        "phone": buyer.get("phone", ""),
+                        "address": full_address
+                    }
                 
                 else:
                     continue
