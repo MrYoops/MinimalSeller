@@ -131,6 +131,7 @@ async def import_fbo_orders(
     
     imported_count = 0
     updated_count = 0
+    skipped_count = 0
     errors = []
     
     # Только Ozon поддерживает FBO
@@ -147,10 +148,34 @@ async def import_fbo_orders(
         # Получить FBO заказы (только Ozon)
         mp_orders = await connector.get_fbo_orders(date_from, date_to)
         
-        logger.info(f"[FBO Import] {marketplace}: получено {len(mp_orders)} заказов")
+        logger.info(f"[FBO Import] {marketplace}: получено {len(mp_orders)} заказов от API")
         
-        # Обработать каждый заказ
-        for mp_order_data in mp_orders:
+        # ДЕДУПЛИКАЦИЯ ВНУТРИ БАТЧА
+        seen_external_ids = set()
+        unique_orders = []
+        duplicate_in_batch = 0
+        
+        for order_data in mp_orders:
+            ext_id = order_data.get("posting_number")
+            
+            if not ext_id:
+                continue
+            
+            if ext_id in seen_external_ids:
+                duplicate_in_batch += 1
+                logger.warning(f"[FBO Import] ⚠️ Дубликат в батче: {ext_id} (пропускаем)")
+                continue
+            
+            seen_external_ids.add(ext_id)
+            unique_orders.append(order_data)
+        
+        if duplicate_in_batch > 0:
+            logger.warning(f"[FBO Import] ⚠️ Обнаружено {duplicate_in_batch} дубликатов внутри батча от API")
+        
+        logger.info(f"[FBO Import] После дедупликации: {len(unique_orders)} уникальных заказов")
+        
+        # Обработать каждый УНИКАЛЬНЫЙ заказ
+        for mp_order_data in unique_orders:
                 external_id = mp_order_data.get("posting_number")
                 products = mp_order_data.get("products", [])
                 
