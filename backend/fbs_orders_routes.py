@@ -454,6 +454,7 @@ async def import_fbs_orders(
     
     imported_count = 0
     updated_count = 0
+    skipped_count = 0
     stock_updated_count = 0
     errors = []
     
@@ -478,13 +479,46 @@ async def import_fbs_orders(
         else:
             raise HTTPException(status_code=400, detail=f"Неизвестный маркетплейс: {marketplace}")
         
-        logger.info(f"[FBS Import] {marketplace}: получено {len(mp_orders)} заказов")
+        logger.info(f"[FBS Import] {marketplace}: получено {len(mp_orders)} заказов от API")
         
         if len(mp_orders) > 0:
             logger.info(f"[FBS Import] Первый заказ (пример): {mp_orders[0].get('posting_number', 'NO_ID')}")
         
-        # Обработать каждый заказ
-        for mp_order_data in mp_orders:
+        # ДЕДУПЛИКАЦИЯ ВНУТРИ БАТЧА: проверить уникальность в полученном списке
+        seen_external_ids = set()
+        unique_orders = []
+        duplicate_in_batch = 0
+        
+        for order_data in mp_orders:
+            # Извлечь external_id в зависимости от МП
+            if marketplace == "ozon":
+                ext_id = order_data.get("posting_number")
+            elif marketplace in ["wb", "wildberries"]:
+                ext_id = str(order_data.get("id"))
+            elif marketplace == "yandex":
+                ext_id = str(order_data.get("id"))
+            else:
+                ext_id = None
+            
+            if not ext_id:
+                continue
+            
+            # Проверить дубликаты внутри батча
+            if ext_id in seen_external_ids:
+                duplicate_in_batch += 1
+                logger.warning(f"[FBS Import] ⚠️ Дубликат в батче: {ext_id} (пропускаем)")
+                continue
+            
+            seen_external_ids.add(ext_id)
+            unique_orders.append(order_data)
+        
+        if duplicate_in_batch > 0:
+            logger.warning(f"[FBS Import] ⚠️ Обнаружено {duplicate_in_batch} дубликатов внутри батча от API")
+        
+        logger.info(f"[FBS Import] После дедупликации: {len(unique_orders)} уникальных заказов")
+        
+        # Обработать каждый УНИКАЛЬНЫЙ заказ
+        for mp_order_data in unique_orders:
                 # Парсинг данных заказа
                 if marketplace == "ozon":
                     external_id = mp_order_data.get("posting_number")
