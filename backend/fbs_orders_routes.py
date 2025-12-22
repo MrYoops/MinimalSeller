@@ -525,6 +525,18 @@ async def import_fbs_orders(
                     mp_status = mp_order_data.get("status")
                     products = mp_order_data.get("products", [])
                     
+                    # Извлечь реальную дату создания заказа от Ozon
+                    order_created_at_str = mp_order_data.get("created_at") or mp_order_data.get("in_process_at")
+                    if order_created_at_str:
+                        try:
+                            # Ozon возвращает дату в ISO формате: "2024-01-15T10:30:00Z"
+                            from dateutil import parser as date_parser
+                            order_created_at = date_parser.parse(order_created_at_str)
+                        except:
+                            order_created_at = datetime.utcnow()
+                    else:
+                        order_created_at = datetime.utcnow()
+                    
                     items = []
                     total_sum = 0
                     
