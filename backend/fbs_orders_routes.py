@@ -631,8 +631,23 @@ async def import_fbs_orders(
                     "updated_at": datetime.utcnow()
                 }
                 
-                await db.orders_fbs.insert_one(order_doc)
-                imported_count += 1
+                # СОЗДАТЬ ЗАКАЗ (с защитой от дубликатов)
+                try:
+                    await db.orders_fbs.insert_one(order_doc)
+                    imported_count += 1
+                    logger.info(f"[FBS Import] ✅ Создан заказ {external_id}")
+                except Exception as insert_error:
+                    # Обработка ошибки дублирования (если индекс уникальности срабатывает)
+                    error_msg = str(insert_error)
+                    if "duplicate key error" in error_msg.lower() or "E11000" in error_msg:
+                        skipped_count += 1
+                        logger.warning(f"[FBS Import] ⚠️ Заказ {external_id} уже существует (защита индекса)")
+                        continue
+                    else:
+                        # Другая ошибка
+                        logger.error(f"[FBS Import] ❌ Ошибка создания заказа {external_id}: {insert_error}")
+                        errors.append({"order": external_id, "error": str(insert_error)})
+                        continue
                 
                 # ОБНОВИТЬ ОСТАТКИ (если чекбокс включен)
                 if update_stock:
