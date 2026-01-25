@@ -8,6 +8,14 @@ import logging
 import json
 import gzip
 import brotli  # For Brotli decompression
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+    RetryCallState
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +50,13 @@ class BaseConnector:
             "Sec-Fetch-Site": "same-origin",
         }
     
+    @retry(
+        stop=stop_after_attempt(3),  # Максимум 3 попытки
+        wait=wait_exponential(multiplier=1, min=2, max=10),  # Экспоненциальная задержка 2-10 сек
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.ConnectError)),  # Повторять только при этих ошибках
+        reraise=True,  # Пробросить ошибку после всех попыток
+        before_sleep=before_sleep_log(logger, logging.WARNING)  # Логировать перед повтором
+    )
     async def _make_request(
         self,
         method: str,
@@ -51,6 +66,13 @@ class BaseConnector:
         params: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """Make HTTP request with full browser headers"""
+        # Логирование попытки (для retry)
+        import sys
+        retry_state = getattr(sys, '_tenacity_retry_state', None)
+        if retry_state:
+            attempt = retry_state.attempt_number
+            logger.warning(f"[{self.marketplace_name}] Retry attempt {attempt}/3 for {url}")
+        
         try:
             async with httpx.AsyncClient(
                 timeout=self.timeout, 
@@ -142,18 +164,22 @@ class BaseConnector:
                     return {"raw_response": response.text}
                 
         except httpx.TimeoutException as e:
-            logger.error(f"[{self.marketplace_name}] Request timeout: {str(e)}")
+            logger.error(f"[{self.marketplace_name}] Request timeout after {self.timeout}s: {str(e)}")
+            logger.error(f"[{self.marketplace_name}] URL: {url}")
             raise MarketplaceError(
                 marketplace=self.marketplace_name,
                 status_code=408,
-                message="Request timeout - marketplace server not responding"
+                message=f"Таймаут запроса к {self.marketplace_name} API (превышено {self.timeout}s). Возможно сервер перегружен.",
+                details=str(e)
             )
         except httpx.ConnectError as e:
             logger.error(f"[{self.marketplace_name}] Connection error: {str(e)}")
+            logger.error(f"[{self.marketplace_name}] URL: {url}")
             raise MarketplaceError(
                 marketplace=self.marketplace_name,
                 status_code=503,
-                message=f"Cannot connect to marketplace server: {str(e)}"
+                message=f"Не удалось подключиться к {self.marketplace_name} API. Проверьте интернет или попробуйте позже.",
+                details=str(e)
             )
         except MarketplaceError:
             raise
@@ -1357,6 +1383,159 @@ class WildberriesConnector(BaseConnector):
             logger.error(f"[WB] Unexpected error: {str(e)}")
             raise MarketplaceError(f"Failed to fetch WB warehouses: {str(e)}", 500)
     
+    async def create_product(self, card_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Создать карточку товара на WB
+        
+        Docs: https://openapi.wildberries.ru/#tag/Kontent-Prosmotr/paths/~1content~1v2~1cards~1upload/post
+        """
+        logger.info("[WB] Creating product card")
+        
+        url = f"{self.content_api_url}/content/v2/cards/upload"
+        headers = self._get_headers()
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=card_data)
+            logger.info(f"[WB] ✅ Product card created: {response}")
+            
+            return {
+                "success": True,
+                "message": "Карточка создана на Wildberries",
+                "data": response
+            }
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to create product: {e.message}")
+            raise
+    
+    async def update_product(self, card_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Обновить карточку товара на WB
+        
+        Docs: https://openapi.wildberries.ru/#tag/Kontent-Redaktirovanie/paths/~1content~1v2~1cards~1update/post
+        """
+        logger.info("[WB] Updating product card")
+        
+        url = f"{self.content_api_url}/content/v2/cards/update"
+        headers = self._get_headers()
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=card_data)
+            logger.info(f"[WB] ✅ Product card updated: {response}")
+            
+            return {
+                "success": True,
+                "message": "Карточка обновлена на Wildberries",
+                "data": response
+            }
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to update product: {e.message}")
+            raise
+    
+    async def update_prices(self, prices: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Обновить цены товаров на WB
+        
+        Args:
+            prices: [{"nm_id": 123456, "price": 1500}, ...]
+        
+        Docs: https://openapi.wildberries.ru/#tag/Ceny/paths/~1public~1api~1v1~1prices/post
+        """
+        logger.info(f"[WB] Updating prices for {len(prices)} products")
+        
+        url = f"{self.marketplace_api_url}/public/api/v1/prices"
+        headers = self._get_headers()
+        
+        # Формат WB API: [{"nmId": int, "price": int}, ...]
+        payload = [
+            {
+                "nmId": int(price["nm_id"]),
+                "price": int(price["price"])
+            }
+            for price in prices
+        ]
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            logger.info(f"[WB] ✅ Prices updated: {response}")
+            
+            return {
+                "success": True,
+                "message": f"Цены обновлены для {len(prices)} товаров",
+                "data": response
+            }
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to update prices: {e.message}")
+            raise
+    
+    async def update_stocks(self, warehouse_id: int, stocks: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Обновить остатки товаров на складе FBS
+        
+        Args:
+            warehouse_id: ID склада WB
+            stocks: [{"barcode": "1234567890", "quantity": 10}, ...]
+        
+        Docs: https://openapi.wildberries.ru/#tag/Sklady/paths/~1api~1v3~1stocks~1{warehouseId}/put
+        """
+        logger.info(f"[WB] Updating stocks for {len(stocks)} products on warehouse {warehouse_id}")
+        
+        url = f"{self.marketplace_api_url}/api/v3/stocks/{warehouse_id}"
+        headers = self._get_headers()
+        
+        # Формат WB API
+        payload = {
+            "stocks": [
+                {
+                    "sku": stock["barcode"],
+                    "amount": stock["quantity"]
+                }
+                for stock in stocks
+            ]
+        }
+        
+        try:
+            response = await self._make_request("PUT", url, headers, json_data=payload)
+            logger.info(f"[WB] ✅ Stocks updated: {response}")
+            
+            return {
+                "success": True,
+                "message": f"Остатки обновлены для {len(stocks)} товаров",
+                "data": response
+            }
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to update stocks: {e.message}")
+            raise
+    
+    async def get_fbs_orders(self, date_from: datetime, date_to: datetime) -> List[Dict[str, Any]]:
+        """
+        Получить заказы FBS за период
+        
+        Docs: https://openapi.wildberries.ru/#tag/Sborka-i-dostavka-tovarov/paths/~1api~1v3~1orders/get
+        """
+        logger.info(f"[WB] Fetching FBS orders from {date_from} to {date_to}")
+        
+        url = f"{self.marketplace_api_url}/api/v3/orders"
+        headers = self._get_headers()
+        
+        # Конвертация дат в timestamp (секунды)
+        params = {
+            "dateFrom": int(date_from.timestamp()),
+            "dateTo": int(date_to.timestamp()),
+            "flag": 0  # 0 = FBS заказы
+        }
+        
+        try:
+            response = await self._make_request("GET", url, headers, params=params)
+            
+            orders = response.get("orders", [])
+            logger.info(f"[WB] Received {len(orders)} FBS orders")
+            
+            return orders
+            
+        except MarketplaceError as e:
+            logger.error(f"[WB] Failed to fetch FBS orders: {e.message}")
+            raise
+    
     async def search_categories(self, query: str) -> List[Dict[str, Any]]:
         """Search WB categories by name"""
         logger.info(f"[WB] Searching categories: '{query}'")
@@ -1923,52 +2102,182 @@ class YandexMarketConnector(BaseConnector):
             logger.error(f"[Yandex] Failed to get stocks: {e.message}")
             raise
     
-    async def get_orders(self, date_from: datetime, date_to: datetime, campaign_id: str = None) -> List[Dict[str, Any]]:
+    async def update_offers(self, offers: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Получить заказы Yandex Market за период
+        Обновить офферы (товары) на Яндекс.Маркет
         
-        API: GET /campaigns/{campaignId}/orders
+        Args:
+            offers: [{
+                "sku": "ARTICLE-001",
+                "name": "Название товара",
+                "category": "Категория",
+                "images": ["url1", "url2"],
+                "vendor": "Бренд",
+                "description": "Описание"
+            }, ...]
+        
+        Docs: https://yandex.ru/dev/market/partner-api/doc/ru/reference/business-assortment/updateOfferMappings
+        """
+        logger.info(f"[Yandex] Updating {len(offers)} offers")
+        
+        url = f"{self.base_url}/campaigns/{self.campaign_id}/offers/update"
+        headers = self._get_headers()
+        
+        # Подготовка данных для API Яндекса
+        payload = {
+            "offers": [
+                {
+                    "offerId": offer["sku"],
+                    "name": offer.get("name"),
+                    "category": offer.get("category"),
+                    "pictures": offer.get("images", []),
+                    "vendor": offer.get("vendor"),
+                    "description": offer.get("description")
+                }
+                for offer in offers
+            ]
+        }
+        
+        # Убрать None значения
+        payload["offers"] = [
+            {k: v for k, v in offer_item.items() if v is not None}
+            for offer_item in payload["offers"]
+        ]
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            logger.info(f"[Yandex] ✅ Offers updated: {response}")
+            
+            return {
+                "success": True,
+                "message": f"Обновлено {len(offers)} офферов на Яндекс.Маркет",
+                "data": response
+            }
+        except MarketplaceError as e:
+            logger.error(f"[Yandex] Failed to update offers: {e.message}")
+            raise
+    
+    async def update_prices(self, offers: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Обновить цены товаров на Яндекс.Маркет
+        
+        Args:
+            offers: [{"sku": "ARTICLE-001", "price": 1500}, ...]
+        
+        Docs: https://yandex.ru/dev/market/partner-api/doc/ru/reference/assortment/updatePrices
+        """
+        logger.info(f"[Yandex] Updating prices for {len(offers)} offers")
+        
+        url = f"{self.base_url}/campaigns/{self.campaign_id}/offer-prices/updates"
+        headers = self._get_headers()
+        
+        payload = {
+            "offers": [
+                {
+                    "id": offer["sku"],
+                    "price": {
+                        "value": offer["price"],
+                        "currencyId": "RUR"
+                    }
+                }
+                for offer in offers
+            ]
+        }
+        
+        try:
+            response = await self._make_request("POST", url, headers, json_data=payload)
+            logger.info(f"[Yandex] ✅ Prices updated: {response}")
+            
+            return {
+                "success": True,
+                "message": f"Цены обновлены для {len(offers)} товаров",
+                "data": response
+            }
+        except MarketplaceError as e:
+            logger.error(f"[Yandex] Failed to update prices: {e.message}")
+            raise
+    
+    async def update_stocks(self, stocks: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Обновить остатки товаров на Яндекс.Маркет
+        
+        Args:
+            stocks: [{
+                "sku": "ARTICLE-001",
+                "warehouse_id": 123,
+                "quantity": 10
+            }, ...]
+        
+        Docs: https://yandex.ru/dev/market/partner-api/doc/ru/reference/stocks/updateStocks
+        """
+        logger.info(f"[Yandex] Updating stocks for {len(stocks)} offers")
+        
+        url = f"{self.base_url}/campaigns/{self.campaign_id}/offers/stocks"
+        headers = self._get_headers()
+        
+        payload = {
+            "skus": [
+                {
+                    "sku": stock["sku"],
+                    "warehouseId": stock["warehouse_id"],
+                    "items": [
+                        {
+                            "count": stock["quantity"],
+                            "type": "FIT",
+                            "updatedAt": datetime.utcnow().isoformat() + "Z"
+                        }
+                    ]
+                }
+                for stock in stocks
+            ]
+        }
+        
+        try:
+            response = await self._make_request("PUT", url, headers, json_data=payload)
+            logger.info(f"[Yandex] ✅ Stocks updated: {response}")
+            
+            return {
+                "success": True,
+                "message": f"Остатки обновлены для {len(stocks)} товаров",
+                "data": response
+            }
+        except MarketplaceError as e:
+            logger.error(f"[Yandex] Failed to update stocks: {e.message}")
+            raise
+    
+    async def get_orders(self, date_from: datetime, date_to: datetime, 
+                    status: str = "PROCESSING,DELIVERY,DELIVERED") -> List[Dict[str, Any]]:
+        """
+        Получить заказы за период
+        
+        Args:
+            date_from: Начальная дата
+            date_to: Конечная дата
+            status: Статусы через запятую
+        
         Docs: https://yandex.ru/dev/market/partner-api/doc/ru/reference/orders/getOrders
-        
-        NOTE: campaign_id можно получить из seller_profile.api_keys[].metadata.campaign_id
         """
-        if not campaign_id:
-            campaign_id = self.campaign_id
+        logger.info(f"[Yandex] Fetching orders from {date_from} to {date_to}")
         
-        url = f"{self.base_url}/campaigns/{campaign_id}/orders"
+        url = f"{self.base_url}/campaigns/{self.campaign_id}/orders"
         headers = self._get_headers()
         
         params = {
-            "status": "PROCESSING,DELIVERY,DELIVERED,CANCELLED",
-            "fromDate": date_from.strftime("%d-%m-%Y"),
-            "toDate": date_to.strftime("%d-%m-%Y"),
-            "page": 1,
-            "pageSize": 50
+            "dateFrom": date_from.isoformat(),
+            "dateTo": date_to.isoformat(),
+            "status": status
         }
         
-        all_orders = []
-        
         try:
-            # Пагинация (может быть несколько страниц)
-            while True:
-                response = await self._make_request("GET", url, headers, params=params)
-                orders = response.get("orders", [])
-                all_orders.extend(orders)
-                
-                pager = response.get("pager", {})
-                current_page = pager.get("currentPage", 1)
-                pages_count = pager.get("pagesCount", 1)
-                
-                if current_page >= pages_count:
-                    break
-                
-                params["page"] = current_page + 1
+            response = await self._make_request("GET", url, headers, params=params)
             
-            logger.info(f"[YandexMarket] Получено {len(all_orders)} заказов")
-            return all_orders
+            orders = response.get("orders", [])
+            logger.info(f"[Yandex] Received {len(orders)} orders")
+            
+            return orders
             
         except MarketplaceError as e:
-            logger.error(f"[YandexMarket] Ошибка получения заказов: {e.message}")
+            logger.error(f"[Yandex] Failed to fetch orders: {e.message}")
             raise
     
     async def get_order_status(self, order_id: str, campaign_id: str = None) -> Dict[str, Any]:

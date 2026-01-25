@@ -18,12 +18,13 @@ const IntegrationsPage = () => {
   });
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [networkError, setNetworkError] = useState(false);
 
   const marketplaces = [
     {
       id: 'ozon',
       name: 'Ozon',
-      logo: '🟠',
+      logo: '🔵',
       description: 'Интеграция с Ozon для работы с товарами, заказами FBS и аналитикой',
       helpText: '⚠️ Для ПОЛНОГО функционала создайте токен со ВСЕМИ правами: Admin, Product, Posting, Finance, Analytics, Warehouse, Orders',
       requiredPermissions: ['Admin', 'Product', 'Posting', 'Finance', 'Analytics', 'Warehouse', 'Orders'],
@@ -63,10 +64,25 @@ const IntegrationsPage = () => {
 
   const loadApiKeys = async () => {
     try {
+      setNetworkError(false);
       const response = await api.get('/api/seller/api-keys');
-      setApiKeys(response.data);
+      setApiKeys(response.data || []);
     } catch (error) {
       console.error('Error loading API keys:', error);
+      // Определяем реальную ошибку сети
+      const isNetworkError = error.code === 'ERR_NETWORK' || 
+                            error.message?.includes('Network Error') ||
+                            !error.response;
+      
+      if (isNetworkError) {
+        console.error('❌ Backend не доступен. Убедитесь что Backend запущен на http://localhost:8001');
+        setNetworkError(true);
+      } else {
+        console.error('❌ Ошибка API:', error.response?.data || error.message);
+        setNetworkError(false);
+      }
+      // Устанавливаем пустой массив
+      setApiKeys([]);
     } finally {
       setLoading(false);
     }
@@ -86,21 +102,60 @@ const IntegrationsPage = () => {
   };
 
   const handleTest = async () => {
+    if (!formData.api_key || !formData.api_key.trim()) {
+      alert('❌ Введите API ключ для тестирования');
+      return;
+    }
+
+    if (selectedMarketplace === 'ozon' && (!formData.client_id || !formData.client_id.trim())) {
+      alert('❌ Введите Client ID для Ozon');
+      return;
+    }
+
     setTesting(true);
     try {
+      console.log('🧪 Тестирование подключения:', {
+        marketplace: selectedMarketplace,
+        client_id: formData.client_id ? formData.client_id.substring(0, 10) + '...' : 'N/A',
+        api_key: formData.api_key ? '***' + formData.api_key.slice(-4) : 'N/A'
+      });
+
       const response = await api.post('/api/seller/api-keys/test', {
         marketplace: selectedMarketplace,
-        client_id: formData.client_id,
+        client_id: formData.client_id || '',
         api_key: formData.api_key
       });
+
+      console.log('✅ Ответ от Backend:', response.data);
 
       if (response.data.success) {
         alert(response.data.message);
       } else {
-        alert(response.data.message);
+        alert(response.data.message || 'Ошибка тестирования');
       }
     } catch (error) {
-      alert('Ошибка тестирования: ' + (error.response?.data?.detail || error.message));
+      console.error('❌ Ошибка тестирования:', error);
+      console.error('   Code:', error.code);
+      console.error('   Message:', error.message);
+      console.error('   Response:', error.response?.data);
+      
+      let errorMsg = 'Неизвестная ошибка';
+      
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        errorMsg = '❌ Network Error: Backend не доступен. Убедитесь что Backend запущен на http://localhost:8001';
+      } else if (error.response?.status === 401) {
+        errorMsg = '❌ Ошибка авторизации. Войдите в систему заново.';
+      } else if (error.response?.status === 403) {
+        errorMsg = '❌ Недостаточно прав. Требуется роль Seller.';
+      } else if (error.response?.data?.detail) {
+        errorMsg = `❌ ${error.response.data.detail}`;
+      } else if (error.response?.data?.message) {
+        errorMsg = `❌ ${error.response.data.message}`;
+      } else if (error.message) {
+        errorMsg = `❌ ${error.message}`;
+      }
+      
+      alert('Ошибка тестирования: ' + errorMsg);
     } finally {
       setTesting(false);
     }
@@ -125,7 +180,10 @@ const IntegrationsPage = () => {
       setShowAddModal(false);
       loadApiKeys();
     } catch (error) {
-      alert('Ошибка: ' + (error.response?.data?.detail || error.message));
+      const errorMsg = error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')
+        ? '❌ Network Error: Backend не доступен. Убедитесь что Backend запущен на http://localhost:8001'
+        : (error.response?.data?.detail || error.message || 'Неизвестная ошибка');
+      alert('Ошибка: ' + errorMsg);
     } finally {
       setSaving(false);
     }
@@ -139,7 +197,10 @@ const IntegrationsPage = () => {
       alert('✅ Интеграция удалена');
       loadApiKeys();
     } catch (error) {
-      alert('Ошибка: ' + (error.response?.data?.detail || error.message));
+      const errorMsg = error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')
+        ? '❌ Network Error: Backend не доступен. Убедитесь что Backend запущен на http://localhost:8001'
+        : (error.response?.data?.detail || error.message || 'Неизвестная ошибка');
+      alert('Ошибка: ' + errorMsg);
     }
   };
 
@@ -150,7 +211,10 @@ const IntegrationsPage = () => {
       });
       loadApiKeys();
     } catch (error) {
-      alert('Ошибка обновления: ' + (error.response?.data?.detail || error.message));
+      const errorMsg = error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')
+        ? '❌ Network Error: Backend не доступен. Убедитесь что Backend запущен на http://localhost:8001'
+        : (error.response?.data?.detail || error.message || 'Неизвестная ошибка');
+      alert('Ошибка обновления: ' + errorMsg);
     }
   };
 
@@ -172,6 +236,8 @@ const IntegrationsPage = () => {
     );
   }
 
+  // Показываем предупреждение только при реальной ошибке сети
+
   const selectedMp = marketplaces.find(m => m.id === selectedMarketplace);
 
   return (
@@ -181,6 +247,19 @@ const IntegrationsPage = () => {
         <h1 className="text-3xl font-bold text-mm-cyan mb-2">ИНТЕГРАЦИИ</h1>
         <p className="text-gray-400">Подключите маркетплейсы для автоматизации работы</p>
       </div>
+
+      {/* Network Error Warning */}
+      {networkError && (
+        <div className="mb-6 p-4 bg-red-900/20 border border-red-600/30 rounded-lg">
+          <p className="text-red-300 font-semibold mb-2">⚠️ Ошибка подключения к Backend</p>
+          <p className="text-red-200 text-sm mb-2">
+            Убедитесь что Backend запущен на <code className="bg-gray-800 px-2 py-1 rounded">http://localhost:8001</code>
+          </p>
+          <p className="text-red-200 text-sm">
+            Проверьте консоль браузера (F12) для подробностей ошибки
+          </p>
+        </div>
+      )}
 
       {/* Active Integrations */}
       {apiKeys.length > 0 && (

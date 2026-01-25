@@ -11,17 +11,32 @@ import os
 from dotenv import load_dotenv
 from bson import ObjectId
 import logging
+from config import settings, validate_settings
+from logging_config import setup_logging
 
 load_dotenv()
+
+# Настроить логирование при старте
+logger = setup_logging()
+logger.info("=" * 50)
+logger.info("MinimalSeller Backend starting...")
+logger.info("=" * 50)
+
+# Проверка конфигурации при запуске
+print("\n🔍 Проверка конфигурации...")
+if validate_settings():
+    print("✅ Конфигурация корректна\n")
+else:
+    print("⚠️ Внимание: есть проблемы с конфигурацией, но продолжаем запуск\n")
 
 app = FastAPI(title="MinimalMod API")
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["*"],
 )
 
@@ -34,11 +49,11 @@ async def log_requests(request, call_next):
     return response
 
 # MongoDB setup
-MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
-DATABASE_NAME = os.getenv("DATABASE_NAME", "minimalmod")
-SECRET_KEY = "your-secret-key-min-32-chars-long-change-me-please"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
+MONGO_URL = settings.get_mongo_url()
+DATABASE_NAME = settings.DATABASE_NAME
+SECRET_KEY = settings.get_secret_key()
+ALGORITHM = settings.JWT_ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.get_token_expire_minutes()
 
 client = None
 db = None
@@ -47,7 +62,7 @@ db = None
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
-logging.basicConfig(level=logging.INFO)
+# Logger уже настроен через setup_logging() выше
 logger = logging.getLogger(__name__)
 
 # Models
@@ -456,6 +471,12 @@ async def test_api_key(
 ):
     """REAL API connection test - no mock data!"""
     from connectors import get_connector, MarketplaceError
+    
+    try:
+        logger.info(f"🔍 API test request received from user {current_user.get('email', 'unknown')}")
+        logger.info(f"   Request data keys: {list(data.keys())}")
+    except Exception as e:
+        logger.error(f"❌ Error logging request: {e}")
     
     marketplace = data.get('marketplace')
     client_id = data.get('client_id', '')
