@@ -1,0 +1,829 @@
+from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import List, Dict, Any, Optional
+import json
+from datetime import datetime
+from bson import ObjectId
+import logging
+import asyncio
+from pathlib import Path
+
+from backend.core.database import get_database
+from auth_utils import get_current_user
+
+# Определяем путь к корню проекта динамически
+PROJECT_ROOT = Path(__file__).parent.parent
+DEBUG_LOG_PATH = PROJECT_ROOT / ".cursor" / "debug.log"
+DEBUG_LOG_PATH.parent.mkdir(exist_ok=True)
+# Ленивый импорт для избежания ошибки при отсутствии tenacity
+def _get_sync_function():
+    try:
+        from stock_sync_routes import sync_product_to_marketplace
+        return sync_product_to_marketplace
+    except ImportError:
+        return None
+
+router = APIRouter(prefix="/api/inventory", tags=["inventory-stock"])
+logger = logging.getLogger(__name__)
+
+# #region agent log
+# Log that this module is being imported
+try:
+    import time
+    with open(str(DEBUG_LOG_PATH), 'a', encoding='utf-8') as f:
+        f.write(json.dumps({"id":"log_module_imported","timestamp":int(time.time()*1000),"location":"inventory_stock_routes.py:19","message":"Module imported","data":{"router_prefix":router.prefix},"sessionId":"debug-session","runId":"run2","hypothesisId":"G"}) + '\n')
+except Exception as e:
+    pass  # Don't fail if logging fails
+# #endregion
+
+# Test endpoint to verify router is working
+@router.get("/test-router")
+async def test_router():
+    """Test endpoint to verify router is registered"""
+    return {"status": "ok", "message": "Router is working", "prefix": router.prefix}
+
+
+@router.get("/fbs")
+async def get_fbs_inventory(
+    current_user: dict = Depends(get_current_user)
+):
+    """Получить все остатки FBS (собственный склад) продавца"""
+    db = await get_database()
+    seller_id = str(current_user["_id"])
+    
+    # Получить все записи inventory
+    cursor = db.inventory.find({"seller_id": seller_id})
+    inventory_list = await cursor.to_list(length=1000)
+    
+    # Обогатить данными о товарах
+    result = []
+    for inv in inventory_list:
+        product_id = inv["product_id"]
+        sku = inv.get("sku", "")
+        
+        # Попробовать найти товар по product_id или по артикулу (sku)
+        product = await db.product_catalog.find_one({"_id": product_id})
+        
+        if not product and sku:
+            # Поиск по артикулу
+            product = await db.product_catalog.find_one({"article": sku, "seller_id": seller_id})
+        
+        if not product:
+            try:
+                product = await db.product_catalog.find_one({"_id": ObjectId(product_id) if isinstance(product_id, str) else product_id})
+            except:
+                product = None
+        
+        # Получить имя товара и фото
+        product_name = ""
+        product_image = ""
+        
+        if product:
+            product_name = product.get("name") or product.get("minimalmod", {}).get("name", "")
+            actual_product_id = str(product.get("_id", product_id))
+            
+            # Попробовать загрузить фото из product_photos
+            photo = await db.product_photos.find_one({"product_id": actual_product_id})
+            if photo:
+                product_image = photo.get("url", "")
+            else:
+                # Fallback на старые поля
+                product_image = product.get("photos", [None])[0] or product.get("minimalmod", {}).get("images", [""])[0] or ""
+        
+        result.append({
+            "id": str(inv["_id"]),
+            "product_id": str(inv["product_id"]),
+            "seller_id": str(inv["seller_id"]),
+            "sku": sku,
+            "quantity": inv.get("quantity", 0),
+            "reserved": inv.get("reserved", 0),
+            "available": inv.get("available", 0),
+            "alert_threshold": inv.get("alert_threshold", 10),
+            "product_name": product_name,
+            "product_image": product_image
+        })
+    
+    return result
+
+
+@router.put("/update-stock")
+async def update_stock(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Обновить остаток товара и синхронизировать на МП
+    
+    Body: {
+      product_id: str,
+      article: str,
+      new_quantity: int,
+      warehouse_id: str (опционально - если не указан, синхронизирует на все склады с sends_stock=True)
+    }
+    """
+    db = await get_database()
+    
+    product_id = data.get("product_id")
+    article = data.get("article")
+    new_quantity = data.get("new_quantity", 0)
+    warehouse_id = data.get("warehouse_id")  # Может быть None
+    
+    if not product_id or not article:
+        raise HTTPException(status_code=400, detail="product_id and article required")
+    
+    if new_quantity < 0:
+        raise HTTPException(status_code=400, detail="Quantity cannot be negative")
+    
+    # Найти inventory запись (product_id может быть ObjectId или UUID строкой)
+    # Сначала пробуем найти напрямую
+    inventory = await db.inventory.find_one({
+        "product_id": product_id,
+        "seller_id": str(current_user["_id"])
+    })
+    
+    # Если не нашли и product_id выглядит как ObjectId, пробуем конвертировать
+    if not inventory and isinstance(product_id, str) and len(product_id) == 24:
+        try:
+            inventory = await db.inventory.find_one({
+                "product_id": ObjectId(product_id),
+                "seller_id": str(current_user["_id"])
+            })
+        except:
+            pass
+    
+    if not inventory:
+        raise HTTPException(status_code=404, detail="Inventory record not found")
+    
+    old_quantity = inventory.get("quantity", 0)
+    reserved = inventory.get("reserved", 0)
+    new_available = new_quantity - reserved
+    
+    # Обновить остаток
+    await db.inventory.update_one(
+        {"_id": inventory["_id"]},
+        {"$set": {
+            "quantity": new_quantity,
+            "available": new_available
+        }}
+    )
+    
+    # Записать в историю (используем тот же product_id что в inventory)
+    quantity_change = new_quantity - old_quantity
+    await db.inventory_history.insert_one({
+        "product_id": inventory["product_id"],  # Используем из найденной записи
+        "seller_id": str(current_user["_id"]),
+        "operation_type": "manual_adjustment",
+        "quantity_change": quantity_change,
+        "reason": f"Остаток изменён вручную: {old_quantity} → {new_quantity}",
+        "user_id": str(current_user["_id"]),
+        "created_at": datetime.utcnow(),
+        "order_id": None,
+        "shipment_id": None
+    })
+    
+    logger.info(f"[STOCK UPDATE] Product {article}: {old_quantity} → {new_quantity}")
+    
+    # Синхронизация на МП
+    synced_warehouses = []
+    
+    if warehouse_id:
+        # Синхронизация на конкретный склад
+        try:
+            sync_func = _get_sync_function()
+            if sync_func:
+                await sync_func(
+                    db,
+                    current_user["_id"],
+                    warehouse_id,
+                    article,
+                    new_available
+                )
+            
+            # ИСПРАВЛЕНО: Поиск по _id (UUID строка), с fallback на id для совместимости
+            warehouse = await db.warehouses.find_one({"_id": warehouse_id})
+            if not warehouse:
+                warehouse = await db.warehouses.find_one({"id": warehouse_id})
+            warehouse_name = warehouse.get("name") if warehouse else warehouse_id
+            synced_warehouses.append(warehouse_name)
+            
+            logger.info(f"[STOCK UPDATE] ✅ Synced to warehouse: {warehouse_name}")
+        except Exception as e:
+            logger.error(f"[STOCK UPDATE] ❌ Sync failed: {e}")
+    else:
+        # Синхронизация на все склады с sends_stock=True
+        warehouses = await db.warehouses.find({
+            "seller_id": str(current_user["_id"]),
+            "sends_stock": True
+        }).to_list(length=100)
+        
+        for wh in warehouses:
+            try:
+                sync_func = _get_sync_function()
+                if sync_func:
+                    await sync_func(
+                        db,
+                        current_user["_id"],
+                        wh["id"],
+                        article,
+                        new_available
+                    )
+                synced_warehouses.append(wh.get("name"))
+                logger.info(f"[STOCK UPDATE] ✅ Synced to warehouse: {wh.get('name')}")
+            except Exception as e:
+                logger.error(f"[STOCK UPDATE] ❌ Sync to {wh.get('name')} failed: {e}")
+    
+    return {
+        "message": "Остаток обновлён и синхронизирован",
+        "old_quantity": old_quantity,
+        "new_quantity": new_quantity,
+        "new_available": new_available,
+        "synced_to_warehouses": synced_warehouses
+    }
+
+
+@router.get("/marketplace-warehouses/{integration_id}")
+async def get_marketplace_warehouses(
+    integration_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Получить список складов МП для выбранной интеграции
+    
+    Используется для импорта остатков
+    """
+    db = await get_database()
+    
+    # Получить интеграцию
+    profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    api_keys = profile.get("api_keys", [])
+    integration = next((k for k in api_keys if k.get("id") == integration_id), None)
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    
+    marketplace = integration.get("marketplace")
+    
+    logger.info(f"[MP WAREHOUSES] Getting warehouses for {marketplace}")
+    
+    # Создать коннектор
+    from connectors import get_connector, MarketplaceError
+    
+    try:
+        connector = get_connector(
+            marketplace,
+            integration.get("client_id", ""),
+            integration["api_key"]
+        )
+        
+        # Получить склады
+        warehouses = await connector.get_warehouses()
+        
+        logger.info(f"[MP WAREHOUSES] Got {len(warehouses)} warehouses")
+        
+        return {
+            "marketplace": marketplace,
+            "warehouses": warehouses
+        }
+    
+    except MarketplaceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"[MP WAREHOUSES] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/import-stocks-from-marketplace")
+async def import_stocks_from_marketplace(
+    data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    ИМПОРТ остатков ИЗ маркетплейса В базу данных
+    
+    Body: {
+      integration_id: str,
+      marketplace_warehouse_id: str (ID склада на МП)
+    }
+    """
+    db = await get_database()
+    
+    integration_id = data.get("integration_id")
+    mp_warehouse_id = data.get("marketplace_warehouse_id")
+    
+    if not integration_id:
+        raise HTTPException(status_code=400, detail="integration_id required")
+    
+    if not mp_warehouse_id:
+        raise HTTPException(status_code=400, detail="marketplace_warehouse_id required")
+    
+    # Получить интеграцию
+    profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    api_keys = profile.get("api_keys", [])
+    integration = next((k for k in api_keys if k.get("id") == integration_id), None)
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    
+    marketplace = integration.get("marketplace")
+    
+    logger.info(f"[IMPORT STOCKS] Starting import from {marketplace} warehouse {mp_warehouse_id}")
+    
+    # Создать коннектор - расшифровываем API ключ
+    from connectors import get_connector, MarketplaceError
+    from utils import get_decrypted_api_key
+    
+    decrypted_api_key = get_decrypted_api_key(integration)
+    if not decrypted_api_key:
+        raise HTTPException(status_code=400, detail="Failed to decrypt API key")
+    
+    try:
+        connector = get_connector(
+            marketplace,
+            integration.get("client_id", ""),
+            decrypted_api_key
+        )
+        
+        # Получить остатки с МП
+        if marketplace == "ozon":
+            mp_stocks = await connector.get_stocks(mp_warehouse_id)
+        elif marketplace in ["wb", "wildberries"]:
+            mp_stocks = await connector.get_stocks(mp_warehouse_id)
+        else:
+            raise HTTPException(status_code=400, detail=f"Marketplace {marketplace} not supported")
+        
+        logger.info(f"[IMPORT STOCKS] Got {len(mp_stocks)} stock records from {marketplace}")
+        
+        if mp_stocks:
+            logger.info(f"[IMPORT STOCKS] Sample stock record: {mp_stocks[0]}")
+        
+        updated_count = 0
+        created_count = 0
+        skipped_count = 0
+        
+        # Для Ozon: фильтруем по warehouse_id на стороне Python
+        # т.к. API возвращает данные со всех складов
+        if marketplace == "ozon" and mp_warehouse_id:
+            logger.info(f"[IMPORT STOCKS] Filtering stocks for warehouse {mp_warehouse_id}")
+            original_count = len(mp_stocks)
+            mp_stocks = [s for s in mp_stocks if str(s.get('warehouse_id')) == str(mp_warehouse_id)]
+            logger.info(f"[IMPORT STOCKS] Filtered: {original_count} → {len(mp_stocks)} records")
+        
+        for mp_stock in mp_stocks:
+            # Извлечь данные в зависимости от МП
+            if marketplace == "ozon":
+                offer_id = mp_stock.get("offer_id")
+                stock_quantity = mp_stock.get("present", 0)
+                
+                logger.debug(f"[IMPORT STOCKS] Processing: {offer_id}, warehouse={mp_stock.get('warehouse_id')}, quantity={stock_quantity}")
+            elif marketplace in ["wb", "wildberries"]:
+                offer_id = mp_stock.get("sku")
+                stock_quantity = mp_stock.get("amount", 0)
+            else:
+                continue
+            
+            if not offer_id:
+                skipped_count += 1
+                continue
+            
+            # Найти товар в каталоге
+            product = await db.product_catalog.find_one({
+                "article": offer_id,
+                "seller_id": str(current_user["_id"])
+            })
+            
+            if not product:
+                logger.warning(f"[IMPORT STOCKS] Product {offer_id} not found in catalog, skipping")
+                skipped_count += 1
+                continue
+            
+            # Найти или создать inventory запись ДЛЯ КОНКРЕТНОГО СКЛАДА
+            # ВАЖНО: Мы ищем по product_id И seller_id (БЕЗ warehouse_id)
+            # Потому что inventory - это ОБЩИЙ остаток, не по складам
+            inventory = await db.inventory.find_one({
+                "product_id": product["_id"],
+                "seller_id": str(current_user["_id"])
+            })
+            
+            if inventory:
+                # Обновить существующую запись
+                old_quantity = inventory.get("quantity", 0)
+                reserved = inventory.get("reserved", 0)
+                new_available = stock_quantity - reserved
+                
+                await db.inventory.update_one(
+                    {"_id": inventory["_id"]},
+                    {"$set": {
+                        "quantity": stock_quantity,
+                        "available": new_available,
+                        "sku": offer_id  # Обновляем SKU на всякий случай
+                    }}
+                )
+                
+                # Записать в историю
+                await db.inventory_history.insert_one({
+                    "product_id": product["_id"],
+                    "seller_id": str(current_user["_id"]),
+                    "operation_type": "import_from_marketplace",
+                    "quantity_change": stock_quantity - old_quantity,
+                    "reason": f"Импорт остатков с {marketplace} (склад МП {mp_warehouse_id})",
+                    "user_id": str(current_user["_id"]),
+                    "created_at": datetime.utcnow()
+                })
+                
+                updated_count += 1
+                logger.info(f"[IMPORT STOCKS] ✅ Updated {offer_id}: {old_quantity} → {stock_quantity}")
+            else:
+                # Создать новую запись
+                new_inventory = {
+                    "product_id": product["_id"],
+                    "seller_id": str(current_user["_id"]),
+                    "sku": offer_id,
+                    "quantity": stock_quantity,
+                    "reserved": 0,
+                    "available": stock_quantity,
+                    "alert_threshold": 10
+                }
+                
+                await db.inventory.insert_one(new_inventory)
+                
+                # Записать в историю
+                await db.inventory_history.insert_one({
+                    "product_id": product["_id"],
+                    "seller_id": str(current_user["_id"]),
+                    "operation_type": "import_from_marketplace",
+                    "quantity_change": stock_quantity,
+                    "reason": f"Импорт остатков с {marketplace} (склад {mp_warehouse_id})",
+                    "user_id": str(current_user["_id"]),
+                    "created_at": datetime.utcnow()
+                })
+                
+                created_count += 1
+                logger.info(f"[IMPORT STOCKS] ✅ Created {offer_id}: {stock_quantity}")
+        
+        logger.info(f"[IMPORT STOCKS] SUMMARY: created={created_count}, updated={updated_count}, skipped={skipped_count}")
+        
+        return {
+            "message": f"Импортировано остатков: {created_count + updated_count} товаров",
+            "created": created_count,
+            "updated": updated_count,
+            "skipped": skipped_count,
+            "marketplace": marketplace,
+            "warehouse_id": mp_warehouse_id
+        }
+    
+    except MarketplaceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"[IMPORT STOCKS] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Явный обработчик OPTIONS ДО endpoint с авторизацией
+@router.options("/sync-all-stocks")
+async def sync_all_stocks_options(request: Request):
+    """Обработка OPTIONS запроса для CORS preflight - БЕЗ авторизации"""
+    # #region agent log
+    try:
+        import json
+        import time
+        with open(str(DEBUG_LOG_PATH), 'a', encoding='utf-8') as f:
+            f.write(json.dumps({"id":"log_options_endpoint_called","timestamp":int(time.time()*1000),"location":"inventory_stock_routes.py:481","message":"OPTIONS endpoint explicitly called","data":{"origin":request.headers.get("origin")},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}) + '\n')
+    except Exception as e:
+        pass
+    # #endregion
+    from fastapi.responses import Response
+    origin = request.headers.get("origin", "*")
+    response = Response(status_code=200)
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Max-Age"] = "3600"
+    return response
+
+@router.post("/sync-all-stocks", name="sync_all_stocks")
+async def sync_all_stocks(
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    # #region agent log
+    import time
+    try:
+        with open(str(DEBUG_LOG_PATH), 'a', encoding='utf-8') as f:
+            f.write(json.dumps({"id":"log_endpoint_reached","timestamp":int(time.time()*1000),"location":"inventory_stock_routes.py:485","message":"POST endpoint function called","data":{"router_prefix":router.prefix,"user_id":str(current_user.get("_id"))},"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}) + '\n')
+    except Exception as e:
+        logger.error(f"Failed to write debug log: {e}")
+    # #endregion
+    """
+    Ручная синхронизация всех остатков на выбранный склад
+    ОПТИМИЗИРОВАНО: отправляет батчами для избежания rate limit
+    
+    ВАЖНО: Отправляет ВСЕ товары из БД (даже с остатком 0), чтобы синхронизировать МП с базой
+    База данных - источник истины!
+    
+    Body: {
+      warehouse_id: str
+    }
+    """
+    # Парсим JSON body
+    try:
+        body = await request.json()
+    except Exception as e:
+        logger.error(f"Failed to parse request body: {e}")
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+    
+    # #region agent log
+    try:
+        with open(str(DEBUG_LOG_PATH), 'a', encoding='utf-8') as f:
+            f.write(json.dumps({"id":"log_endpoint_start","timestamp":int(time.time()*1000),"location":"inventory_stock_routes.py:417","message":"Endpoint started execution","data":{"body_parsed":body,"user_id":str(current_user.get("_id"))},"sessionId":"debug-session","runId":"run2","hypothesisId":"C"}) + '\n')
+    except Exception as e:
+        logger.error(f"Failed to write debug log: {e}")
+    # #endregion
+    
+    logger.info(f"")
+    logger.info(f"{'='*80}")
+    logger.info(f"[SYNC-ALL-STOCKS] Запрос на синхронизацию остатков")
+    logger.info(f"[SYNC-ALL-STOCKS] User ID: {current_user.get('_id')}")
+    logger.info(f"[SYNC-ALL-STOCKS] Request data: {body}")
+    logger.info(f"{'='*80}")
+    
+    db = await get_database()
+    
+    warehouse_id = body.get("warehouse_id")
+    
+    # #region agent log
+    try:
+        with open(str(DEBUG_LOG_PATH), 'a', encoding='utf-8') as f:
+            f.write(json.dumps({"id":"log_warehouse_id_extracted","timestamp":int(time.time()*1000),"location":"inventory_stock_routes.py:432","message":"Warehouse ID extracted","data":{"warehouse_id":warehouse_id},"sessionId":"debug-session","runId":"run2","hypothesisId":"C"}) + '\n')
+    except Exception as e:
+        logger.error(f"Failed to write debug log: {e}")
+    # #endregion
+    
+    if not warehouse_id:
+        logger.error("[SYNC-ALL-STOCKS] ❌ warehouse_id не передан в запросе")
+        raise HTTPException(status_code=400, detail="warehouse_id required")
+    
+    logger.info(f"[SYNC-ALL-STOCKS] Ищем склад с ID: {warehouse_id}")
+    # #region agent log
+    import json
+    with open(str(DEBUG_LOG_PATH), 'a', encoding='utf-8') as f:
+        f.write(json.dumps({"id":"log_search_start","timestamp":int(__import__('time').time()*1000),"location":"inventory_stock_routes.py:418","message":"Starting warehouse search","data":{"warehouse_id":warehouse_id,"user_id":str(current_user["_id"]),"user_id_type":type(current_user["_id"]).__name__},"sessionId":"debug-session","runId":"run2","hypothesisId":"C"}) + '\n')
+    # #endregion
+    
+    # Проверить существование склада
+    # В базе данных склад использует _id как идентификатор
+    # Но в API возвращается как "id": str(wh["_id"])
+    # В server.py используется current_user["_id"] (ObjectId), а не str(current_user["_id"])
+    # Поэтому ищем по _id, а не по полю "id"
+    
+    warehouse = None
+    from bson import ObjectId
+    
+    # ИСПРАВЛЕНО: В базе данных склад хранится с _id как UUID строка (не ObjectId)
+    # warehouse_id из запроса - это UUID строка, которая используется как _id
+    # Проверяем оба варианта user_id: ObjectId и строка
+    warehouse = await db.warehouses.find_one({
+        "_id": warehouse_id,  # Ищем по _id напрямую, так как это UUID строка
+        "user_id": str(current_user["_id"])
+    })
+    # #region agent log
+    with open(str(DEBUG_LOG_PATH), 'a', encoding='utf-8') as f:
+        f.write(json.dumps({"id":"log_search_attempt1","timestamp":int(__import__('time').time()*1000),"location":"inventory_stock_routes.py:489","message":"Search attempt 1: by _id with str user_id","data":{"found":warehouse is not None,"warehouse_id":warehouse_id},"sessionId":"debug-session","runId":"run2","hypothesisId":"C"}) + '\n')
+    # #endregion
+    
+    if not warehouse:
+        warehouse = await db.warehouses.find_one({
+            "_id": warehouse_id,  # Ищем по _id напрямую
+            "user_id": current_user["_id"]  # ObjectId
+        })
+        # #region agent log
+        with open(str(DEBUG_LOG_PATH), 'a', encoding='utf-8') as f:
+            f.write(json.dumps({"id":"log_search_attempt2","timestamp":int(__import__('time').time()*1000),"location":"inventory_stock_routes.py:499","message":"Search attempt 2: by _id with ObjectId user_id","data":{"found":warehouse is not None},"sessionId":"debug-session","runId":"run2","hypothesisId":"C"}) + '\n')
+        # #endregion
+    
+    # Если все еще не найден, пробуем найти без проверки user_id (для отладки)
+    if not warehouse:
+        logger.warning(f"Trying to find warehouse without user_id check")
+        # #region agent log
+        with open(str(DEBUG_LOG_PATH), 'a', encoding='utf-8') as f:
+            f.write(json.dumps({"id":"log_search_attempt3_start","timestamp":int(__import__('time').time()*1000),"location":"inventory_stock_routes.py:508","message":"Search attempt 3: without user_id check","data":{},"sessionId":"debug-session","runId":"run2","hypothesisId":"C"}) + '\n')
+        # #endregion
+        warehouse = await db.warehouses.find_one({
+            "_id": warehouse_id
+        })
+        if warehouse:
+            logger.warning(f"Found warehouse but user_id mismatch: warehouse.user_id={warehouse.get('user_id')} (type: {type(warehouse.get('user_id'))}), current_user._id={current_user['_id']} (type: {type(current_user['_id'])})")
+            # #region agent log
+            with open(str(DEBUG_LOG_PATH), 'a', encoding='utf-8') as f:
+                f.write(json.dumps({"id":"log_search_attempt3_found","timestamp":int(__import__('time').time()*1000),"location":"inventory_stock_routes.py:515","message":"Found warehouse but user_id mismatch","data":{"warehouse_user_id":str(warehouse.get('user_id')),"warehouse_user_id_type":type(warehouse.get('user_id')).__name__,"current_user_id":str(current_user['_id']),"current_user_id_type":type(current_user['_id']).__name__},"sessionId":"debug-session","runId":"run2","hypothesisId":"C"}) + '\n')
+            # #endregion
+    
+    if not warehouse:
+        logger.error(f"❌ Warehouse not found: id={warehouse_id}, user_id={current_user['_id']}")
+        # Проверим, какие склады есть у пользователя
+        all_warehouses_str = await db.warehouses.find({"user_id": str(current_user["_id"])}).to_list(length=10)
+        all_warehouses_objid = await db.warehouses.find({"user_id": current_user["_id"]}).to_list(length=10)
+        # Объединяем и убираем дубликаты
+        all_warehouses_dict = {}
+        for wh in all_warehouses_str + all_warehouses_objid:
+            wh_key = str(wh.get('_id', ''))
+            if wh_key not in all_warehouses_dict:
+                all_warehouses_dict[wh_key] = wh
+        all_warehouses = list(all_warehouses_dict.values())
+        logger.info(f"   User has {len(all_warehouses)} warehouses")
+        # #region agent log
+        import json
+        warehouses_info = []
+        for wh in all_warehouses:
+            wh_id = wh.get('id') or str(wh.get('_id', ''))
+            warehouses_info.append({
+                "id": wh_id,
+                "_id": str(wh.get('_id', '')),
+                "name": wh.get('name', ''),
+                "user_id": str(wh.get('user_id', '')),
+                "user_id_type": type(wh.get('user_id')).__name__ if wh.get('user_id') else None
+            })
+            logger.info(f"   - Warehouse: id={wh_id}, _id={wh.get('_id')}, name={wh.get('name')}, user_id={wh.get('user_id')}")
+        with open(str(DEBUG_LOG_PATH), 'a', encoding='utf-8') as f:
+            f.write(json.dumps({"id":"log_available_warehouses","timestamp":int(__import__('time').time()*1000),"location":"inventory_stock_routes.py:510","message":"Available warehouses for user","data":{"count":len(all_warehouses),"warehouses":warehouses_info,"searching_for_id":warehouse_id},"sessionId":"debug-session","runId":"run2","hypothesisId":"C"}) + '\n')
+        # #endregion
+        raise HTTPException(status_code=404, detail=f"Warehouse not found: {warehouse_id}. Check logs for available warehouses.")
+    
+    logger.info(f"")
+    logger.info(f"{'='*80}")
+    logger.info(f"[MANUAL SYNC] НАЧАЛО СИНХРОНИЗАЦИИ ОСТАТКОВ")
+    logger.info(f"[MANUAL SYNC] Склад: {warehouse.get('name')} (ID: {warehouse_id})")
+    logger.info(f"{'='*80}")
+    
+    # Проверить наличие warehouse_links
+    links = await db.warehouse_links.find({"warehouse_id": warehouse_id}).to_list(length=100)
+    if not links:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"У склада '{warehouse.get('name')}' нет связей с маркетплейсами! Создайте связи в настройках склада."
+        )
+    
+    logger.info(f"[MANUAL SYNC] Найдено связей с МП: {len(links)}")
+    for link in links:
+        logger.info(f"  - {link.get('marketplace_name')} → Склад МП: {link.get('marketplace_warehouse_id')}")
+    
+    # Получить все inventory записи
+    inventories = await db.inventory.find({
+        "seller_id": str(current_user["_id"])
+    }).to_list(length=10000)
+    
+    logger.info(f"")
+    logger.info(f"[MANUAL SYNC] Всего записей inventory в БД: {len(inventories)}")
+    logger.info(f"[MANUAL SYNC] ⚠️ ВАЖНО: Будут отправлены ВСЕ товары, включая товары с остатком 0")
+    logger.info(f"[MANUAL SYNC] База данных = источник истины для МП")
+    logger.info(f"")
+    
+    # Группируем товары по маркетплейсам для батч-отправки
+    from connectors import get_connector, MarketplaceError
+    
+    synced_count = 0
+    failed_count = 0
+    skipped_count = 0
+    
+    # Для каждого МП синхронизируем батчами
+    for link in links:
+        marketplace = link.get("marketplace_name")
+        mp_warehouse_id = link.get("marketplace_warehouse_id")
+        
+        logger.info(f"")
+        logger.info(f"[MANUAL SYNC] {'='*60}")
+        logger.info(f"[MANUAL SYNC] Обработка МП: {marketplace.upper()}")
+        logger.info(f"[MANUAL SYNC] Склад МП: {mp_warehouse_id}")
+        logger.info(f"[MANUAL SYNC] {'='*60}")
+        
+        # Получить API ключ
+        profile = await db.seller_profiles.find_one({"user_id": current_user["_id"]})
+        if not profile:
+            logger.error(f"[MANUAL SYNC] ❌ Профиль пользователя не найден!")
+            continue
+        
+        api_key_data = next(
+            (k for k in profile.get("api_keys", []) if k.get("marketplace") == marketplace),
+            None
+        )
+        
+        if not api_key_data:
+            logger.error(f"[MANUAL SYNC] ❌ API ключ для {marketplace} не найден!")
+            continue
+        
+        logger.info(f"[MANUAL SYNC] ✅ API ключ найден для {marketplace}")
+        
+        # Создать коннектор - расшифровываем API ключ
+        from utils import get_decrypted_api_key
+        decrypted_api_key = get_decrypted_api_key(api_key_data)
+        if not decrypted_api_key:
+            logger.error(f"[MANUAL SYNC] ❌ Не удалось расшифровать API ключ для {marketplace}!")
+            continue
+        
+        connector = get_connector(
+            marketplace,
+            api_key_data.get("client_id", ""),
+            decrypted_api_key
+        )
+        
+        # Собираем товары для этого МП
+        batch_items = []
+        
+        logger.info(f"[MANUAL SYNC] Сбор товаров для отправки...")
+        
+        for inv in inventories:
+            product = await db.product_catalog.find_one({"_id": inv["product_id"]})
+            
+            if not product:
+                skipped_count += 1
+                logger.warning(f"[MANUAL SYNC] ⚠️ Товар с ID {inv['product_id']} не найден в каталоге")
+                continue
+            
+            article = product.get("article")
+            available = inv.get("available", 0)
+            
+            # ВАЖНО: Ozon не принимает отрицательные остатки, исправляем на 0
+            if available < 0:
+                logger.warning(f"[MANUAL SYNC] ⚠️ Товар {article} имеет отрицательный остаток {available}, исправляем на 0")
+                available = 0
+            
+            # ИЗМЕНЕНО: Отправляем ВСЕ товары, используем article как offer_id
+            # Для Ozon offer_id = article продавца
+            if marketplace == "ozon":
+                batch_items.append({"offer_id": article, "stock": available})
+                logger.debug(f"[MANUAL SYNC] Добавлен: {article} → остаток: {available}")
+            elif marketplace in ["wb", "wildberries"]:
+                # Для WB нужен barcode, если его нет - используем article
+                marketplace_data = product.get("marketplace_data", {}).get(marketplace, {})
+                mp_sku = marketplace_data.get("barcode") or marketplace_data.get("id") or article
+                batch_items.append({"sku": mp_sku, "amount": available})
+                logger.debug(f"[MANUAL SYNC] Добавлен: {mp_sku} → остаток: {available}")
+        
+        logger.info(f"[MANUAL SYNC] Собрано товаров для отправки: {len(batch_items)}")
+        logger.info(f"[MANUAL SYNC] Пропущено (не найдены в каталоге): {skipped_count}")
+        
+        # Отправляем БАТЧАМИ
+        if batch_items:
+            batch_size = 100
+            total_batches = (len(batch_items) + batch_size - 1) // batch_size
+            
+            logger.info(f"")
+            logger.info(f"[MANUAL SYNC] Начинаю отправку батчами (размер батча: {batch_size})")
+            logger.info(f"[MANUAL SYNC] Всего батчей: {total_batches}")
+            logger.info(f"")
+            
+            for i in range(0, len(batch_items), batch_size):
+                batch = batch_items[i:i+batch_size]
+                batch_num = i//batch_size + 1
+                
+                try:
+                    logger.info(f"[MANUAL SYNC] ▶ Отправка батча {batch_num}/{total_batches} ({len(batch)} товаров)...")
+                    
+                    # Логируем первые 3 товара из батча для проверки
+                    sample = batch[:3]
+                    logger.info(f"[MANUAL SYNC]   Пример товаров из батча:")
+                    for item in sample:
+                        if marketplace == "ozon":
+                            logger.info(f"[MANUAL SYNC]     - offer_id: {item['offer_id']}, stock: {item['stock']}")
+                        else:
+                            logger.info(f"[MANUAL SYNC]     - sku: {item['sku']}, amount: {item['amount']}")
+                    
+                    await connector.update_stock(mp_warehouse_id, batch)
+                    synced_count += len(batch)
+                    
+                    logger.info(f"[MANUAL SYNC] ✅ Батч {batch_num}/{total_batches} отправлен успешно!")
+                    
+                    # Небольшая задержка между батчами для избежания rate limit
+                    if batch_num < total_batches:
+                        logger.info(f"[MANUAL SYNC] ⏳ Пауза 0.5 сек перед следующим батчем...")
+                        await asyncio.sleep(0.5)
+                    
+                except MarketplaceError as e:
+                    failed_count += len(batch)
+                    logger.error(f"[MANUAL SYNC] ❌ Батч {batch_num}/{total_batches} FAILED!")
+                    logger.error(f"[MANUAL SYNC] ❌ Ошибка: {e.message}")
+                    logger.error(f"[MANUAL SYNC] ❌ Status code: {e.status_code}")
+        else:
+            logger.warning(f"[MANUAL SYNC] ⚠️ Нет товаров для отправки на {marketplace}!")
+    
+    logger.info(f"")
+    logger.info(f"{'='*80}")
+    logger.info(f"[MANUAL SYNC] СИНХРОНИЗАЦИЯ ЗАВЕРШЕНА")
+    logger.info(f"[MANUAL SYNC] Успешно отправлено: {synced_count}")
+    logger.info(f"[MANUAL SYNC] Ошибок: {failed_count}")
+    logger.info(f"[MANUAL SYNC] Пропущено: {skipped_count}")
+    logger.info(f"{'='*80}")
+    logger.info(f"")
+    
+    return {
+        "message": f"Синхронизировано {synced_count} товаров",
+        "synced": synced_count,
+        "failed": failed_count,
+        "skipped": skipped_count,
+        "warehouse_name": warehouse.get("name")
+    }

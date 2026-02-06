@@ -11,12 +11,8 @@ try:
 except Exception:
     client = None
 
-from models import (
-    ProductCreate, ProductUpdate, ProductResponse,
-    BulkImportRequest, AIAdaptRequest, ProductMappingCreate,
-    ListingQualityScore
-)
-from database import get_database
+from backend.schemas.product import ProductCreate, ProductUpdate, ProductResponse, BulkImportRequest, AIAdaptRequest, ProductMappingCreate, ListingQualityScore
+from backend.core.database import get_database
 
 # Модели для работы с тегами
 class BulkTagsRequest(BaseModel):

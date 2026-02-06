@@ -5,9 +5,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from bson import ObjectId
 
-from database import get_database
+from backend.core.database import get_database
 from connectors import get_connector, MarketplaceError
-from models import OrderItemNew, OrderCustomerNew, OrderTotalsNew
+from backend.schemas.order import OrderItemNew, OrderCustomerNew, OrderTotalsNew
 import uuid
 
 logger = logging.getLogger(__name__)
@@ -223,7 +223,12 @@ class OrderSyncScheduler:
                             logger.info(f"[OrderSync FBS] 🔙 Возврат товаров для {order_number} (статус: cancelled)")
                             
                             # Проверить настройки склада
-                            warehouse = await db.warehouses.find_one({"id": warehouse_id}) if warehouse_id else None
+                            # ИСПРАВЛЕНО: Поиск по _id (UUID строка), с fallback на id для совместимости
+                            warehouse = None
+                            if warehouse_id:
+                                warehouse = await db.warehouses.find_one({"_id": warehouse_id})
+                                if not warehouse:
+                                    warehouse = await db.warehouses.find_one({"id": warehouse_id})
                             
                             if warehouse and warehouse.get("return_on_cancel", True):
                                 for item in items:
@@ -396,7 +401,10 @@ class OrderSyncScheduler:
                     "marketplace_warehouse_id": str(warehouse_id_mp)
                 })
                 if link:
-                    local_warehouse = await db.warehouses.find_one({"id": link.get("warehouse_id")})
+                    # ИСПРАВЛЕНО: Поиск по _id (UUID строка), с fallback на id для совместимости
+                    local_warehouse = await db.warehouses.find_one({"_id": link.get("warehouse_id")})
+                    if not local_warehouse:
+                        local_warehouse = await db.warehouses.find_one({"id": link.get("warehouse_id")})
             
             # Если не нашли, используем склад с use_for_orders=True
             if not local_warehouse:

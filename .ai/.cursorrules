@@ -1,0 +1,71 @@
+# Cursor Rules for MinimalSeller Project
+
+## Project Context
+This is a marketplace management system (Ozon, Wildberries, Yandex.Market) with:
+- Backend: FastAPI + MongoDB (Motor)
+- Frontend: React + Vite + Tailwind CSS
+
+## Critical Files to Always Read First
+1. `.ai/SYNC_v2.md` - **ГЛАВНЫЙ ФАЙЛ!** Единый центр координации задач
+2. `.ai/MASTERFILE.md` - Project rules and architecture
+3. `.ai/CHANGELOG.md` - Recent changes
+
+## Security Rules (NEVER VIOLATE)
+- NEVER use `allow_origins=["*"]` in CORS
+- NEVER log API keys or secrets (even partially)
+- NEVER use user input directly in MongoDB regex without `re.escape()`
+- ALWAYS validate ObjectId before database queries
+- ALWAYS hash passwords with bcrypt
+
+## Code Style
+### Python
+- Use snake_case for functions and variables
+- Use PascalCase for classes
+- Use UPPER_CASE for constants
+- Add type hints to all functions
+- Document with docstrings
+
+### React/JSX
+- Use PascalCase for components
+- Use camelCase for functions and variables
+- Use `is` or `has` prefix for boolean state
+
+## File Size Limits
+- Maximum 500 lines per file (except legacy server.py)
+- Split large files into modules
+
+## Before Making Changes
+1. Check SYNC_v2.md for current tasks
+2. Update SYNC_v2.md to mark task as "In Progress"
+3. Make changes
+4. **ОБЯЗАТЕЛЬНО: Обновить SYNC_v2.md после КАЖДОГО изменения!**
+5. Update CHANGELOG.md with what you changed
+6. Update SYNC_v2.md to mark task as "Completed"
+
+## КРИТИЧЕСКОЕ ПРАВИЛО
+**ВСЕГДА обновляй SYNC_v2.md после любых изменений в проекте!**
+- После исправления ошибок
+- После выполнения задач
+- После изменения конфигурации
+- После любых изменений в коде
+
+## Current Priority Tasks (from Audit)
+1. P0: Fix CORS in server.py (line 57-64)
+2. P0: Fix API key logging in server.py (line 561)
+3. P0: Add Rate Limiting middleware
+4. P0: Fix NoSQL Injection in server.py (line 882-886)
+5. P1: Add Security Headers middleware
+6. P1: Add ObjectId validation helper
+
+## Tech Stack Versions
+- Python 3.11+
+- FastAPI 0.121+
+- React 18.2+
+- Vite 5.0+
+- Tailwind 3.3+
+- MongoDB (Motor 3.3+)
+
+## API Endpoints
+- Backend: http://localhost:8001
+- Frontend: http://localhost:3000
+- API Docs: http://localhost:8001/docs

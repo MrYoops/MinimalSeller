@@ -51,7 +51,7 @@ export default function CatalogProductsPage() {
 
   const loadCategories = async () => {
     try {
-      const response = await api.get('/api/catalog/categories')
+      const response = await api.get('/api/categories')
       setCategories(response.data)
     } catch (error) {
       console.error('Failed to load categories:', error)
@@ -72,7 +72,7 @@ export default function CatalogProductsPage() {
       if (selectedBrand) params.brand = selectedBrand
       if (selectedStatus) params.status = selectedStatus
 
-      const response = await api.get('/api/catalog/products', { params })
+      const response = await api.get('/api/products', { params })
       const productsData = response.data
       setProducts(productsData)
       
@@ -80,7 +80,7 @@ export default function CatalogProductsPage() {
       const productsWithPhotosData = await Promise.all(
         productsData.map(async (product) => {
           try {
-            const photosResponse = await api.get(`/api/catalog/products/${product.id}/photos`)
+            const photosResponse = await api.get(`/api/products/${product.id}/photos`)
             const photos = photosResponse.data
             return {
               ...product,
@@ -105,7 +105,7 @@ export default function CatalogProductsPage() {
     if (!window.confirm('Вы уверены, что хотите НАВСЕГДА удалить этот товар? Это действие нельзя отменить.')) return
     
     try {
-      await api.delete(`/api/catalog/products/${productId}`)
+      await api.delete(`/api/products/${productId}`)
       loadProducts()
     } catch (error) {
       alert('Ошибка при удалении товара: ' + error.message)

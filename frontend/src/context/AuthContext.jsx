@@ -4,13 +4,8 @@ import axios from 'axios'
 const AuthContext = createContext()
 
 // Backend URL - автоматическое определение для локальной и preview версий
-const getBackendURL = () => {
-  // Если запускается локально (localhost или 127.0.0.1)
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://localhost:8001'
-  }
-  
-  // Для preview используем относительный путь (проксируется через nginx)
+function getBackendURL() {
+  // Always use relative path to leverage Vite proxy in dev and Nginx in prod
   return ''
 }
 

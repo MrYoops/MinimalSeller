@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
+import sys
 
 class Settings(BaseSettings):
     # MongoDB
@@ -23,9 +24,10 @@ class Settings(BaseSettings):
     YANDEX_CAMPAIGN_ID: str = ""
     
     # Security
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:8002"
     RATE_LIMIT_CALLS: int = 100
     RATE_LIMIT_PERIOD: int = 60
+    DEBUG: bool = True
     
     # Legacy support (для обратной совместимости)
     MONGO_URL: str = ""
@@ -63,6 +65,12 @@ class Settings(BaseSettings):
         return self.JWT_EXPIRATION_HOURS * 60
 
 settings = Settings()
+
+# Критическая проверка: не запускаем сервер с небезопасным JWT_SECRET
+if settings.JWT_SECRET == "CHANGE_ME":
+    print("❌ ОШИБКА: Измените JWT_SECRET в .env файле!")
+    print("💡 Создайте файл backend/.env и установите JWT_SECRET=ваш_случайный_ключ_минимум_32_символа")
+    sys.exit(1)
 
 def validate_settings():
     """Проверка критичных настроек при запуске"""

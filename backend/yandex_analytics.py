@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 import aiohttp
 
-from database import get_database
-from auth_utils import get_current_user
+from backend.core.database import get_database
+from backend.auth_utils import get_current_user
 
 router = APIRouter(prefix="/api/yandex-analytics", tags=["yandex-analytics"])
 

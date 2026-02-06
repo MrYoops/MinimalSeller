@@ -225,7 +225,7 @@ function WarehouseModal({ warehouse, onClose, onSuccess }) {
   const loadLinks = async () => {
     if (!warehouse) return
     try {
-      const response = await api.get(`/api/warehouse-links/${warehouse.id}/links`)
+      const response = await api.get(`/api/warehouses/${warehouse.id}/links`)
       setLinks(response.data)
     } catch (error) {
       console.error('Failed to load links:', error)
@@ -270,7 +270,7 @@ function WarehouseModal({ warehouse, onClose, onSuccess }) {
     try {
       const integration = integrations.find(i => i.marketplace === selectedMarketplace)
       
-      await api.post(`/api/warehouse-links/${warehouse.id}/links`, {
+      await api.post(`/api/warehouses/${warehouse.id}/links`, {
         integration_id: integration.id,
         marketplace_name: selectedMarketplace,
         marketplace_warehouse_id: mpWarehouse.id,
@@ -290,7 +290,7 @@ function WarehouseModal({ warehouse, onClose, onSuccess }) {
     if (!confirm('Удалить связь?')) return
     
     try {
-      await api.delete(`/api/warehouse-links/${warehouse.id}/links/${linkId}`)
+      await api.delete(`/api/warehouses/${warehouse.id}/links/${linkId}`)
       toast.success('Связь удалена')
       loadLinks()
     } catch (error) {

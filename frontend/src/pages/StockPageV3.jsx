@@ -266,20 +266,70 @@ function StockPageV3() {
       return
     }
 
+    if (!selectedWarehouse.id) {
+      console.error('❌ selectedWarehouse.id is missing!', selectedWarehouse)
+      toast.error('Ошибка: у склада отсутствует ID')
+      return
+    }
+
+    console.log('🔄 [SYNC-ALL-STOCKS] Начало синхронизации:', {
+      warehouseId: selectedWarehouse.id,
+      warehouseName: selectedWarehouse.name,
+      warehouse: selectedWarehouse
+    })
+
     if (!confirm(`Отправить все остатки на склад "${selectedWarehouse.name}"?`)) {
       return
     }
 
     setSyncing(true)
     try {
-      const response = await api.post('/api/inventory/sync-all-stocks', {
-        warehouse_id: selectedWarehouse.id
+      // Проверяем, что warehouse_id существует
+      if (!selectedWarehouse.id) {
+        console.error('❌ [SYNC-ALL-STOCKS] selectedWarehouse.id is missing!', selectedWarehouse)
+        toast.error('Ошибка: у склада отсутствует ID')
+        setSyncing(false)
+        return
+      }
+      
+      const requestData = {
+        warehouse_id: String(selectedWarehouse.id) // Явно преобразуем в строку
+      }
+      
+      console.log('📤 [SYNC-ALL-STOCKS] Отправка запроса:', {
+        url: '/api/inventory/sync-all-stocks',
+        data: requestData,
+        selectedWarehouse: selectedWarehouse
       })
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/09b067c6-83bd-40e3-9b15-a36beccac6c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StockPageV3.jsx:305',message:'Sending request',data:{url:'/api/inventory/sync-all-stocks',requestData,warehouseId:selectedWarehouse?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      
+      const response = await api.post('/api/inventory/sync-all-stocks', requestData, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/09b067c6-83bd-40e3-9b15-a36beccac6c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StockPageV3.jsx:315',message:'Request success',data:{status:response.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      
+      console.log('✅ [SYNC-ALL-STOCKS] Успешный ответ:', response.data)
       toast.success(response.data.message || 'Остатки синхронизированы')
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Ошибка синхронизации')
-      console.error(error)
+      console.error('❌ [SYNC-ALL-STOCKS] Ошибка:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText
+      })
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/09b067c6-83bd-40e3-9b15-a36beccac6c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StockPageV3.jsx:328',message:'Request failed',data:{error:error.message,status:error.response?.status,statusText:error.response?.statusText,url:error.config?.url},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      const errorMessage = error.response?.data?.detail || error.message || 'Ошибка синхронизации'
+      toast.error(errorMessage)
     }
     setSyncing(false)
   }

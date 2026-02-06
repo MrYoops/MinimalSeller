@@ -12,7 +12,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 async def init_database():
     # Connect to MongoDB
-    mongo_url = os.getenv("MONGO_URL", "mongodb://mongodb:27017")
+    mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
     client = AsyncIOMotorClient(mongo_url)
     db = client.minimalseller
     

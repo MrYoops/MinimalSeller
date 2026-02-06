@@ -7,7 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
-from connectors import get_connector, MarketplaceError
+from backend.connectors import get_connector, MarketplaceError
 
 logger = logging.getLogger(__name__)
 

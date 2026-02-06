@@ -4,7 +4,7 @@ from datetime import datetime
 import logging
 import asyncio
 
-from database import get_database
+from backend.core.database import get_database
 from stock_sync_routes import sync_product_to_marketplace
 
 logger = logging.getLogger(__name__)

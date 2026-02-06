@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { FiArrowLeft, FiDownload, FiUpload, FiCheck, FiX } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -7,12 +7,36 @@ import CatalogNavDropdown from '../components/CatalogNavDropdown'
 export default function CatalogImportPage() {
   const { api } = useAuth()
   const navigate = useNavigate()
+  /* Integrations State */
+  const [integrations, setIntegrations] = useState([])
+  const [integrationsLoading, setIntegrationsLoading] = useState(false)
+  const [selectedIntegration, setSelectedIntegration] = useState('') // API Key ID
+
   const [step, setStep] = useState(1) // 1: выбор, 2: загрузка, 3: результат
   const [importType, setImportType] = useState('') // 'marketplace' или 'excel'
   const [selectedMarketplace, setSelectedMarketplace] = useState('')
   const [file, setFile] = useState(null)
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState(null)
+
+  useEffect(() => {
+      if (step === 2 && importType === 'marketplace') {
+          fetchIntegrations()
+      }
+  }, [step, importType])
+
+  const fetchIntegrations = async () => {
+      try {
+          setIntegrationsLoading(true)
+          const response = await api.get('/api/seller/api-keys')
+          setIntegrations(response.data)
+      } catch (error) {
+          console.error('Failed to load integrations:', error)
+          // Do not alert, just accept empty array to show fallback
+      } finally {
+          setIntegrationsLoading(false)
+      }
+  }
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0]
@@ -32,15 +56,19 @@ export default function CatalogImportPage() {
 
   const handleImportFromMarketplace = async () => {
     if (!selectedMarketplace) {
-      alert('Выберите маркетплейс')
+      alert('Выберите магазин/маркетплейс')
       return
     }
 
     setImporting(true)
     try {
-      const response = await api.post('/api/catalog/import/marketplace', null, {
-        params: { marketplace: selectedMarketplace }
-      })
+      // Updated to match backend endpoint with api_key_id
+      const params = { marketplace: selectedMarketplace }
+      if (selectedIntegration) {
+          params.api_key_id = selectedIntegration
+      }
+
+      const response = await api.post('/api/products/marketplaces/import-all', null, { params })
       setResult(response.data)
       setStep(3)
     } catch (error) {
@@ -176,32 +204,67 @@ export default function CatalogImportPage() {
       {/* Step 2: Загрузка данных */}
       {step === 2 && importType === 'marketplace' && (
         <div className="bg-mm-secondary p-8 rounded-lg space-y-6">
-          <h2 className="text-2xl font-bold text-mm-text">Выберите маркетплейс</h2>
+          <h2 className="text-2xl font-bold text-mm-text">Выберите источник импорта</h2>
           
-          <div className="grid grid-cols-3 gap-4">
-            {['ozon', 'wb', 'yandex'].map((mp) => {
-              const names = { ozon: 'Ozon', wb: 'Wildberries', yandex: 'Яндекс.Маркет' }
-              const colors = { ozon: 'blue', wb: 'purple', yandex: 'red' }
-              return (
-                <div
-                  key={mp}
-                  onClick={() => setSelectedMarketplace(mp)}
-                  className={`p-6 rounded-lg cursor-pointer transition border-2 text-center ${
-                    selectedMarketplace === mp
-                      ? `border-${colors[mp]}-500 bg-${colors[mp]}-500/10`
-                      : 'border-mm-border hover:border-mm-cyan/50'
-                  }`}
-                >
-                  <h3 className="text-lg font-bold text-mm-text">{names[mp]}</h3>
+          {/* Active Integrations Loading State */}
+          {integrationsLoading && (
+              <div className="text-sm text-mm-cyan animate-pulse">Загрузка активных интеграций...</div>
+          )}
+
+          {/* Fallback to Buttons if no integrations or error */}
+          {(!integrationsLoading && integrations.length === 0) && (
+             <div className="space-y-4">
+                <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded text-yellow-300 text-sm">
+                  ⚠️ Активные интеграции не найдены или не загрузились. Вы можете выбрать маркетплейс вручную, но рекомендуется проверить раздел "Интеграции".
                 </div>
-              )
-            })}
-          </div>
+                <div className="grid grid-cols-3 gap-4">
+                    {['ozon', 'wb', 'yandex'].map((mp) => {
+                    const names = { ozon: 'Ozon', wb: 'Wildberries', yandex: 'Яндекс.Маркет' }
+                    const colors = { ozon: 'blue', wb: 'purple', yandex: 'red' }
+                    return (
+                        <div
+                        key={mp}
+                        onClick={() => { setSelectedMarketplace(mp); setSelectedIntegration(''); }}
+                        className={`p-6 rounded-lg cursor-pointer transition border-2 text-center ${
+                            selectedMarketplace === mp
+                            ? `border-${colors[mp]}-500 bg-${colors[mp]}-500/10`
+                            : 'border-mm-border hover:border-mm-cyan/50'
+                        }`}
+                        >
+                        <h3 className="text-lg font-bold text-mm-text">{names[mp]}</h3>
+                        </div>
+                    )
+                    })}
+                </div>
+             </div>
+          )}
+
+          {/* Dropdown for Active Integrations */}
+          {(!integrationsLoading && integrations.length > 0) && (
+              <div className="space-y-2">
+                <label className="text-sm text-mm-text-secondary">Ваши активные магазины</label>
+                <select
+                  value={selectedIntegration}
+                  onChange={(e) => {
+                      const integr = integrations.find(i => i.id === e.target.value);
+                      setSelectedIntegration(e.target.value);
+                      setSelectedMarketplace(integr ? integr.marketplace : '');
+                  }}
+                  className="w-full bg-mm-dark border border-mm-border rounded px-4 py-3 text-mm-text focus:border-mm-cyan focus:outline-none"
+                >
+                  <option value="" disabled>Выберите магазин...</option>
+                  {integrations.map(integr => (
+                      <option key={integr.id} value={integr.id}>
+                          {integr.name || `${integr.marketplace.toUpperCase()} (${integr.api_key_masked})`}
+                      </option>
+                  ))}
+                </select>
+              </div>
+          )}
 
           <div className="bg-blue-500/10 border border-blue-500/30 rounded p-4">
             <p className="text-blue-300 text-sm">
-              💡 <strong>Важно:</strong> Убедитесь, что у вас настроена интеграция с выбранным маркетплейсом
-              в разделе "ИНТЕГРАЦИИ".
+              💡 <strong>Важно:</strong> Выберите магазин для импорта всех товаров.
             </p>
           </div>
 
@@ -213,7 +276,7 @@ export default function CatalogImportPage() {
               Назад
             </button>
             <button
-              onClick={handleImportFromMarketplace}
+              onClick={handleImportFromMarketplace} // Uses correct endpoint now
               disabled={!selectedMarketplace || importing}
               className="flex-1 px-6 py-3 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded disabled:opacity-50 disabled:cursor-not-allowed"
             >

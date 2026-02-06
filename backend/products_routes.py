@@ -4,10 +4,7 @@ from bson import ObjectId
 from datetime import datetime
 import re
 
-from models import (
-    ProductCreate, ProductUpdate, ProductResponse,
-    BulkImportRequest, AIAdaptRequest, ProductMappingCreate
-)
+from backend.schemas.product import ProductCreate, ProductUpdate, ProductResponse, BulkImportRequest, AIAdaptRequest, ProductMappingCreate
 from utils import (
     extract_investor_tag, generate_url_slug,
     calculate_listing_quality_score, prepare_product_response,

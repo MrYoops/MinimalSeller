@@ -1,6 +1,7 @@
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
+from backend.core.security import decrypt_api_key
 
 def extract_investor_tag(sku: str) -> str:
     """
@@ -30,6 +31,32 @@ def generate_url_slug(name: str) -> str:
     # Убираем дефисы в начале и конце
     slug = slug.strip('-')
     return slug
+
+def get_decrypted_api_key(api_key_obj: Dict[str, Any]) -> Optional[str]:
+    """
+    Безопасно получить и расшифровать API ключ из объекта ключа.
+    
+    Args:
+        api_key_obj: Объект API ключа из базы данных
+        
+    Returns:
+        Расшифрованный API ключ или None
+    """
+    if not api_key_obj:
+        return None
+    
+    encrypted_key = api_key_obj.get("api_key")
+    if not encrypted_key:
+        return None
+    
+    try:
+        return decrypt_api_key(encrypted_key)
+    except Exception as e:
+        # Логируем ошибку, но не падаем
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Ошибка при расшифровке API ключа: {str(e)}")
+        return None
 
 def calculate_listing_quality_score(product: Dict[str, Any]) -> Dict[str, float]:
     """

@@ -11,8 +11,8 @@ import aiohttp
 import os
 import xlsxwriter
 
-from database import get_database
-from auth_utils import get_current_user
+from backend.core.database import get_database
+from backend.auth_utils import get_current_user
 
 router = APIRouter(prefix="/api/business-analytics", tags=["business-analytics"])
 
@@ -255,7 +255,8 @@ async def fetch_realization_report(client_id: str, api_key: str, year: int, mont
     }
     
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers=headers, json=body) as resp:
+        # SSL verification disabled to avoid local certificate issues
+        async with session.post(url, headers=headers, json=body, ssl=False) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 return data.get("result", {}).get("rows", [])
@@ -422,7 +423,7 @@ async def fetch_ozon_operations(
                     "page_size": 1000
                 }
                 
-                async with session.post(url, headers=headers, json=body) as resp:
+                async with session.post(url, headers=headers, json=body, ssl=False) as resp:
                     if resp.status != 200:
                         error_text = await resp.text()
                         raise HTTPException(status_code=resp.status, detail=f"Ozon API error: {error_text}")
