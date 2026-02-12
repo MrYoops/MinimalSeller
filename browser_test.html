@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Browser Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 20px; margin: 5px; }
+        input { padding: 5px; margin: 5px; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Final Browser Test - MinimalSeller</h1>
+    
+    <div class="test-section">
+        <h2>1. Backend Health Check</h2>
+        <button onclick="testHealth()">Test Health</button>
+        <div id="health-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Login Test</h2>
+        <input type="email" id="email" value="admin@minimalmod.com" placeholder="Email">
+        <br><br>
+        <input type="password" id="password" value="admin123" placeholder="Password">
+        <br><br>
+        <button onclick="testLogin()">Test Login</button>
+        <div id="login-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Protected Endpoint Test</h2>
+        <button onclick="testProtected()">Test Protected</button>
+        <div id="protected-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Network Diagnostics</h2>
+        <button onclick="testDiagnostics()">Run Diagnostics</button>
+        <div id="diagnostics-result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8002';
+        let authToken = null;
+        
+        function log(message, type = 'info') {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function updateResult(elementId, content, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = content;
+            element.className = `test-section ${isSuccess ? 'success' : 'error'}`;
+        }
+        
+        async function testHealth() {
+            log('Testing backend health...');
+            try {
+                const response = await axios.get(`${API_URL}/api/health`);
+                log(`Health check successful: ${response.status}`);
+                updateResult('health-result', `
+                    <h3>✅ Health Check Success</h3>
+                    <p>Status: ${response.status}</p>
+                    <p>Service: ${response.data.service}</p>
+                    <p>Status: ${response.data.status}</p>
+                `, true);
+            } catch (error) {
+                log(`Health check failed: ${error.message}`, 'error');
+                updateResult('health-result', `
+                    <h3>❌ Health Check Failed</h3>
+                    <p>Error: ${error.message}</p>
+                    <p>Status: ${error.response?.status || 'N/A'}</p>
+                    <pre>${error.response?.data ? JSON.stringify(error.response.data, null, 2) : 'No response data'}</pre>
+                `, false);
+            }
+        }
+        
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            log(`Testing login for: ${email}`);
+            try {
+                const response = await axios.post(`${API_URL}/api/auth/login`, {
+                    email: email,
+                    password: password
+                });
+                
+                log(`Login successful: ${response.status}`);
+                authToken = response.data.access_token;
+                
+                updateResult('login-result', `
+                    <h3>✅ Login Success</h3>
+                    <p>Status: ${response.status}</p>
+                    <p>Token Type: ${response.data.token_type}</p>
+                    <p>Token: ${authToken.substring(0, 50)}...</p>
+                    <p>User: ${response.data.user?.email || 'N/A'}</p>
+                    <p>Role: ${response.data.user?.role || 'N/A'}</p>
+                `, true);
+            } catch (error) {
+                log(`Login failed: ${error.message}`, 'error');
+                updateResult('login-result', `
+                    <h3>❌ Login Failed</h3>
+                    <p>Error: ${error.message}</p>
+                    <p>Status: ${error.response?.status || 'N/A'}</p>
+                    <p>Detail: ${error.response?.data?.detail || 'N/A'}</p>
+                    <pre>${error.response?.data ? JSON.stringify(error.response.data, null, 2) : 'No response data'}</pre>
+                `, false);
+            }
+        }
+        
+        async function testProtected() {
+            if (!authToken) {
+                updateResult('protected-result', `
+                    <h3>⚠️ No Auth Token</h3>
+                    <p>Please login first</p>
+                `, false);
+                return;
+            }
+            
+            log('Testing protected endpoint...');
+            try {
+                const response = await axios.get(`${API_URL}/api/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                log(`Protected endpoint successful: ${response.status}`);
+                updateResult('protected-result', `
+                    <h3>✅ Protected Endpoint Success</h3>
+                    <p>Status: ${response.status}</p>
+                    <p>Email: ${response.data.email}</p>
+                    <p>Role: ${response.data.role}</p>
+                    <p>Full Name: ${response.data.full_name || 'N/A'}</p>
+                `, true);
+            } catch (error) {
+                log(`Protected endpoint failed: ${error.message}`, 'error');
+                updateResult('protected-result', `
+                    <h3>❌ Protected Endpoint Failed</h3>
+                    <p>Error: ${error.message}</p>
+                    <p>Status: ${error.response?.status || 'N/A'}</p>
+                    <pre>${error.response?.data ? JSON.stringify(error.response.data, null, 2) : 'No response data'}</pre>
+                `, false);
+            }
+        }
+        
+        async function testDiagnostics() {
+            log('Running network diagnostics...');
+            const results = [];
+            
+            // Test 1: Basic connectivity
+            try {
+                const response = await fetch(`${API_URL}/api/health`);
+                results.push(`✅ Basic connectivity: ${response.status}`);
+            } catch (e) {
+                results.push(`❌ Basic connectivity: ${e.message}`);
+            }
+            
+            // Test 2: CORS preflight
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                results.push(`✅ CORS preflight: ${response.status}`);
+                results.push(`📋 CORS headers: ${response.headers.get('access-control-allow-origin') || 'None'}`);
+            } catch (e) {
+                results.push(`❌ CORS preflight: ${e.message}`);
+            }
+            
+            // Test 3: Network info
+            results.push(`🌐 Current origin: ${window.location.origin}`);
+            results.push(`🔧 API URL: ${API_URL}`);
+            results.push(`🕐 Timestamp: ${new Date().toISOString()}`);
+            
+            updateResult('diagnostics-result', `
+                <h3>🔍 Network Diagnostics</h3>
+                <pre>${results.join('\n')}</pre>
+            `, true);
+        }
+        
+        // Auto-run health check on load
+        window.onload = () => {
+            testHealth();
+        };
+    </script>
+</body>
+</html>

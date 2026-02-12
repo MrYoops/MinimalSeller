@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-mm-border;
+  }
+  
+  body {
+    @apply bg-mm-black text-mm-text font-mono antialiased;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Light Theme */
+  .light-theme body {
+    @apply bg-white text-gray-900;
+  }
+  
+  .light-theme .bg-mm-black {
+    @apply bg-white;
+  }
+  
+  .light-theme .bg-mm-dark {
+    @apply bg-gray-50;
+  }
+  
+  .light-theme .bg-mm-darker {
+    @apply bg-gray-100;
+  }
+  
+  .light-theme .bg-mm-gray {
+    @apply bg-gray-200;
+  }
+  
+  .light-theme .text-mm-text {
+    @apply text-gray-900;
+  }
+  
+  .light-theme .text-mm-text-secondary {
+    @apply text-gray-600;
+  }
+  
+  .light-theme .text-mm-text-tertiary {
+    @apply text-gray-500;
+  }
+  
+  .light-theme .border-mm-border {
+    @apply border-gray-300;
+  }
+  
+  .light-theme .card-neon {
+    @apply bg-white border-gray-300;
+  }
+  
+  .light-theme .input-neon {
+    @apply bg-gray-50 border-gray-300;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans font-bold;
+  }
+  
+  h1 {
+    @apply text-4xl uppercase tracking-wider;
+  }
+  
+  h2 {
+    @apply text-2xl uppercase tracking-wide;
+  }
+}
+
+@layer components {
+  /* Neon Button */
+  .btn-neon {
+    @apply px-6 py-3 border-2 font-mono uppercase tracking-wider transition-all duration-200;
+    @apply hover:shadow-neon-purple hover:brightness-125;
+  }
+  
+  .btn-primary {
+    @apply btn-neon border-mm-purple text-mm-purple;
+  }
+  
+  .btn-secondary {
+    @apply btn-neon border-mm-cyan text-mm-cyan;
+  }
+  
+  /* Input fields */
+  .input-neon {
+    @apply bg-mm-dark border border-mm-border px-4 py-3 font-mono;
+    @apply focus:outline-none focus:border-mm-cyan focus:shadow-neon-cyan transition-all duration-200;
+  }
+  
+  /* Cards */
+  .card-neon {
+    @apply bg-mm-dark border border-mm-border p-6;
+  }
+  
+  /* Comment style */
+  .comment {
+    @apply text-mm-text-tertiary font-mono text-sm;
+  }
+  
+  /* Status badges */
+  .status-new {
+    @apply inline-flex items-center px-3 py-1 text-xs font-mono uppercase border border-mm-blue text-mm-blue;
+  }
+  
+  .status-active {
+    @apply inline-flex items-center px-3 py-1 text-xs font-mono uppercase border border-mm-green text-mm-green;
+  }
+  
+  .status-pending {
+    @apply inline-flex items-center px-3 py-1 text-xs font-mono uppercase border border-mm-yellow text-mm-yellow;
+  }
+  
+  .status-error {
+    @apply inline-flex items-center px-3 py-1 text-xs font-mono uppercase border border-mm-red text-mm-red;
+  }
+}

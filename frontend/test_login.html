@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>Login Test</h1>
+    <div>
+        <input type="email" id="email" value="admin@minimalmod.com" placeholder="Email">
+        <br><br>
+        <input type="password" id="password" value="admin123" placeholder="Password">
+        <br><br>
+        <button onclick="testLogin()">Test Login</button>
+        <br><br>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8002';
+        
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                console.log('🔍 Testing login to:', `${API_URL}/api/auth/login`);
+                console.log('🔍 Email:', email);
+                
+                const response = await axios.post(`${API_URL}/api/auth/login`, {
+                    email: email,
+                    password: password
+                });
+                
+                console.log('✅ Login response:', response.status);
+                console.log('✅ Login data:', response.data);
+                
+                resultDiv.innerHTML = `
+                    <h3>✅ Success!</h3>
+                    <p>Status: ${response.status}</p>
+                    <p>Token: ${response.data.access_token.substring(0, 50)}...</p>
+                    <p>User: ${response.data.user?.email || 'N/A'}</p>
+                `;
+                
+            } catch (error) {
+                console.error('❌ Login error:', error);
+                console.error('❌ Error response:', error.response?.data);
+                console.error('❌ Error status:', error.response?.status);
+                
+                resultDiv.innerHTML = `
+                    <h3>❌ Error!</h3>
+                    <p>Status: ${error.response?.status || 'N/A'}</p>
+                    <p>Message: ${error.response?.data?.detail || error.message}</p>
+                    <p>Full error: ${JSON.stringify(error.response?.data || error.message, null, 2)}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: minimalmod-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - minimalmod-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: minimalmod-backend
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DATABASE_NAME=test
+      - SECRET_KEY=your-secret-key-min-32-chars-long-change-me-please
+      - ACCESS_TOKEN_EXPIRE_MINUTES=1440
+      - MOCK_MODE=false
+    depends_on:
+      - mongodb
+    networks:
+      - minimalmod-network
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    image: node:18
+    container_name: minimalmod-frontend
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_BACKEND_URL=http://localhost:8001
+    command: sh -c "yarn install && yarn dev --host"
+    networks:
+      - minimalmod-network
+    volumes:
+      - ./frontend:/app
+
+networks:
+  minimalmod-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
