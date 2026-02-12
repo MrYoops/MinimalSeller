@@ -5,6 +5,9 @@ from bson import ObjectId
 from core.database import get_database
 from schemas.product import ProductCreate, ProductUpdate, ProductResponse, BulkImportRequest, ListingQualityScore
 from utils import extract_investor_tag
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ProductService:
     @staticmethod
@@ -131,14 +134,96 @@ class ProductService:
             if not product.get("article") and product.get("sku"):
                 product["article"] = product["sku"]
             
-            # Add brand field (placeholder for now)
+            # ИСПРАВЛЕНО: Извлечение бренда из разных источников
             if not product.get("brand"):
-                # Try to extract from minimalmod tags or use placeholder
-                product["brand"] = "Unknown Brand"
+                # 1. Пробуем из marketplace_data
+                marketplace_data = product.get("marketplace_data", {})
+                for mp_name, mp_data in marketplace_data.items():
+                    if isinstance(mp_data, dict) and mp_data.get("brand"):
+                        product["brand"] = mp_data.get("brand")
+                        break
+                
+                # 2. Пробуем из marketplaces.{marketplace}
+                if not product.get("brand"):
+                    marketplaces = product.get("marketplaces", {})
+                    for mp_name, mp_data in marketplaces.items():
+                        if isinstance(mp_data, dict) and mp_data.get("brand"):
+                            product["brand"] = mp_data.get("brand")
+                            break
+                
+                # 3. Пробуем из minimalmod.attributes
+                if not product.get("brand"):
+                    minimalmod = product.get("minimalmod", {})
+                    attributes = minimalmod.get("attributes", {})
+                    if isinstance(attributes, dict):
+                        for attr_name, attr_value in attributes.items():
+                            attr_name_lower = str(attr_name).lower()
+                            if any(keyword in attr_name_lower for keyword in ['бренд', 'brand', 'производитель', 'manufacturer', 'vendor']):
+                                if attr_value:
+                                    product["brand"] = str(attr_value) if not isinstance(attr_value, dict) else str(attr_value.get('value', ''))
+                                    break
             
             # Add category_name field (placeholder for now)
             if not product.get("category_name") and product.get("category_id"):
                 product["category_name"] = f"Category {product['category_id']}"
+            
+            # ИСПРАВЛЕНО: Извлечение price_discounted из разных источников
+            if product.get("price_discounted") is None:
+                # 1. Пробуем из marketplaces.{marketplace}.discount_price (в рублях)
+                marketplaces = product.get("marketplaces", {})
+                for mp_name, mp_data in marketplaces.items():
+                    if isinstance(mp_data, dict) and mp_data.get("discount_price"):
+                        discount_price_rub = float(mp_data.get("discount_price", 0))
+                        if discount_price_rub > 0:
+                            product["price_discounted"] = discount_price_rub
+                            break
+                
+                # 2. Пробуем из marketplace_data.{marketplace}.discount_price
+                if product.get("price_discounted") is None:
+                    marketplace_data = product.get("marketplace_data", {})
+                    for mp_name, mp_data in marketplace_data.items():
+                        if isinstance(mp_data, dict) and mp_data.get("discount_price"):
+                            discount_price_rub = float(mp_data.get("discount_price", 0))
+                            if discount_price_rub > 0:
+                                product["price_discounted"] = discount_price_rub
+                                break
+                
+                # 3. Если есть price и price_with_discount, используем price_with_discount
+                if product.get("price_discounted") is None:
+                    price_with_discount = product.get("price_with_discount", 0)
+                    price_without_discount = product.get("price_without_discount", 0) or product.get("price", 0)
+                    if price_with_discount > 0 and price_with_discount < price_without_discount:
+                        product["price_discounted"] = price_with_discount
+            
+            # ИСПРАВЛЕНО: Извлечение price_discounted из разных источников
+            price_discounted = product.get("price_discounted")
+            if price_discounted is None:
+                # 1. Пробуем из marketplaces.{marketplace}.discount_price (в рублях, конвертируем в копейки для совместимости)
+                marketplaces = product.get("marketplaces", {})
+                for mp_name, mp_data in marketplaces.items():
+                    if isinstance(mp_data, dict) and mp_data.get("discount_price"):
+                        discount_price_rub = float(mp_data.get("discount_price", 0))
+                        if discount_price_rub > 0:
+                            # Конвертируем в копейки для совместимости со схемой (но фронтенд ожидает float в рублях)
+                            product["price_discounted"] = discount_price_rub  # Оставляем в рублях, т.к. фронтенд ожидает float
+                            break
+                
+                # 2. Пробуем из marketplace_data.{marketplace}.discount_price
+                if product.get("price_discounted") is None:
+                    marketplace_data = product.get("marketplace_data", {})
+                    for mp_name, mp_data in marketplace_data.items():
+                        if isinstance(mp_data, dict) and mp_data.get("discount_price"):
+                            discount_price_rub = float(mp_data.get("discount_price", 0))
+                            if discount_price_rub > 0:
+                                product["price_discounted"] = discount_price_rub
+                                break
+                
+                # 3. Если есть price и price_with_discount, используем price_with_discount
+                if product.get("price_discounted") is None:
+                    price_with_discount = product.get("price_with_discount", 0)
+                    price_without_discount = product.get("price_without_discount", 0) or product.get("price", 0)
+                    if price_with_discount > 0 and price_with_discount < price_without_discount:
+                        product["price_discounted"] = price_with_discount
             
             # Add variants_count field (placeholder for now)
             if not product.get("variants_count"):
@@ -191,10 +276,62 @@ class ProductService:
             if not product.get("article") and product.get("sku"):
                 product["article"] = product["sku"]
             
-            # Add brand field (placeholder for now)
+            # ИСПРАВЛЕНО: Извлечение бренда из разных источников
             if not product.get("brand"):
-                # Try to extract from minimalmod tags or use placeholder
-                product["brand"] = "Unknown Brand"
+                # 1. Пробуем из marketplace_data
+                marketplace_data = product.get("marketplace_data", {})
+                for mp_name, mp_data in marketplace_data.items():
+                    if isinstance(mp_data, dict) and mp_data.get("brand"):
+                        product["brand"] = mp_data.get("brand")
+                        break
+                
+                # 2. Пробуем из marketplaces.{marketplace}
+                if not product.get("brand"):
+                    marketplaces = product.get("marketplaces", {})
+                    for mp_name, mp_data in marketplaces.items():
+                        if isinstance(mp_data, dict) and mp_data.get("brand"):
+                            product["brand"] = mp_data.get("brand")
+                            break
+                
+                # 3. Пробуем из minimalmod.attributes
+                if not product.get("brand"):
+                    minimalmod = product.get("minimalmod", {})
+                    attributes = minimalmod.get("attributes", {})
+                    if isinstance(attributes, dict):
+                        for attr_name, attr_value in attributes.items():
+                            attr_name_lower = str(attr_name).lower()
+                            if any(keyword in attr_name_lower for keyword in ['бренд', 'brand', 'производитель', 'manufacturer', 'vendor']):
+                                if attr_value:
+                                    product["brand"] = str(attr_value) if not isinstance(attr_value, dict) else str(attr_value.get('value', ''))
+                                    break
+            
+            # ИСПРАВЛЕНО: Извлечение price_discounted из разных источников
+            if product.get("price_discounted") is None:
+                # 1. Пробуем из marketplaces.{marketplace}.discount_price (в рублях)
+                marketplaces = product.get("marketplaces", {})
+                for mp_name, mp_data in marketplaces.items():
+                    if isinstance(mp_data, dict) and mp_data.get("discount_price"):
+                        discount_price_rub = float(mp_data.get("discount_price", 0))
+                        if discount_price_rub > 0:
+                            product["price_discounted"] = discount_price_rub
+                            break
+                
+                # 2. Пробуем из marketplace_data.{marketplace}.discount_price
+                if product.get("price_discounted") is None:
+                    marketplace_data = product.get("marketplace_data", {})
+                    for mp_name, mp_data in marketplace_data.items():
+                        if isinstance(mp_data, dict) and mp_data.get("discount_price"):
+                            discount_price_rub = float(mp_data.get("discount_price", 0))
+                            if discount_price_rub > 0:
+                                product["price_discounted"] = discount_price_rub
+                                break
+                
+                # 3. Если есть price и price_with_discount, используем price_with_discount
+                if product.get("price_discounted") is None:
+                    price_with_discount = product.get("price_with_discount", 0)
+                    price_without_discount = product.get("price_without_discount", 0) or product.get("price", 0)
+                    if price_with_discount > 0 and price_with_discount < price_without_discount:
+                        product["price_discounted"] = price_with_discount
             
             # Fix minimalmod.attributes validation error - convert array to dict
             if "minimalmod" in product and isinstance(product["minimalmod"], dict):
@@ -493,17 +630,87 @@ class ProductService:
                 })
                 
                 # Prepare data with proper structure
+                # Преобразуем characteristics из массива в словарь если нужно
+                attributes = p.get('attributes', {})
+                if isinstance(attributes, list):
+                    # Если это массив характеристик [{name: '', value: ''}], преобразуем в словарь
+                    attributes = {char.get('name', ''): char.get('value', '') for char in attributes if char.get('name')}
+                elif not isinstance(attributes, dict):
+                    attributes = {}
+                
+                # Также проверяем поле characteristics
+                if not attributes and p.get('characteristics'):
+                    chars = p.get('characteristics', [])
+                    if isinstance(chars, list):
+                        attributes = {char.get('name', ''): char.get('value', '') for char in chars if char.get('name')}
+                    elif isinstance(chars, dict):
+                        attributes = chars
+                
+                # ИСПРАВЛЕНО: Автоматическое сопоставление категории через CategorySystem
+                category_mapping_id = None
+                mp_category_id = p.get('category_id', '')
+                mp_category_name = p.get('category', '')
+                
+                if mp_category_id and mp_category_name:
+                    try:
+                        from category_system import CategorySystem
+                        category_system = CategorySystem(db)
+                        
+                        # Создаем или находим сопоставление категории
+                        if marketplace == 'ozon':
+                            mapping_id = await category_system.create_or_update_mapping(
+                                internal_name=mp_category_name,
+                                ozon_category_id=str(mp_category_id)
+                            )
+                        elif marketplace in ['wb', 'wildberries']:
+                            mapping_id = await category_system.create_or_update_mapping(
+                                internal_name=mp_category_name,
+                                wb_category_id=str(mp_category_id)
+                            )
+                        elif marketplace == 'yandex':
+                            mapping_id = await category_system.create_or_update_mapping(
+                                internal_name=mp_category_name,
+                                yandex_category_id=str(mp_category_id)
+                            )
+                        else:
+                            mapping_id = None
+                        
+                        category_mapping_id = mapping_id
+                        logger.info(f"[ProductService] Category mapping created/found: {mapping_id} for {mp_category_name}")
+                    except Exception as e:
+                        logger.warning(f"[ProductService] Failed to create category mapping: {e}")
+                
+                # ИСПРАВЛЕНО: Извлечение цен с правильной логикой
+                # Для WB: price - обычная цена, discount_price - цена со скидкой (реальная цена продажи)
+                # Для Ozon: price - основная цена
+                regular_price = float(p.get('price', 0) or 0)
+                discount_price = float(p.get('discount_price', 0) or 0)
+                
+                # Используем discount_price как основную цену если она есть (это реальная цена продажи)
+                # Иначе используем regular_price
+                price = discount_price if discount_price > 0 else regular_price
+                
+                # Если цена все еще 0, пробуем другие поля
+                if price == 0:
+                    price = float(p.get('salePrice', 0) or p.get('sale_price', 0) or 0)
+                
+                # ИСПРАВЛЕНО: Логирование для отладки
+                logger.info(f"[ProductService] Product {sku}: regular_price={regular_price}, discount_price={discount_price}, final_price={price}, brand={p.get('brand', '')}, category={mp_category_name}")
+                
                 product_data = {
                     "sku": sku,
-                    "price": float(p.get('price', 0)),
+                    "price": regular_price if regular_price > 0 else price,  # Обычная цена
+                    "price_discounted": discount_price if discount_price > 0 and discount_price < (regular_price if regular_price > 0 else price) else None,  # ИСПРАВЛЕНО: Сохраняем только если реально меньше обычной цены
                     "purchase_price": 0.0,
                     "seller_id": seller_object_id,
                     "article": sku,
+                    "brand": p.get('brand', ''),  # ИСПРАВЛЕНО: Добавляем бренд
+                    "category_mapping_id": category_mapping_id,  # ИСПРАВЛЕНО: Добавляем сопоставление категории
                     "minimalmod": {
                         "name": p.get('name', 'Unknown'),
-                        "description": p.get('description', ''),
-                        "images": p.get('images', []),
-                        "attributes": p.get('attributes', {}) or {},  # Ensure dict, not list
+                        "description": p.get('description', '') or '',  # ИСПРАВЛЕНО: Гарантируем строку
+                        "images": p.get('images', []) or p.get('photos', []),  # ИСПРАВЛЕНО: Поддержка обоих полей
+                        "attributes": attributes,  # ИСПРАВЛЕНО: Используем преобразованные attributes
                         "tags": [marketplace, "imported"]
                     },
                     "marketplaces": {
@@ -511,13 +718,22 @@ class ProductService:
                             "enabled": True,
                             "product_id": p.get('id', ''),
                             "sku": sku,
-                            "price": float(p.get('price', 0)),
+                            "price": regular_price if regular_price > 0 else price,  # Обычная цена
+                            "discount_price": discount_price if discount_price > 0 else price,  # Цена со скидкой
                             "stock": p.get('stock', 0),
                             "warehouse_id": "7f0c027c-f7a4-492c-aaa5-86b1c9f659b7"
                         }
                     },
                     "marketplace_data": {
-                        marketplace: p
+                        marketplace: {
+                            **p,  # Сохраняем все данные с маркетплейса
+                            "category": mp_category_name,
+                            "category_id": mp_category_id,
+                            "brand": p.get('brand', ''),
+                            "characteristics": p.get('characteristics', []),
+                            "attributes": attributes,
+                            "imported_at": datetime.utcnow().isoformat()
+                        }
                     },
                     "dates": {
                         "created_at": datetime.utcnow(),
@@ -529,10 +745,32 @@ class ProductService:
                 }
                 
                 if existing:
-                    # Update existing product
+                    # ИСПРАВЛЕНО: Извлечение цен и бренда перед обновлением
+                    regular_price_update = float(p.get('price', 0) or 0)
+                    discount_price_update = float(p.get('discount_price', 0) or 0)
+                    
+                    # Используем discount_price как основную цену если она есть
+                    price_update = discount_price_update if discount_price_update > 0 else regular_price_update
+                    if price_update == 0:
+                        price_update = existing.get('price', 0)
+                    
+                    brand = p.get('brand', '') or existing.get('brand', '')
+                    
+                    # Update existing product with main fields
                     update_fields = {
-                       f"marketplace_data.{marketplace}": p,
-                       "dates.updated_at": datetime.utcnow()
+                        # ИСПРАВЛЕНО: Обновляем основные поля товара
+                        "price": regular_price_update if regular_price_update > 0 else (price_update if price_update > 0 else existing.get('price', 0)),
+                        "price_discounted": discount_price_update if discount_price_update > 0 else existing.get('price_discounted'),  # ИСПРАВЛЕНО: Обновляем цену со скидкой
+                        "brand": brand if brand else existing.get('brand', ''),
+                        # Обновляем marketplace данные
+                        f"marketplace_data.{marketplace}": p,
+                        f"marketplaces.{marketplace}.enabled": True,
+                        f"marketplaces.{marketplace}.product_id": p.get('id', ''),
+                        f"marketplaces.{marketplace}.sku": sku,
+                        f"marketplaces.{marketplace}.price": regular_price_update if regular_price_update > 0 else price_update,  # Обычная цена
+                        f"marketplaces.{marketplace}.discount_price": discount_price_update if discount_price_update > 0 else price_update,  # Цена со скидкой
+                        f"marketplaces.{marketplace}.stock": p.get('stock', 0),
+                        "dates.updated_at": datetime.utcnow()
                     }
                     await db.products.update_one(
                         {"_id": existing["_id"]},

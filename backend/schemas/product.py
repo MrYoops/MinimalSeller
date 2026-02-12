@@ -80,6 +80,7 @@ class ProductResponse(BaseModel):
     article: Optional[str] = None  # Добавлено поле article
     brand: Optional[str] = None  # Добавлено поле brand для фронтенда
     price: float = 0.0
+    price_discounted: Optional[float] = None  # ИСПРАВЛЕНО: Добавлено поле price_discounted для фронтенда
     purchase_price: float = 0.0
     category_id: Optional[str] = None
     category_name: Optional[str] = None  # Добавлено для фронтенда

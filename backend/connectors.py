@@ -316,6 +316,73 @@ class OzonConnector(BaseConnector):
                         
                         logger.debug(f"[Ozon] Product {detailed.get('offer_id')}: found {len(images)} images")
                         
+                        # ИСПРАВЛЕНО: Извлечение бренда из разных источников
+                        brand = ''
+                        attributes_list = detailed.get('attributes', [])
+                        
+                        # 1. Пробуем получить бренд напрямую из полей товара
+                        brand = detailed.get('brand', '') or detailed.get('vendor', '') or detailed.get('brandName', '') or detailed.get('manufacturer', '')
+                        
+                        # 2. Если бренд не найден, ищем в атрибутах
+                        if not brand and isinstance(attributes_list, list):
+                            # Расширенный список ключевых слов для поиска бренда
+                            brand_keywords = [
+                                'бренд', 'brand', 'производитель', 'manufacturer', 'vendor', 
+                                'изготовитель', 'марка', 'торговая марка', 'trademark',
+                                'brand_name', 'brand_name_en', 'vendor_name'
+                            ]
+                            for attr in attributes_list:
+                                if isinstance(attr, dict):
+                                    attr_name = str(attr.get('name', '') or attr.get('attribute_name', '') or attr.get('id', '') or attr.get('attribute_id', '')).lower().strip()
+                                    attr_value = attr.get('value') or attr.get('values') or attr.get('value_name') or attr.get('value_name_en')
+                                    
+                                    # Проверяем название атрибута
+                                    if any(keyword in attr_name for keyword in brand_keywords):
+                                        if isinstance(attr_value, list) and attr_value:
+                                            brand = str(attr_value[0]).strip()
+                                        elif attr_value:
+                                            brand = str(attr_value).strip()
+                                        if brand:
+                                            logger.info(f"[Ozon] Found brand in attributes: {brand} (field: {attr_name}) for offer_id={detailed.get('offer_id')}")
+                                            break
+                        
+                        # 3. Также проверяем в других возможных полях
+                        if not brand:
+                            # Проверяем в дополнительных полях товара
+                            product_info = detailed.get('product', {})
+                            if isinstance(product_info, dict):
+                                brand = product_info.get('brand', '') or product_info.get('vendor', '')
+                        
+                        # Логируем если бренд не найден
+                        if not brand:
+                            available_attrs = [attr.get('name', '') for attr in (attributes_list[:10] if isinstance(attributes_list, list) else [])]
+                            logger.warning(f"[Ozon] ⚠️ Brand not found for offer_id={detailed.get('offer_id')}. Available attribute names: {available_attrs}")
+                        
+                        # ИСПРАВЛЕНО: Извлечение категории из разных полей Ozon API
+                        category_id = ''
+                        category_name = ''
+                        
+                        # Пробуем разные поля для category_id
+                        category_id = (
+                            str(detailed.get('category_id', '')) or 
+                            str(detailed.get('categoryId', '')) or 
+                            str(detailed.get('fbo_sku', {}).get('category_id', '')) or
+                            str(detailed.get('fbs_sku', {}).get('category_id', '')) or
+                            ''
+                        )
+                        
+                        # Пробуем разные поля для category_name
+                        category_name = (
+                            detailed.get('category_name', '') or 
+                            detailed.get('categoryName', '') or
+                            detailed.get('category', '') or
+                            ''
+                        )
+                        
+                        # Если категория не найдена, логируем для отладки
+                        if not category_id and not category_name:
+                            logger.warning(f"[Ozon] ⚠️ Category not found for offer_id={detailed.get('offer_id')}. Available fields: {list(detailed.keys())[:20]}")
+                        
                         all_products.append({
                             "id": str(detailed.get('id', '')),
                             "sku": detailed.get('offer_id', ''),
@@ -324,11 +391,13 @@ class OzonConnector(BaseConnector):
                             "price": float(detailed.get('price', 0) or 0),
                             "stock": 0,
                             "images": images,
-                            "attributes": detailed.get('attributes', []),
-                            "category": detailed.get('category_name', ''),
+                            "attributes": attributes_list,
+                            "category": category_name,  # ИСПРАВЛЕНО: Используем извлеченное значение
+                            "category_id": category_id,  # ИСПРАВЛЕНО: Используем извлеченное значение
                             "marketplace": "ozon",
                             "status": 'archived' if detailed.get('is_archived') else 'active',
-                            "barcode": detailed.get('barcodes', [''])[0] if detailed.get('barcodes') else ''
+                            "barcode": detailed.get('barcodes', [''])[0] if detailed.get('barcodes') else '',
+                            "brand": brand  # ИСПРАВЛЕНО: Добавляем бренд
                         })
                     
                 except MarketplaceError as e:
@@ -354,9 +423,11 @@ class OzonConnector(BaseConnector):
                     "images": [],
                     "attributes": {},
                     "category": '',
+                    "category_id": '',
                     "marketplace": "ozon",
                     "status": 'archived' if item.get('archived') else 'active',
-                    "barcode": ''
+                    "barcode": '',
+                    "brand": ''  # ИСПРАВЛЕНО: Добавляем пустой бренд в fallback
                 })
             
             logger.info(f"[Ozon] Successfully transformed {len(all_products)} products (basic info only)")
@@ -1265,70 +1336,287 @@ class WildberriesConnector(BaseConnector):
             cards = response_data.get('cards', [])
             logger.info(f"[WB] Received {len(cards)} product cards")
             
+            # ИСПРАВЛЕНО: Получаем актуальные цены продавца из личного кабинета через discounts-prices-api
+            seller_prices_map = await self.get_seller_prices()
+            logger.info(f"[WB] Loaded {len(seller_prices_map)} seller prices from discounts-prices-api")
+            
+            # Получить цены для всех товаров (fallback на public API если нет в seller prices)
+            nm_ids = [int(card.get('nmID', 0)) for card in cards if card.get('nmID')]
+            prices_map = {}
+            
+            if nm_ids:
+                try:
+                    # ИСПРАВЛЕНО: Используем seller prices из discounts-prices-api как основной источник
+                    # Сопоставляем по vendor_code (артикул продавца)
+                    matched_count = 0
+                    for card in cards:
+                        vendor_code = card.get('vendorCode', '')
+                        nm_id = str(card.get('nmID', ''))
+                        
+                        if vendor_code and vendor_code in seller_prices_map:
+                            seller_price_info = seller_prices_map[vendor_code]
+                            regular_price = seller_price_info.get('regular_price', 0)
+                            discount_price = seller_price_info.get('discount_price')
+                            
+                            # ИСПРАВЛЕНО: Проверяем что discount_price реально меньше regular_price
+                            if discount_price and discount_price >= regular_price:
+                                discount_price = None
+                            
+                            prices_map[nm_id] = {
+                                "price": regular_price,
+                                "discount_price": discount_price,
+                                "discount_percent": seller_price_info.get('discount', 0)
+                            }
+                            matched_count += 1
+                            logger.debug(f"[WB] Using seller price for vendor_code={vendor_code}, nm_id={nm_id}: regular={regular_price}, discount={discount_price}")
+                    
+                    logger.info(f"[WB] Matched {matched_count} products with seller prices from discounts-prices-api")
+                    
+                    # Fallback: получаем цены через публичный API для товаров без seller prices
+                    missing_nm_ids = [int(nm_id) for card in cards if str(card.get('nmID', '')) not in prices_map and card.get('nmID')]
+                    if missing_nm_ids:
+                        logger.info(f"[WB] Fetching prices for {len(missing_nm_ids)} products from public API (not in seller prices)")
+                        prices_url = f"{self.marketplace_api_url}/public/api/v1/info"
+                        
+                        # Запрашиваем цены батчами по 100 товаров
+                        for i in range(0, len(missing_nm_ids), 100):
+                            batch_nm_ids = missing_nm_ids[i:i+100]
+                            prices_params = {"nm": ",".join(map(str, batch_nm_ids))}
+                        
+                            try:
+                                prices_response = await self._make_request("GET", prices_url, headers, params=prices_params)
+                                
+                                if isinstance(prices_response, list):
+                                    for price_item in prices_response:
+                                        nm_id = str(price_item.get('nmId', ''))
+                                        
+                                        # Пропускаем если уже есть в prices_map из seller prices
+                                        if nm_id in prices_map:
+                                            continue
+                                        
+                                        # ИСПРАВЛЕНО: Правильное извлечение цен из WB API
+                                        # priceU - обычная цена (в копейках)
+                                        # salePriceU - цена со скидкой (в копейках) - это то, что платит покупатель
+                                        regular_price = 0
+                                        discount_price = 0
+                                        
+                                        # Получаем обычную цену (priceU в копейках)
+                                        if price_item.get('priceU'):
+                                            regular_price = float(price_item.get('priceU', 0)) / 100
+                                        elif price_item.get('price'):
+                                            regular_price = float(price_item.get('price', 0))
+                                        
+                                        # Получаем цену со скидкой (salePriceU в копейках) - это реальная цена продажи
+                                        if price_item.get('salePriceU'):
+                                            discount_price = float(price_item.get('salePriceU', 0)) / 100
+                                        elif price_item.get('salePrice'):
+                                            discount_price = float(price_item.get('salePrice', 0))
+                                        
+                                        # Если discount_price не найден, но есть regular_price и discount, вычисляем
+                                        if discount_price == 0 and regular_price > 0:
+                                            discount = float(price_item.get('discount', 0) or price_item.get('discountPercent', 0))
+                                            if discount > 0:
+                                                discount_price = regular_price * (1 - discount / 100)
+                                            else:
+                                                discount_price = regular_price  # Нет скидки, цена со скидкой = обычной
+                                        
+                                        # Если regular_price не найден, но есть discount_price, используем его как regular_price
+                                        if regular_price == 0 and discount_price > 0:
+                                            regular_price = discount_price
+                                        
+                                        discount = float(price_item.get('discount', 0) or price_item.get('discountPercent', 0))
+                                        
+                                        # ИСПРАВЛЕНО: Проверяем, что цена со скидкой действительно меньше обычной цены
+                                        # Если цены одинаковые, значит скидки нет - не сохраняем discount_price
+                                        if discount_price > 0 and regular_price > 0 and discount_price < regular_price:
+                                            # Есть реальная скидка
+                                            prices_map[nm_id] = {
+                                                "price": regular_price,  # Обычная цена
+                                                "discount_price": discount_price,  # Цена со скидкой (только если меньше обычной)
+                                                "discount_percent": discount
+                                            }
+                                            logger.debug(f"[WB] Price found (public API) for nm_id={nm_id}: regular={regular_price} руб, discount_price={discount_price} руб, discount={discount}%")
+                                        elif regular_price > 0:
+                                            # Нет скидки или цены одинаковые - сохраняем только обычную цену
+                                            prices_map[nm_id] = {
+                                                "price": regular_price,  # Обычная цена
+                                                "discount_price": None,  # Нет скидки
+                                                "discount_percent": 0
+                                            }
+                                            logger.debug(f"[WB] Price found (public API) for nm_id={nm_id}: regular={regular_price} руб, NO DISCOUNT")
+                                        elif discount_price > 0:
+                                            # Есть только discount_price, но нет regular_price
+                                            prices_map[nm_id] = {
+                                                "price": discount_price,  # Используем discount_price как обычную цену
+                                                "discount_price": None,  # Нет скидки
+                                                "discount_percent": 0
+                                            }
+                                            logger.debug(f"[WB] Price found (public API) for nm_id={nm_id}: only discount_price={discount_price} руб")
+                                        else:
+                                            logger.warning(f"[WB] Price is 0 for nm_id={nm_id} in price response. Available fields: {list(price_item.keys())}")
+                            except Exception as batch_error:
+                                logger.warning(f"[WB] Ошибка получения цен для батча {i}-{i+100}: {batch_error}")
+                                # Продолжаем для остальных товаров
+                                continue
+                    
+                    logger.info(f"[WB] Получены цены для {len(prices_map)} из {len(nm_ids)} товаров")
+                    if len(prices_map) == 0:
+                        logger.warning(f"[WB] ⚠️ НЕ ПОЛУЧЕНЫ ЦЕНЫ! Проверьте формат ответа API. Первый ответ: {prices_response[:1] if isinstance(prices_response, list) and prices_response else prices_response}")
+                except Exception as e:
+                    logger.warning(f"[WB] Не удалось получить цены: {e}")
+                    import traceback
+                    logger.error(f"[WB] Traceback: {traceback.format_exc()}")
+            
             for card in cards:
                 # Extract vendor code (артикул продавца)
                 vendor_code = card.get('vendorCode', '')
+                nm_id = str(card.get('nmID', ''))
                 
-                # Extract photos
+                # Extract photos - извлекаем все доступные размеры
                 photos = []
+                images = []  # Дублируем для совместимости
                 for photo in card.get('photos', []):
-                    photos.append(photo.get('big', photo.get('c516x688', '')))
+                    # Используем лучшее доступное качество
+                    photo_url = photo.get('big') or photo.get('c516x688') or photo.get('c246x328') or photo.get('c102x136') or ''
+                    if photo_url:
+                        photos.append(photo_url)
+                        images.append(photo_url)  # Для совместимости с кодом импорта
                 
-                # Extract characteristics (характеристики)
+                # Extract characteristics (характеристики) - преобразуем в словарь для атрибутов
                 characteristics = []
+                characteristics_dict = {}  # Для сохранения как атрибуты
                 for char in card.get('characteristics', []):
-                    characteristics.append({
-                        "name": char.get('name', ''),
-                        "value": char.get('value', '')
-                    })
+                    char_name = char.get('name', '')
+                    char_value = char.get('value', '')
+                    if char_name:
+                        characteristics.append({
+                            "name": char_name,
+                            "value": char_value
+                        })
+                        characteristics_dict[char_name] = char_value
                 
                 # Extract description
                 description = card.get('description', '')
                 
+                # ИСПРАВЛЕНО: Извлечение бренда из разных источников
+                brand = ''
+                
+                # 1. Пробуем получить бренд напрямую из карточки
+                brand = card.get('brand', '') or card.get('brandName', '') or card.get('vendor', '')
+                
+                # 2. Если бренд не найден, ищем в характеристиках
+                if not brand:
+                    for char in card.get('characteristics', []):
+                        char_name = str(char.get('name', '')).lower().strip()
+                        char_value = str(char.get('value', '')).strip()
+                        
+                        # Проверяем различные варианты названий полей бренда
+                        if char_value and (
+                            'бренд' in char_name or 
+                            'brand' in char_name or 
+                            'производитель' in char_name or
+                            'manufacturer' in char_name or
+                            'vendor' in char_name or
+                            'изготовитель' in char_name
+                        ):
+                            brand = char_value
+                            logger.debug(f"[WB] Found brand in characteristics: {brand} (field: {char_name})")
+                            break
+                
+                # 3. Также проверяем в словаре характеристик (если уже преобразован)
+                if not brand and characteristics_dict:
+                    for key, value in characteristics_dict.items():
+                        key_lower = str(key).lower().strip()
+                        if value and (
+                            'бренд' in key_lower or 
+                            'brand' in key_lower or 
+                            'производитель' in key_lower or
+                            'manufacturer' in key_lower or
+                            'vendor' in key_lower
+                        ):
+                            brand = str(value).strip()
+                            logger.debug(f"[WB] Found brand in characteristics_dict: {brand} (key: {key})")
+                            break
+                
+                # Логируем если бренд не найден
+                if not brand:
+                    logger.warning(f"[WB] ⚠️ Brand not found for nm_id={nm_id}, vendor_code={vendor_code}. Available characteristic names: {[c.get('name', '') for c in card.get('characteristics', [])[:10]]}")
+                
                 # ИСПРАВЛЕНО: Используем subjectID и subjectName вместо object
                 subject_id = card.get('subjectID')
                 subject_name = card.get('subjectName', '')
+                
+                # ИСПРАВЛЕНО: Получить цену из prices_map с проверкой
+                price_info = prices_map.get(nm_id, {})
+                price = price_info.get('price', 0)
+                
+                # Если цена не найдена в prices_map, пробуем discount_price
+                if price == 0:
+                    price = price_info.get('discount_price', 0)
+                
+                # Логируем если цена не найдена
+                if price == 0:
+                    logger.warning(f"[WB] ⚠️ Price not found for nm_id={nm_id}, vendor_code={vendor_code}. Prices_map keys: {list(prices_map.keys())[:5] if prices_map else 'empty'}")
+                    logger.warning(f"[WB] Available nm_ids in prices_map: {len(prices_map)}, Current nm_id: {nm_id}")
                 
                 # Extract sizes if available
                 sizes = card.get('sizes', [])
                 if sizes:
                     for size in sizes:
                         all_products.append({
-                            "id": str(card.get('nmID', '')),
+                            "id": nm_id,
                             "sku": vendor_code,  # Артикул продавца
-                            "barcode": size.get('skus', [''])[0],  # Баркод
+                            "barcode": size.get('skus', [''])[0] if size.get('skus') else '',  # Баркод
                             "name": card.get('title', 'Unnamed product'),
                             "description": description,
-                            "photos": photos,
-                            "characteristics": characteristics,
-                            "price": 0,
+                            "photos": photos,  # Для обратной совместимости
+                            "images": images,  # Основное поле для импорта
+                            "characteristics": characteristics,  # Массив для отображения
+                            "attributes": characteristics_dict,  # Словарь для сохранения
+                            "price": price,
+                            "discount_price": price_info.get('discount_price') if price_info.get('discount_price') and price_info.get('discount_price') < price else None,  # ИСПРАВЛЕНО: Только если реально меньше обычной цены
+                            "discount_percent": price_info.get('discount_percent', 0),
                             "stock": 0,
                             "marketplace": "wb",
                             "size": size.get('techSize', ''),
-                            "category": subject_name,  # ИСПРАВЛЕНО
-                            "category_id": str(subject_id) if subject_id else '',  # ДОБАВЛЕНО!
-                            "brand": card.get('brand', '')
+                            "category": subject_name,
+                            "category_id": str(subject_id) if subject_id else '',
+                            "brand": brand
                         })
                 else:
                     # Single product without sizes
+                    # ИСПРАВЛЕНО: Получить цену для товара без размеров
+                    price_info_single = prices_map.get(nm_id, {})
+                    price_single = price_info_single.get('price', 0)
+                    if price_single == 0:
+                        price_single = price_info_single.get('discount_price', 0)
+                    
                     all_products.append({
-                        "id": str(card.get('nmID', '')),
+                        "id": nm_id,
                         "sku": vendor_code,
                         "barcode": '',
                         "name": card.get('title', 'Unnamed product'),
                         "description": description,
-                        "photos": photos,
-                        "characteristics": characteristics,
-                        "price": 0,
+                        "photos": photos,  # Для обратной совместимости
+                        "images": images,  # Основное поле для импорта
+                        "characteristics": characteristics,  # Массив для отображения
+                        "attributes": characteristics_dict,  # Словарь для сохранения
+                        "price": price_single,
+                        "discount_price": price_info_single.get('discount_price') if price_info_single.get('discount_price') and price_info_single.get('discount_price') < price_single else None,  # ИСПРАВЛЕНО: Только если реально меньше обычной цены
+                        "discount_percent": price_info_single.get('discount_percent', 0),
                         "stock": 0,
                         "marketplace": "wb",
                         "size": '',
-                        "category": subject_name,  # ИСПРАВЛЕНО
-                        "category_id": str(subject_id) if subject_id else '',  # ДОБАВЛЕНО!
-                        "brand": card.get('brand', '')
+                        "category": subject_name,
+                        "category_id": str(subject_id) if subject_id else '',
+                        "brand": brand
                     })
             
             logger.info(f"[WB] Successfully transformed {len(all_products)} products with full details")
+            logger.info(f"[WB] Products with prices: {sum(1 for p in all_products if p.get('price', 0) > 0)}")
+            logger.info(f"[WB] Products with images: {sum(1 for p in all_products if p.get('images'))}")
+            logger.info(f"[WB] Products with brand: {sum(1 for p in all_products if p.get('brand'))}")
+            logger.info(f"[WB] Products with characteristics: {sum(1 for p in all_products if p.get('characteristics'))}")
             return all_products
             
         except MarketplaceError as e:
@@ -1475,7 +1763,7 @@ class WildberriesConnector(BaseConnector):
         
         Args:
             warehouse_id: ID склада WB
-            stocks: [{"barcode": "1234567890", "quantity": 10}, ...]
+            stocks: [{"sku": "1234567890", "amount": 10}, ...] или [{"barcode": "1234567890", "quantity": 10}, ...]
         
         Docs: https://openapi.wildberries.ru/#tag/Sklady/paths/~1api~1v3~1stocks~1{warehouseId}/put
         """
@@ -1484,12 +1772,12 @@ class WildberriesConnector(BaseConnector):
         url = f"{self.marketplace_api_url}/api/v3/stocks/{warehouse_id}"
         headers = self._get_headers()
         
-        # Формат WB API
+        # Формат WB API - поддерживаем оба формата для обратной совместимости
         payload = {
             "stocks": [
                 {
-                    "sku": stock["barcode"],
-                    "amount": stock["quantity"]
+                    "sku": stock.get("sku") or stock.get("barcode", ""),
+                    "amount": stock.get("amount") or stock.get("quantity", 0)
                 }
                 for stock in stocks
             ]
@@ -1711,6 +1999,87 @@ class WildberriesConnector(BaseConnector):
             logger.error(f"[WB] Failed to get stocks: {e.message}")
             raise
 
+    async def get_seller_prices(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Получить актуальные цены продавца из личного кабинета WB
+        Использует discounts-prices-api для получения реальных цен продавца
+        
+        Returns:
+            {
+                "vendor_code": {
+                    "regular_price": float,
+                    "discount_price": float,
+                    "discount": float,
+                    "nm_id": int
+                }
+            }
+        """
+        logger.info("[WB] Getting seller prices from discounts-prices-api")
+        
+        # ИСПРАВЛЕНО: Используем правильный endpoint для цен продавца из личного кабинета
+        url = "https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter"
+        headers = self._get_headers()
+        
+        prices_map = {}
+        
+        try:
+            # Запрашиваем цены батчами по 1000 товаров
+            limit = 1000
+            offset = 0
+            
+            while True:
+                params = {
+                    "limit": limit,
+                    "offset": offset
+                }
+                
+                response = await self._make_request("GET", url, headers, params=params)
+                
+                if not response or not isinstance(response, dict):
+                    break
+                
+                data = response.get("data", {})
+                goods = data.get("listGoods", [])
+                
+                if not goods:
+                    break
+                
+                for item in goods:
+                    vendor_code = item.get("vendorCode")
+                    nm_id = item.get("nmId") or item.get("nm_id")
+                    discount = float(item.get("discount", 0) or 0)
+                    
+                    sizes = item.get("sizes", [])
+                    if sizes:
+                        # Берем первый размер (или можно брать все)
+                        s = sizes[0]
+                        regular_price = float(s.get("price", 0) or 0) / 100  # В копейках, конвертируем в рубли
+                        discount_price = float(s.get("discountedPrice", 0) or 0) / 100  # В копейках, конвертируем в рубли
+                        
+                        if vendor_code:
+                            prices_map[vendor_code] = {
+                                "regular_price": regular_price,
+                                "discount_price": discount_price if discount_price > 0 and discount_price < regular_price else None,
+                                "discount": discount,
+                                "nm_id": nm_id
+                            }
+                
+                # Проверяем есть ли еще данные
+                total = data.get("total", 0)
+                if offset + limit >= total:
+                    break
+                
+                offset += limit
+                
+            logger.info(f"[WB] ✅ Loaded {len(prices_map)} seller prices from discounts-prices-api")
+            return prices_map
+            
+        except Exception as e:
+            logger.error(f"[WB] Failed to load seller prices from discounts-prices-api: {e}")
+            import traceback
+            logger.error(f"[WB] Traceback: {traceback.format_exc()}")
+            return {}
+    
     async def get_product_prices(self, nm_id: int) -> Dict[str, Any]:
         """
         Получить текущие цены товара с Wildberries
@@ -1785,7 +2154,8 @@ class WildberriesConnector(BaseConnector):
         logger.info(f"[WB] Updating prices for nm_id {nm_id}: regular={regular_price}₽, discount={discount_price}₽")
         
         # Новый API WB для установки цен (2024)
-        url = f"{self.content_api_url}/public/api/v1/prices"
+        # Используем marketplace-api для цен, не content-api
+        url = f"{self.marketplace_api_url}/public/api/v1/prices"
         headers = self._get_headers()
         
         # Валидация
@@ -1935,43 +2305,52 @@ class YandexMarketConnector(BaseConnector):
         return headers
     
     async def get_products(self) -> List[Dict[str, Any]]:
-        """Get products from Yandex.Market - REAL API CALL"""
+        """Get products from Yandex.Market - REAL API CALL with pagination"""
         logger.info(f"[Yandex] Fetching products for campaign {self.campaign_id}")
         
         url = f"{self.base_url}/campaigns/{self.campaign_id}/offers"
         headers = self._get_headers()
         
-        params = {
-            "limit": 200,
-            "page_token": ""
-        }
-        
         all_products = []
+        page_token = ""
         
-        try:
-            response_data = await self._make_request("GET", url, headers, params=params)
+        # Пагинация для получения всех товаров
+        while True:
+            params = {
+                "limit": 200,
+                "page_token": page_token
+            }
             
-            offers = response_data.get('result', {}).get('offers', [])
-            logger.info(f"[Yandex] Received {len(offers)} products")
-            
-            for offer in offers:
-                all_products.append({
-                    "id": offer.get('id', ''),
-                    "sku": offer.get('shopSku', ''),
-                    "name": offer.get('name', 'Unnamed product'),
-                    "price": float(offer.get('price', 0)),
-                    "stock": offer.get('stock', {}).get('count', 0) if isinstance(offer.get('stock'), dict) else 0,
-                    "marketplace": "yandex",
-                    "status": offer.get('availability', 'UNKNOWN'),
-                    "barcode": offer.get('barcodes', [''])[0] if offer.get('barcodes') else ''
-                })
-            
-            logger.info(f"[Yandex] Successfully transformed {len(all_products)} products")
-            return all_products
-            
-        except MarketplaceError as e:
-            logger.error(f"[Yandex] Failed to fetch products: {e.message}")
-            raise
+            try:
+                response_data = await self._make_request("GET", url, headers, params=params)
+                
+                result = response_data.get('result', {})
+                offers = result.get('offers', [])
+                logger.info(f"[Yandex] Received {len(offers)} products (page_token: {page_token[:20] if page_token else 'first'})")
+                
+                for offer in offers:
+                    all_products.append({
+                        "id": offer.get('id', ''),
+                        "sku": offer.get('shopSku', ''),
+                        "name": offer.get('name', 'Unnamed product'),
+                        "price": float(offer.get('price', 0)),
+                        "stock": offer.get('stock', {}).get('count', 0) if isinstance(offer.get('stock'), dict) else 0,
+                        "marketplace": "yandex",
+                        "status": offer.get('availability', 'UNKNOWN'),
+                        "barcode": offer.get('barcodes', [''])[0] if offer.get('barcodes') else ''
+                    })
+                
+                # Проверяем, есть ли следующая страница
+                page_token = result.get('paging', {}).get('nextPageToken', '')
+                if not page_token:
+                    break
+                    
+            except MarketplaceError as e:
+                logger.error(f"[Yandex] Failed to fetch products: {e.message}")
+                raise
+        
+        logger.info(f"[Yandex] Successfully transformed {len(all_products)} products (total)")
+        return all_products
     
     async def get_warehouses(self) -> List[Dict[str, Any]]:
         """Get seller's FBS warehouses from Yandex.Market"""
@@ -2053,7 +2432,7 @@ class YandexMarketConnector(BaseConnector):
                         {
                             "count": item["count"],
                             "type": "FIT",
-                            "updatedAt": datetime.utcnow().isoformat()
+                            "updatedAt": datetime.utcnow().isoformat() + "Z"
                         }
                     ]
                 }

@@ -542,7 +542,7 @@ async def sync_stock_to_marketplaces(warehouse_id: str, sku: str, new_quantity: 
                 )
             elif marketplace == "yandex":
                 await connector.update_stocks(
-                    stocks=[{"sku": sku, "count": new_quantity}]
+                    stocks=[{"sku": sku, "warehouse_id": int(mp_warehouse_id), "quantity": new_quantity}]
                 )
             
             synced_count += 1

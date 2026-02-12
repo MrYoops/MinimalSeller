@@ -162,8 +162,12 @@ export default function CatalogProductFormV4() {
       const data = response.data
       
       setProduct({
-        ...data,
-        dimensions: data.dimensions || { length: 0, width: 0, height: 0 },
+        article: data.article || '',
+        name: data.name || '',
+        brand: data.brand || '',
+        category_id: data.category_id || '',
+        description: data.description || '',  // Гарантируем, что description всегда строка
+        status: data.status || 'active',
         manufacturer: data.manufacturer || '',
         country_of_origin: data.country_of_origin || 'Вьетнам',
         label_name: data.label_name || data.name || '',
@@ -174,6 +178,8 @@ export default function CatalogProductFormV4() {
         additional_expenses: data.additional_expenses || 0,
         cost_price: data.cost_price || 0,
         vat: data.vat || 0,
+        weight: data.weight || 0,
+        dimensions: data.dimensions || { length: 0, width: 0, height: 0 },
         gender: data.gender || '',
         season: data.season || '',
         composition: data.composition || '',
@@ -188,8 +194,9 @@ export default function CatalogProductFormV4() {
         setMarketplaceData(data.marketplace_specific_data)
       }
     } catch (error) {
-      alert('Ошибка загрузки товара: ' + error.message)
-      navigate('/dashboard')
+      console.error('Ошибка загрузки товара:', error)
+      alert('Ошибка загрузки товара: ' + (error.response?.data?.detail || error.message))
+      navigate('/catalog/products')
     } finally {
       setLoading(false)
     }
@@ -555,11 +562,14 @@ export default function CatalogProductFormV4() {
     }
   }
 
-  if (loading && id) {
+  // Защита от рендеринга до инициализации product
+  if (!product || (loading && id)) {
     return (
-      <div className="text-center py-12">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-mm-cyan"></div>
-        <p className="text-mm-text-secondary mt-4">Загрузка...</p>
+      <div className="min-h-screen bg-mm-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-mm-cyan"></div>
+          <p className="text-mm-text-secondary mt-4">Загрузка товара...</p>
+        </div>
       </div>
     )
   }
@@ -570,7 +580,7 @@ export default function CatalogProductFormV4() {
       <div className="bg-mm-secondary border-b border-mm-border p-4">
         <div className="flex items-center gap-4 mb-3">
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/catalog/products')}
             className="p-2 text-mm-text hover:text-mm-cyan transition"
           >
             <FiArrowLeft size={20} />
@@ -1102,10 +1112,10 @@ export default function CatalogProductFormV4() {
                 <div className="bg-mm-secondary p-6 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
                     <label className="text-sm font-bold text-mm-text-secondary uppercase">Описание</label>
-                    <span className="text-xs text-mm-text-secondary">{product.description.length} / 2000</span>
+                    <span className="text-xs text-mm-text-secondary">{(product.description || '').length} / 2000</span>
                   </div>
-                  <textarea
-                    value={product.description}
+                    <textarea
+                    value={product.description || ''}
                     onChange={(e) => handleProductChange('description', e.target.value)}
                     rows="5"
                     maxLength={2000}
@@ -1121,8 +1131,8 @@ export default function CatalogProductFormV4() {
                       <label className="block text-xs text-mm-text-secondary mb-1">Длина, мм <span className="text-red-400">*</span></label>
                       <input
                         type="number"
-                        value={product.dimensions.length}
-                        onChange={(e) => handleProductChange('dimensions', { ...product.dimensions, length: parseInt(e.target.value) || 0 })}
+                        value={product.dimensions?.length || 0}
+                        onChange={(e) => handleProductChange('dimensions', { ...(product.dimensions || { length: 0, width: 0, height: 0 }), length: parseInt(e.target.value) || 0 })}
                         required
                         className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
                       />
@@ -1131,8 +1141,8 @@ export default function CatalogProductFormV4() {
                       <label className="block text-xs text-mm-text-secondary mb-1">Ширина, мм <span className="text-red-400">*</span></label>
                       <input
                         type="number"
-                        value={product.dimensions.width}
-                        onChange={(e) => handleProductChange('dimensions', { ...product.dimensions, width: parseInt(e.target.value) || 0 })}
+                        value={product.dimensions?.width || 0}
+                        onChange={(e) => handleProductChange('dimensions', { ...(product.dimensions || { length: 0, width: 0, height: 0 }), width: parseInt(e.target.value) || 0 })}
                         required
                         className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
                       />
@@ -1141,8 +1151,8 @@ export default function CatalogProductFormV4() {
                       <label className="block text-xs text-mm-text-secondary mb-1">Высота, мм <span className="text-red-400">*</span></label>
                       <input
                         type="number"
-                        value={product.dimensions.height}
-                        onChange={(e) => handleProductChange('dimensions', { ...product.dimensions, height: parseInt(e.target.value) || 0 })}
+                        value={product.dimensions?.height || 0}
+                        onChange={(e) => handleProductChange('dimensions', { ...(product.dimensions || { length: 0, width: 0, height: 0 }), height: parseInt(e.target.value) || 0 })}
                         required
                         className="w-full px-3 py-2 bg-mm-dark border border-mm-border rounded text-mm-text focus:border-mm-cyan outline-none"
                       />

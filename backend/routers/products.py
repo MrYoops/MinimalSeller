@@ -1,13 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import Optional, List
 from bson import ObjectId
+from datetime import datetime
+import logging
 
 from services.product_service import ProductService
 from services.auth_service import AuthService
 from schemas.user import UserRole
 from schemas.product import ProductResponse, ProductCreate, ProductUpdate
+from category_system import CategorySystem
 from pydantic import BaseModel
 import os
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/products", tags=["Products"])
 
@@ -193,17 +198,34 @@ async def import_from_marketplace(
         })
         
         if existing and request.duplicate_action == "link_only":
-            # Just link the marketplace data
-            print(f"[SYNC] Linking existing product: {existing.get('article')}")
+            # ИСПРАВЛЕНО: Извлечение цен и бренда перед обновлением
+            regular_price = float(product_data.get('price', 0) or 0)
+            discount_price = float(product_data.get('discount_price', 0) or 0)
+            
+            # Используем discount_price как основную цену если она есть
+            price = discount_price if discount_price > 0 else regular_price
+            if price == 0:
+                price = existing.get('price', 0)
+            
+            brand = product_data.get('brand', '') or existing.get('brand', '')
+            
+            # Just link the marketplace data AND update main fields
+            print(f"[SYNC] Linking existing product: {existing.get('article')}, regular_price={regular_price}, discount_price={discount_price}, final_price={price}, brand={brand}")
             update_result = await db.products.update_one(
                 {"_id": existing["_id"]},
                 {
                     "$set": {
+                        # ИСПРАВЛЕНО: Обновляем основные поля товара
+                        "price": regular_price if regular_price > 0 else (price if price > 0 else existing.get('price', 0)),
+                        "price_discounted": discount_price if discount_price > 0 else existing.get('price_discounted'),  # ИСПРАВЛЕНО: Обновляем цену со скидкой
+                        "brand": brand if brand else existing.get('brand', ''),
+                        # Обновляем marketplace данные
                         f"marketplace_data.{marketplace}": product_data,
                         f"marketplaces.{marketplace}.enabled": True,
                         f"marketplaces.{marketplace}.product_id": product_data.get('id', ''),
                         f"marketplaces.{marketplace}.sku": sku,
-                        f"marketplaces.{marketplace}.price": product_data.get('price', 0),
+                        f"marketplaces.{marketplace}.price": regular_price if regular_price > 0 else price,  # Обычная цена
+                        f"marketplaces.{marketplace}.discount_price": discount_price if discount_price > 0 else price,  # Цена со скидкой
                         f"marketplaces.{marketplace}.stock": product_data.get('stock', 0),
                         "dates.updated_at": datetime.utcnow()
                     }
@@ -237,19 +259,89 @@ async def import_from_marketplace(
                 "message": f"Товар с артикулом {sku} уже существует. Выберите действие."
             }
         
+        # ИСПРАВЛЕНО: Преобразуем characteristics из массива в словарь если нужно
+        attributes = product_data.get('attributes', {})
+        if isinstance(attributes, list):
+            # Если это массив характеристик [{name: '', value: ''}], преобразуем в словарь
+            attributes = {char.get('name', ''): char.get('value', '') for char in attributes if char.get('name')}
+        elif not isinstance(attributes, dict):
+            attributes = {}
+        
+        # Также проверяем поле characteristics
+        if not attributes and product_data.get('characteristics'):
+            chars = product_data.get('characteristics', [])
+            if isinstance(chars, list):
+                attributes = {char.get('name', ''): char.get('value', '') for char in chars if char.get('name')}
+            elif isinstance(chars, dict):
+                attributes = chars
+        
+        # ИСПРАВЛЕНО: Автоматическое сопоставление категории через CategorySystem
+        category_mapping_id = None
+        category_id = None
+        category_system = CategorySystem(db)
+        
+        mp_category_id = product_data.get('category_id', '')
+        mp_category_name = product_data.get('category', '')
+        
+        if mp_category_id and mp_category_name:
+            try:
+                # Создаем или находим сопоставление категории
+                if marketplace == 'ozon':
+                    mapping_id = await category_system.create_or_update_mapping(
+                        internal_name=mp_category_name,
+                        ozon_category_id=str(mp_category_id)
+                    )
+                elif marketplace in ['wb', 'wildberries']:
+                    mapping_id = await category_system.create_or_update_mapping(
+                        internal_name=mp_category_name,
+                        wb_category_id=str(mp_category_id)
+                    )
+                elif marketplace == 'yandex':
+                    mapping_id = await category_system.create_or_update_mapping(
+                        internal_name=mp_category_name,
+                        yandex_category_id=str(mp_category_id)
+                    )
+                else:
+                    mapping_id = None
+                
+                category_mapping_id = mapping_id
+                logger.info(f"[IMPORT] Category mapping created/found: {mapping_id} for {mp_category_name}")
+            except Exception as e:
+                logger.warning(f"[IMPORT] Failed to create category mapping: {e}")
+        
+        # ИСПРАВЛЕНО: Извлечение цен с правильной логикой
+        # Для WB: price - обычная цена, discount_price - цена со скидкой (реальная цена продажи)
+        # Для Ozon: price - основная цена
+        regular_price = float(product_data.get('price', 0) or 0)
+        discount_price = float(product_data.get('discount_price', 0) or 0)
+        
+        # Используем discount_price как основную цену если она есть (это реальная цена продажи)
+        # Иначе используем regular_price
+        price = discount_price if discount_price > 0 else regular_price
+        
+        # Если цена все еще 0, пробуем другие поля
+        if price == 0:
+            price = float(product_data.get('salePrice', 0) or product_data.get('sale_price', 0) or 0)
+        
+        # ИСПРАВЛЕНО: Логирование для отладки
+        logger.info(f"[IMPORT] Product {sku}: regular_price={regular_price}, discount_price={discount_price}, final_price={price}, brand={product_data.get('brand', '')}, category={mp_category_name}")
+        
         # Create new product
         print(f"[SYNC] Creating new product: {sku}")
         new_product = {
             "sku": sku,
-            "price": float(product_data.get('price', 0)),
+            "price": regular_price if regular_price > 0 else price,  # Обычная цена
+            "price_discounted": discount_price if discount_price > 0 and discount_price < (regular_price if regular_price > 0 else price) else None,  # ИСПРАВЛЕНО: Сохраняем только если реально меньше обычной цены
             "purchase_price": 0.0,
             "seller_id": seller_object_id,
             "article": sku,
+            "brand": product_data.get('brand', ''),  # ИСПРАВЛЕНО: Добавляем бренд
+            "category_mapping_id": category_mapping_id,  # ИСПРАВЛЕНО: Добавляем сопоставление категории
             "minimalmod": {
                 "name": product_data.get('name', 'Unknown'),
-                "description": product_data.get('description', ''),
-                "images": product_data.get('images', []),
-                "attributes": product_data.get('attributes', {}) or {},
+                "description": product_data.get('description', '') or '',  # ИСПРАВЛЕНО: Гарантируем строку
+                "images": product_data.get('images', []) or product_data.get('photos', []),  # Поддержка обоих полей
+                "attributes": attributes,  # ИСПРАВЛЕНО: Используем преобразованные attributes
                 "tags": [marketplace, "imported"]
             },
             "marketplaces": {
@@ -257,13 +349,22 @@ async def import_from_marketplace(
                     "enabled": True,
                     "product_id": product_data.get('id', ''),
                     "sku": sku,
-                    "price": float(product_data.get('price', 0)),
+                    "price": regular_price if regular_price > 0 else price,  # Обычная цена
+                    "discount_price": discount_price if discount_price > 0 else price,  # Цена со скидкой
                     "stock": product_data.get('stock', 0),
                     "warehouse_id": "7f0c027c-f7a4-492c-aaa5-86b1c9f659b7"
                 }
             },
             "marketplace_data": {
-                marketplace: product_data
+                marketplace: {
+                    **product_data,  # Сохраняем все данные с маркетплейса
+                    "category": mp_category_name,
+                    "category_id": mp_category_id,
+                    "brand": product_data.get('brand', ''),
+                    "characteristics": product_data.get('characteristics', []),
+                    "attributes": attributes,
+                    "imported_at": datetime.utcnow().isoformat()
+                }
             },
             "dates": {
                 "created_at": datetime.utcnow(),

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FiPlus, FiSearch, FiFilter, FiDownload, FiUpload, FiEdit, FiTrash2, FiPackage, FiLink, FiDollarSign, FiTag, FiX } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
 import SyncLogsTab from './SyncLogsTab'
@@ -22,6 +23,7 @@ const generateTagColor = (tag) => {
 
 export default function CatalogProductsPage() {
   const { api } = useAuth()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('products') // products | sync
   const [products, setProducts] = useState([])
   const [productsWithPhotos, setProductsWithPhotos] = useState([])
@@ -243,7 +245,7 @@ export default function CatalogProductsPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => window.location.href = '/catalog/products/new'}
+            onClick={() => navigate('/catalog/products/new')}
             className="px-4 py-2 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded flex items-center gap-2"
           >
             <FiPlus /> СОЗДАТЬ ТОВАР
@@ -430,7 +432,7 @@ export default function CatalogProductsPage() {
           <p className="text-mm-text-secondary text-lg">Нет товаров</p>
           <p className="text-mm-text-secondary text-sm mt-2">Создайте первый товар или импортируйте товары</p>
           <button
-            onClick={() => window.location.href = '/catalog/products/new'}
+            onClick={() => navigate('/catalog/products/new')}
             className="mt-4 px-6 py-2 bg-mm-cyan text-mm-dark hover:bg-mm-cyan/90 rounded"
           >
             Создать товар
@@ -559,7 +561,7 @@ export default function CatalogProductsPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    {product.price_discounted ? (
+                    {product.price_discounted && product.price_discounted < product.price ? (
                       <div className="flex flex-col">
                         <span className="text-mm-cyan font-bold text-base">
                           {product.price_discounted.toFixed(2)} ₽
@@ -590,7 +592,7 @@ export default function CatalogProductsPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => window.location.href = `/catalog/products/${product.id}/edit`}
+                        onClick={() => navigate(`/catalog/products/${product.id}/edit`)}
                         className="p-2 text-mm-cyan hover:bg-mm-cyan/10 rounded transition"
                         title="Редактировать"
                       >
